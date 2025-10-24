@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+</head>
+<body>
+    
+    {% if user_nombre %}
+        <h1>¡Bienvenido, {{ user_nombre }}!</h1>
+        <p>Has iniciado sesión exitosamente usando MongoDB.</p>
+        <a href="{% url 'logout' %}">Cerrar Sesión</a>
+    
+    {% else %}
+        <p>No estás autenticado.</p>
+        <a href="{% url 'login' %}">Ir al Login</a>
+    {% endif %}
+
+</body>
+</html>

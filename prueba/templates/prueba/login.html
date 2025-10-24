@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagina inicio (login)</title>
+    <link rel="stylesheet" href="{% static 'prueba/css/login.css' %}">
+    
+</head>
+<body>
+
+    <div class="login-container">
+        
+        <div class="logo-placeholder">
+            110 x 74<br>
+            NUAM LOGO <!-- logo que debe ir de nuam -->
+        </div>
+
+        {% if request.session.user_id %}
+            <p>Ya estás logueado como: {{ request.session.user_nombre }}</p>
+            <a href="{% url 'home' %}">Ir al Home</a> | 
+            <a href="{% url 'logout' %}">Cerrar Sesión</a>
+        
+        {% else %}
+            <form method="post">
+                {% csrf_token %}
+                
+                {{ form.correo }}
+                {{ form.contrasena }}
+                
+                {% if error %}
+                    <p class="error-message">{{ error }}</p>
+                {% endif %}
+                    
+                <button type="submit" class="login-button">Iniciar sesion</button>
+            </form>
+            
+            <a href="#" class="contact-link">contacto</a>
+        
+        {% endif %}
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,26 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista de Usuarios de MongoDB</title>
+</head>
+<body>
+    <h1>Lista de Usuarios (desde MongoDB)</h1>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Correo</th>
+        </tr> 
+        
+        {% for usuario in usuarios %}
+        <tr>
+            <td>{{ usuario.id }}</td> 
+            <td>{{ usuario.nombre }}</td>
+            <td>{{ usuario.correo }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
