@@ -1,4 +1,9 @@
-/* Estilos para replicar el mockup */
+:root {
+    --nuam-orange: #f5550b; /* Naranja principal (Tailwind Amber 500) */
+    --nuam-orange-dark: #d95306; /* Naranja oscuro para hover (Amber 600) */
+    --text-on-orange: #FFFFFF;
+}
+
 body {
     font-family: Arial, sans-serif;
     background-color: #f0f2f5;
@@ -43,19 +48,34 @@ form {
     padding: 0.75rem;
     border: 1px solid #ccc;
     border-radius: 4px;
-    box-sizing: border-box; /* Importante para que el padding no afecte el ancho */
+    box-sizing: border-box; 
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* --- ¡CAMBIO! --- */
+.form-input:focus {
+    border-color: var(--nuam-orange);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+    outline: none;
 }
 
 .login-button {
-    background-color: #f0f0f0;
-    border: 1px solid #ccc;
+    /* --- ¡CAMBIO! --- */
+    background-color: var(--nuam-orange);
+    border: 1px solid var(--nuam-orange-dark);
+    color: var(--text-on-orange);
+    /* --- Fin del Cambio --- */
+
     padding: 0.75rem;
     border-radius: 4px;
     cursor: pointer;
     font-weight: bold;
+    transition: background-color 0.2s;
 }
+
+/* --- ¡CAMBIO! --- */
 .login-button:hover {
-    background-color: #e0e0e0;
+    background-color: var(--nuam-orange-dark);
 }
 
 .error-message {
@@ -69,4 +89,10 @@ form {
     font-size: 0.9rem;
     color: #555;
     text-decoration: none;
+    transition: color 0.2s;
+}
+
+/* --- ¡CAMBIO! --- */
+.contact-link:hover {
+    color: var(--nuam-orange);
 }

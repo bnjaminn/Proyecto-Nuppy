@@ -1,0 +1,147 @@
+/* --- prueba/static/prueba/css/modal.css --- */
+/* Estilos actualizados para el primer modal */
+
+:root {
+    --nuam-orange: #F59E0B;
+    --nuam-orange-dark: #D97706;
+}
+
+.modal-overlay {
+    display: none; 
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* --- Tamaño específico para Modal 1 --- */
+.modal-large {
+    max-width: 700px; 
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    line-height: 1;
+}
+.modal-close:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+/* --- Layout de Grilla para Modal 1 --- */
+.modal-form-grid-3rows {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 columnas */
+    gap: 1.5rem;
+}
+.full-width {
+    grid-column: 1 / -1; /* Ocupa todo el ancho */
+}
+
+/* --- Estilos comunes de campos --- */
+.form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-field label {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.form-field input[type="text"],
+.form-field input[type="date"],
+.form-field input[type="number"] {
+    padding: 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.form-field input:focus {
+    border-color: var(--nuam-orange);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+    outline: none;
+}
+.readonly-field { /* Estilo para campo Mercado readonly */
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #eee;
+    background-color: #f9f9f9;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+.form-field-checkbox {
+    /* Alinea el checkbox y la etiqueta horizontalmente */
+    display: flex; 
+    flex-direction: row; 
+    align-items: center; /* Centra verticalmente */
+    gap: 0.5rem; /* Espacio entre checkbox y etiqueta */
+    padding-top: 1rem; /* Espacio superior para alinear con otros campos */
+}
+
+.form-field-checkbox input[type="checkbox"] {
+    /* Tamaño del checkbox */
+    width: 1.2rem; 
+    height: 1.2rem;
+    cursor: pointer;
+}
+
+.form-field-checkbox label {
+    /* Quitamos el margen inferior que tenían las otras etiquetas */
+    margin-bottom: 0; 
+    font-weight: normal; /* Opcional: etiqueta no en negrita */
+}

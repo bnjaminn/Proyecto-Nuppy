@@ -1,0 +1,36 @@
+<div id="crear-usuario-modal-overlay" class="modal-overlay">
+    <div class="modal-content modal-small"> 
+        <div class="modal-header">
+            <h2>Crear Nuevo Usuario</h2>
+            <span id="btn-cerrar-crear-usuario-x" class="modal-close">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <form id="form-crear-usuario" method="post" action="{% url 'crear_usuario' %}">
+                {% csrf_token %} 
+                <div class="modal-form-grid-vertical"> 
+                    <div class="form-field">
+                        <label for="crear-nombre">Nombre:</label>
+                        <input type="text" id="crear-nombre" name="nombre" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="crear-correo">Correo Electrónico:</label>
+                        <input type="email" id="crear-correo" name="correo" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="crear-contrasena">Contraseña:</label>
+                        <input type="password" id="crear-contrasena" name="contrasena" required>
+                    </div>
+                    <div class="form-field form-field-checkbox"> 
+                        <input type="checkbox" id="crear-rol" name="rol">
+                        <label for="crear-rol">¿Es Administrador?</label> 
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" id="btn-cerrar-crear-usuario" class="btn btn-secondary">Cancelar</button>
+            <button type="submit" form="form-crear-usuario" class="btn">Crear Usuario</button>
+        </div>
+    </div>
+</div>

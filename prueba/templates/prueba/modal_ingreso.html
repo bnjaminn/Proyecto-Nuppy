@@ -1,0 +1,49 @@
+<div id="ingreso-modal-overlay" class="modal-overlay">
+    <div class="modal-content modal-large"> 
+        
+        <div class="modal-header">
+            <h2>Ingreso de calificaciones</h2>
+            <span id="btn-cerrar-modal-x" class="modal-close">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <form onsubmit="return false;">
+                <div class="modal-form-grid-3rows"> 
+                    <div class="form-field">
+                        <label for="modal-ejercicio">Ejercicio:</label>
+                        <input type="number" id="modal-ejercicio" name="ejercicio">
+                    </div>
+                    <div class="form-field">
+                        <label for="modal-instrumento">Instrumento:</label>
+                        <input type="text" id="modal-instrumento" name="instrumento">
+                    </div>
+                    <div class="form-field">
+                        <label for="modal-fecha_pago">Fecha Pago:</label>
+                        <input type="date" id="modal-fecha_pago" name="fecha_pago">
+                    </div>
+                    <div class="form-field">
+                        <label for="modal-secuencia">Secuencia Evento:</label>
+                        <input type="number" id="modal-secuencia" name="secuencia">
+                    </div>
+                    <div class="form-field">
+                        <label for="modal-mercado">Mercado:</label>
+                         <input type="text" id="modal-mercado" name="mercado" readonly class="readonly-field"> 
+                    </div>
+                    <div class="form-field">
+                        <label for="modal-dividendo">Dividendo:</label>
+                        <input type="number" step="any" id="modal-dividendo" name="dividendo" value="0.0"> 
+                    </div>
+                    <div class="form-field form-field-checkbox full-width"> 
+                        <input type="checkbox" id="modal-isfut" name="isfut">
+                        <label for="modal-isfut">ISFUT</label> 
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" id="btn-cerrar-modal" class="btn btn-secondary">Cancelar</button>
+            <button type="button" id="btn-siguiente-modal" class="btn">Ingresar</button> 
+        </div>
+    </div>
+</div>

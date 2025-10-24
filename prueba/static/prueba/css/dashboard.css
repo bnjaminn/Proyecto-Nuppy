@@ -1,0 +1,178 @@
+:root {
+    --nuam-orange: #D97706; /* Naranja principal (Amber 500) */
+    --nuam-orange-dark: #f53a0b; /* Naranja oscuro (Amber 600) */
+    --nuam-orange-light: #FEF3C7; /* Naranja claro para fondos (Amber 100) */
+    --text-on-orange: #FFFFFF;
+    --text-on-light-orange: #B45309; /* Texto oscuro para fondos claros (Amber 800) */
+}   
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: #f4f4f4;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* --- Encabezado y Filtros --- */
+.header {
+    background-color: #f9f9f9;
+    padding: 1rem;
+    border-bottom: 1px solid #ccc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    /* --- ¡CAMBIO! --- */
+    /* Borde superior naranja para branding */
+    border-top: 4px solid var(--nuam-orange);
+}
+
+.header-left, .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.filter-group select, .filter-group input {
+    padding: 0.4rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* --- ¡CAMBIO! --- */
+.filter-group select:focus, 
+.filter-group input:focus {
+    border-color: var(--nuam-orange);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+    outline: none;
+}
+
+.logo-placeholder {
+    width: 110px;
+    height: 74px;
+    border: 1px dashed #999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 10px;
+    color: #888;
+    background-color: #eee;
+}
+
+.btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.btn {
+    /* --- ¡CAMBIO! --- */
+    background-color: var(--nuam-orange);
+    border: 1px solid var(--nuam-orange-dark);
+    color: var(--text-on-orange);
+    /* --- Fin del Cambio --- */
+    
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+/* --- ¡CAMBIO! --- */
+.btn:hover {
+    background-color: var(--nuam-orange-dark);
+}
+
+/* --- Saludo de Usuario y Logout --- */
+.user-info {
+    font-size: 0.9rem;
+    color: #333;
+}
+.user-info a {
+    /* --- ¡CAMBIO! --- */
+    color: var(--nuam-orange-dark);
+    text-decoration: none;
+    margin-left: 10px;
+}
+.user-info a:hover {
+    text-decoration: underline;
+}
+
+/* --- Contenido Principal (Tabla) --- */
+.main-content {
+    flex-grow: 1;
+    overflow-x: auto;
+    background-color: #fff;
+    margin: 1rem;
+    border: 1px solid #ccc;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 8000px; /* Ancho para todas las columnas de factores */
+}
+
+.data-table th, .data-table td {
+    border: 1px solid #ddd;
+    padding: 0.75rem;
+    text-align: left;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.data-table th {
+    /* --- ¡CAMBIO! --- */
+    /* Encabezado de tabla con fondo naranja claro */
+    background-color: var(--nuam-orange-light);
+    color: var(--text-on-light-orange);
+    /* --- Fin del Cambio --- */
+    
+    position: sticky;
+    top: 0;
+    text-align: center;
+    vertical-align: top;
+}
+
+/* Estilo para el nombre de negocio (de la homologación) */
+.data-table th small {
+    display: block;
+    margin-top: 5px;
+    font-weight: normal;
+    color: #333; /* Texto normal, no naranja */
+    font-size: 0.8rem;
+    white-space: normal; /* Permite que el texto largo se ajuste */
+    min-width: 150px; /* Ancho mínimo para el nombre de negocio */
+}
+
+
+/* --- Footer (Botones de Acción) --- */
+.footer {
+    background-color: #f9f9f9;
+    padding: 1rem;
+    border-top: 1px solid #ccc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.footer-actions {
+    display: flex;
+    gap: 0.5rem;
+}

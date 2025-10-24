@@ -1,0 +1,278 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración de Usuarios - NUAM</title>
+    
+    <link rel="stylesheet" href="{% static 'prueba/css/dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'prueba/css/administrar.css' %}">
+    <link rel="stylesheet" href="{% static 'prueba/css/modal.css' %}">
+    
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <h2>Administración de Usuarios</h2>
+        </div>
+        <div class="header-right">
+            <div class="user-info">
+                Admin: <strong>{{ user_nombre }}</strong>
+                <a href="{% url 'home' %}" class="btn btn-secondary" style="margin-left: 1rem;">(Volver al Dashboard)</a> 
+                <a href="{% url 'logout' %}" style="margin-left: 0.5rem;">(Cerrar Sesión)</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="admin-container">
+        
+        <div class="user-management-layout">
+            
+            <div class="user-actions">
+                <button class="btn" id="btn-abrir-crear-usuario">Crear Usuario</button>
+                <button class="btn btn-secondary" id="btn-modificar-usuario" disabled>Modificar Usuario</button> 
+                <button class="btn btn-danger" id="btn-eliminar-usuario" disabled>Eliminar Usuario</button> 
+            </div>
+
+            <div class="user-grid">
+                
+                {% for usuario in lista_usuarios %}
+                    <div class="user-card" data-user-id="{{ usuario.id }}"> 
+                        <h4>{{ usuario.nombre }}</h4>
+                        <p>{{ usuario.correo }}</p>
+                        <p>Rol: 
+                            {% if usuario.rol %}
+                                <span class="role">Administrador</span>
+                            {% else %}
+                                Usuario Estándar
+                            {% endif %}
+                        </p>
+                    </div>
+                {% empty %}
+                    <p>No hay usuarios registrados.</p>
+                {% endfor %}
+
+            </div>
+        </div>
+    </main> {% include 'prueba/modal_crear_usuario.html' %}
+            {% include 'prueba/modal_modificar_usuario.html' %}
+
+    <script defer>
+document.addEventListener('DOMContentLoaded', function() { 
+    console.log("DOM Cargado. Iniciando TODOS los scripts..."); 
+
+    // --- SECCIÓN 1: Selección/Deselección de Usuarios ---
+    const userCards = document.querySelectorAll('.user-card');
+    const btnModificar = document.querySelector('#btn-modificar-usuario'); 
+    const btnEliminar = document.querySelector('#btn-eliminar-usuario');   
+    let selectedUserIds = [];
+
+    function actualizarBotonesAccion() {
+        const selectedCards = document.querySelectorAll('.user-card.selected');
+        const count = selectedCards.length;
+        
+        if (btnModificar) btnModificar.disabled = (count !== 1); 
+        if (btnEliminar) btnEliminar.disabled = (count === 0); 
+
+        selectedUserIds = Array.from(selectedCards).map(card => card.dataset.userId);
+        console.log(count + " usuario(s) seleccionado(s):", selectedUserIds);
+    }
+
+    userCards.forEach(card => {
+        card.addEventListener('click', () => {
+            card.classList.toggle('selected');
+            actualizarBotonesAccion();
+        });
+    });
+
+    actualizarBotonesAccion(); 
+    console.log("Lógica de selección de usuarios inicializada.");
+
+    // --- SECCIÓN 2: Modal Crear Usuario ---
+    const modalCrearOverlay = document.getElementById('crear-usuario-modal-overlay');
+    const btnAbrirCrear = document.getElementById('btn-abrir-crear-usuario'); 
+    const btnCerrarCrear = document.getElementById('btn-cerrar-crear-usuario');
+    const btnCerrarCrearX = document.getElementById('btn-cerrar-crear-usuario-x');
+    const formCrearUsuario = document.getElementById('form-crear-usuario');
+
+    function abrirModalCrear() {
+        if (!modalCrearOverlay) return;
+        if (formCrearUsuario) formCrearUsuario.reset(); 
+        modalCrearOverlay.style.display = 'flex';
+    }
+    function cerrarModalCrear() {
+        if (!modalCrearOverlay) return;
+        modalCrearOverlay.style.display = 'none';
+    }
+
+    if (btnAbrirCrear) btnAbrirCrear.addEventListener('click', abrirModalCrear);
+    if (btnCerrarCrear) btnCerrarCrear.addEventListener('click', cerrarModalCrear);
+    if (btnCerrarCrearX) btnCerrarCrearX.addEventListener('click', cerrarModalCrear);
+    if (modalCrearOverlay) {
+        modalCrearOverlay.addEventListener('click', (e) => { 
+            if (e.target === modalCrearOverlay) cerrarModalCrear(); 
+        });
+    }
+
+    if (formCrearUsuario) { 
+        formCrearUsuario.addEventListener('submit', function(event) {
+            event.preventDefault(); 
+            const formData = new FormData(formCrearUsuario);
+            const url = formCrearUsuario.action;
+            if (!formData.has('rol')) { formData.append('rol', 'false'); } else { formData.set('rol', 'true'); }
+
+            fetch(url, { 
+                method: 'POST', 
+                body: formData, 
+                headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+            })
+            .then(response => { 
+                if (!response.ok) return response.text().then(text => { throw new Error(`Error ${response.status}: ${text}`) });
+                return response.json(); 
+            })
+            .then(data => { 
+                if (data.success) {
+                    alert('Usuario creado exitosamente!');
+                    cerrarModalCrear();
+                    window.location.reload(); 
+                } else {
+                    alert('Error al crear usuario: ' + (data.error || 'Intenta de nuevo.'));
+                }
+            })
+            .catch(error => {
+                alert('Error al crear usuario:\n' + error.message);
+            });
+        });
+    }
+    console.log("Lógica del modal Crear Usuario inicializada.");
+
+    // --- SECCIÓN 3: Eliminar Usuario ---
+    if (btnEliminar) { 
+        btnEliminar.addEventListener('click', function() { 
+            const selectedCards = document.querySelectorAll('.user-card.selected');
+            const userIdsToDelete = Array.from(selectedCards).map(card => card.dataset.userId);
+
+            if (userIdsToDelete.length === 0) {
+                alert("Selecciona al menos un usuario para eliminar.");
+                return; 
+            }
+            if (!confirm(`¿Eliminar ${userIdsToDelete.length} usuario(s)?`)) return;
+
+            const url = "{% url 'eliminar_usuarios' %}"; 
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value; 
+
+            fetch(url, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ user_ids: userIdsToDelete }) 
+            })
+            .then(response => {
+                if (!response.ok) return response.text().then(text => { throw new Error(`Error ${response.status}: ${text}`) });
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert(`${data.deleted_count || userIdsToDelete.length} usuario(s) eliminado(s).`);
+                    window.location.reload(); 
+                } else {
+                    alert('Error al eliminar: ' + (data.error || 'Intenta de nuevo.'));
+                }
+            })
+            .catch(error => {
+                alert('Error de conexión al eliminar:\n' + error.message);
+            });
+        });
+    }
+
+    // --- SECCIÓN 4: Modal Modificar Usuario ---
+    const modalModificarOverlay = document.getElementById('modificar-usuario-modal-overlay');
+    const btnCerrarModificar = document.getElementById('btn-cerrar-modificar-usuario');
+    const btnCerrarModificarX = document.getElementById('btn-cerrar-modificar-usuario-x');
+    const formModificarUsuario = document.getElementById('form-modificar-usuario');
+
+    function abrirModalModificar() {
+        if (!modalModificarOverlay) return;
+        const selectedCard = document.querySelector('.user-card.selected');
+        if (!selectedCard) {
+            alert("Selecciona un usuario para modificar.");
+            return;
+        }
+
+        const userId = selectedCard.dataset.userId;
+        const nombre = selectedCard.querySelector('h4').textContent;
+        const correo = selectedCard.querySelector('p').textContent;
+        const rolText = selectedCard.querySelector('.role') ? true : false;
+
+        document.getElementById('modificar-user-id').value = userId;
+        document.getElementById('modificar-nombre').value = nombre;
+        document.getElementById('modificar-correo').value = correo;
+        document.getElementById('modificar-rol').checked = rolText;
+
+        modalModificarOverlay.style.display = 'flex';
+    }
+
+    function cerrarModalModificar() {
+        if (!modalModificarOverlay) return;
+        modalModificarOverlay.style.display = 'none';
+    }
+
+    if (btnModificar) btnModificar.addEventListener('click', abrirModalModificar);
+    if (btnCerrarModificar) btnCerrarModificar.addEventListener('click', cerrarModalModificar);
+    if (btnCerrarModificarX) btnCerrarModificarX.addEventListener('click', cerrarModalModificar);
+    if (modalModificarOverlay) {
+        modalModificarOverlay.addEventListener('click', (e) => {
+            if (e.target === modalModificarOverlay) cerrarModalModificar();
+        });
+    }
+
+    if (formModificarUsuario) {
+        formModificarUsuario.addEventListener('submit', function(event) {
+            event.preventDefault();
+            console.log("[Modificar] Enviando formulario...");
+
+            const formData = new FormData(formModificarUsuario);
+            if (!formData.has('rol')) formData.append('rol', 'false');
+            else formData.set('rol', 'true');
+
+            const url = formModificarUsuario.action;
+            const csrf = formData.get('csrfmiddlewaretoken');
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': csrf }
+            })
+            .then(async response => {
+                const text = await response.text();
+                let json = null;
+                try { json = JSON.parse(text); } catch(e) {}
+                if (!response.ok) {
+                    const msg = (json && (json.error || JSON.stringify(json))) || text || response.statusText;
+                    throw new Error(`HTTP ${response.status}: ${msg}`);
+                }
+                return json || {};
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('Usuario modificado exitosamente.');
+                    cerrarModalModificar();
+                    window.location.reload();
+                } else {
+                    alert('No se pudo modificar: ' + (data.error || 'Error desconocido.'));
+                }
+            })
+            .catch(error => {
+                alert('Error al modificar usuario:\n' + error.message);
+            });
+        });
+    }
+
+    console.log("Script completo cargado y listeners asignados.");  
+});
+</script>
+
+
+</body>
+</html>
