@@ -59,55 +59,60 @@
     </main> {% include 'prueba/modal_crear_usuario.html' %}
             {% include 'prueba/modal_modificar_usuario.html' %}
 
-    <script defer>
+
+
+
+            
+    <script defer> //Espera a que TODO el HTML este cargado y listo antes de ejecutar el código
 document.addEventListener('DOMContentLoaded', function() { 
     console.log("DOM Cargado. Iniciando TODOS los scripts..."); 
 
-    // --- SECCIÓN 1: Selección/Deselección de Usuarios ---
-    const userCards = document.querySelectorAll('.user-card');
-    const btnModificar = document.querySelector('#btn-modificar-usuario'); 
-    const btnEliminar = document.querySelector('#btn-eliminar-usuario');   
-    let selectedUserIds = [];
+    //SECCION 1: Selección/Deseleccion de Usuarios
+    const userCards = document.querySelectorAll('.user-card'); //Todas las tarjetas de usuario
+    const btnModificar = document.querySelector('#btn-modificar-usuario'); //Boton Modificar
+    const btnEliminar = document.querySelector('#btn-eliminar-usuario');  //Boton eliminar  
+    let selectedUserIds = []; // Array para almacenar los ID de los usuarios seleccionados
 
-    function actualizarBotonesAccion() {
-        const selectedCards = document.querySelectorAll('.user-card.selected');
+    function actualizarBotonesAccion() { //Funcion que se llama cada vez que cambia la seleccion
+        const selectedCards = document.querySelectorAll('.user-card.selected'); //Cuenta cuantas tarjetas tienen la clase selected
         const count = selectedCards.length;
         
-        if (btnModificar) btnModificar.disabled = (count !== 1); 
+        if (btnModificar) btnModificar.disabled = (count !== 1); //Habilita/deshabilita el botón Modificar: solo si hay 1 seleccionado
         if (btnEliminar) btnEliminar.disabled = (count === 0); 
 
-        selectedUserIds = Array.from(selectedCards).map(card => card.dataset.userId);
+        selectedUserIds = Array.from(selectedCards).map(card => card.dataset.userId); //Actualiza la lista de ID seleccionados
         console.log(count + " usuario(s) seleccionado(s):", selectedUserIds);
     }
 
-    userCards.forEach(card => {
+    userCards.forEach(card => { //Añade un detector de clics a cada tarjeta de usuario
         card.addEventListener('click', () => {
-            card.classList.toggle('selected');
-            actualizarBotonesAccion();
+            card.classList.toggle('selected'); //Cuando se hace clic alterna la clase selected (la añade si no está la quita si esta)
+            actualizarBotonesAccion(); //Llama a la función para actualizar el estado de los botones Modificar/Eliminar
         });
     });
 
-    actualizarBotonesAccion(); 
+    actualizarBotonesAccion();  //Llama a la función una vez al cargar la página para establecer el estado inicial (botones deshabilitados)
     console.log("Lógica de selección de usuarios inicializada.");
 
-    // --- SECCIÓN 2: Modal Crear Usuario ---
+    //SECCION 2: Modal Crear Usuario
+    //Busca los elementos HTML del modal Crear por sus ID
     const modalCrearOverlay = document.getElementById('crear-usuario-modal-overlay');
     const btnAbrirCrear = document.getElementById('btn-abrir-crear-usuario'); 
     const btnCerrarCrear = document.getElementById('btn-cerrar-crear-usuario');
     const btnCerrarCrearX = document.getElementById('btn-cerrar-crear-usuario-x');
     const formCrearUsuario = document.getElementById('form-crear-usuario');
 
-    function abrirModalCrear() {
-        if (!modalCrearOverlay) return;
-        if (formCrearUsuario) formCrearUsuario.reset(); 
-        modalCrearOverlay.style.display = 'flex';
+    function abrirModalCrear() { //Funcion para mostrar el modal crear
+        if (!modalCrearOverlay) return; //si no se encontró el modal no hace nada
+        if (formCrearUsuario) formCrearUsuario.reset(); //Si se encontró el formulario lo resetea (limpia campos)
+        modalCrearOverlay.style.display = 'flex'; //Cambia el estilo CSS para mostrar el modal
     }
-    function cerrarModalCrear() {
+    function cerrarModalCrear() { //Funcion para ocultar el modal Crear
         if (!modalCrearOverlay) return;
-        modalCrearOverlay.style.display = 'none';
+        modalCrearOverlay.style.display = 'none'; //Cambia el estilo CSS para ocultarlo
     }
 
-    if (btnAbrirCrear) btnAbrirCrear.addEventListener('click', abrirModalCrear);
+    if (btnAbrirCrear) btnAbrirCrear.addEventListener('click', abrirModalCrear); // aqui asignamos la función abrirModalCrear al evento del botón principal "Crear Usuario"
     if (btnCerrarCrear) btnCerrarCrear.addEventListener('click', cerrarModalCrear);
     if (btnCerrarCrearX) btnCerrarCrearX.addEventListener('click', cerrarModalCrear);
     if (modalCrearOverlay) {
@@ -115,67 +120,68 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.target === modalCrearOverlay) cerrarModalCrear(); 
         });
     }
-
-    if (formCrearUsuario) { 
+    
+    if (formCrearUsuario) { //Logica para cuando se envia el formulario dentro del modal Crear
         formCrearUsuario.addEventListener('submit', function(event) {
-            event.preventDefault(); 
-            const formData = new FormData(formCrearUsuario);
-            const url = formCrearUsuario.action;
-            if (!formData.has('rol')) { formData.append('rol', 'false'); } else { formData.set('rol', 'true'); }
+            event.preventDefault(); //Evita que la pagina se recargue
+            const formData = new FormData(formCrearUsuario); //Recolecta todos los datos del formulario
+            const url = formCrearUsuario.action; //Obtiene la URL de la vista Django
+            if (!formData.has('rol')) { formData.append('rol', 'false'); } else { formData.set('rol', 'true'); } //Manejo especial para el checkbox rol si no esta marcado, no se envía por defecto
 
+            // Envia los datos al servidor usando Fetch (AJAX) con metodo POST
             fetch(url, { 
                 method: 'POST', 
-                body: formData, 
-                headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+                body: formData, //Los datos del formulario
+                headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }  //Token de seguridad de Django
             })
-            .then(response => { 
+            .then(response => {  //Procesa la respuesta inicial del servidor junto con los errores
                 if (!response.ok) return response.text().then(text => { throw new Error(`Error ${response.status}: ${text}`) });
-                return response.json(); 
+                return response.json();  // Si todo OK intenta leer el cuerpo como JSON
             })
-            .then(data => { 
+            .then(data => {  //Procesa los datos JSON si todo salio bien
                 if (data.success) {
                     alert('Usuario creado exitosamente!');
-                    cerrarModalCrear();
+                    cerrarModalCrear(); // # Cierra el modal si todo sale bien
                     window.location.reload(); 
-                } else {
+                } else { // # Si indica error Muestra los errores
                     alert('Error al crear usuario: ' + (data.error || 'Intenta de nuevo.'));
                 }
             })
-            .catch(error => {
+            .catch(error => { // # Atrapa errores de red
                 alert('Error al crear usuario:\n' + error.message);
             });
         });
     }
     console.log("Lógica del modal Crear Usuario inicializada.");
 
-    // --- SECCIÓN 3: Eliminar Usuario ---
-    if (btnEliminar) { 
-        btnEliminar.addEventListener('click', function() { 
-            const selectedCards = document.querySelectorAll('.user-card.selected');
+    //SECCION 3: Eliminar Usuario
+    if (btnEliminar) { //Reutiliza la variable btnEliminar de la SecciOn 1
+        btnEliminar.addEventListener('click', function() { //AsignaMOS la logica al evento click del botón Eliminar Usuario
+            const selectedCards = document.querySelectorAll('.user-card.selected'); //Obtiene los ID de todas las tarjetas seleccionadas
             const userIdsToDelete = Array.from(selectedCards).map(card => card.dataset.userId);
 
-            if (userIdsToDelete.length === 0) {
+            if (userIdsToDelete.length === 0) { //Verifica si hay usuarios seleccionados
                 alert("Selecciona al menos un usuario para eliminar.");
                 return; 
             }
-            if (!confirm(`¿Eliminar ${userIdsToDelete.length} usuario(s)?`)) return;
+            if (!confirm(`¿Eliminar ${userIdsToDelete.length} usuario(s)?`)) return; //Pide confirmacion
 
-            const url = "{% url 'eliminar_usuarios' %}"; 
+            const url = "{% url 'eliminar_usuarios' %}"; //URL de la vista Django
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value; 
 
-            fetch(url, {
+            fetch(url, { //Envía la lista de ID al servidor como JSON usando Fetch y método POST
                 method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({ user_ids: userIdsToDelete }) 
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }, //Indica que enviamos JSON
+                body: JSON.stringify({ user_ids: userIdsToDelete }) //Convierte la lista a texto JSON
             })
             .then(response => {
-                if (!response.ok) return response.text().then(text => { throw new Error(`Error ${response.status}: ${text}`) });
+                if (!response.ok) return response.text().then(text => { throw new Error(`Error ${response.status}: ${text}`) }); //Manejo de error
                 return response.json();
             })
-            .then(data => {
+            .then(data => { //Procesa el JSON 
                 if (data.success) {
-                    alert(`${data.deleted_count || userIdsToDelete.length} usuario(s) eliminado(s).`);
-                    window.location.reload(); 
+                    alert(`${data.deleted_count || userIdsToDelete.length} usuario(s) eliminado(s).`); //Muestra mensaje de éxito
+                    window.location.reload(); //Recarga la página
                 } else {
                     alert('Error al eliminar: ' + (data.error || 'Intenta de nuevo.'));
                 }
@@ -186,13 +192,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- SECCIÓN 4: Modal Modificar Usuario ---
+    //SECCION 4: Modal Modificar Usuario
+    //Busca los elementos HTML del modal Modificar
     const modalModificarOverlay = document.getElementById('modificar-usuario-modal-overlay');
     const btnCerrarModificar = document.getElementById('btn-cerrar-modificar-usuario');
     const btnCerrarModificarX = document.getElementById('btn-cerrar-modificar-usuario-x');
     const formModificarUsuario = document.getElementById('form-modificar-usuario');
 
-    function abrirModalModificar() {
+    function abrirModalModificar() { //Funciones para abrir/cerrar el modal Modificar
         if (!modalModificarOverlay) return;
         const selectedCard = document.querySelector('.user-card.selected');
         if (!selectedCard) {
@@ -200,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const userId = selectedCard.dataset.userId;
+        const userId = selectedCard.dataset.userId; //Obtiene el ID del usuario
         const nombre = selectedCard.querySelector('h4').textContent;
         const correo = selectedCard.querySelector('p').textContent;
         const rolText = selectedCard.querySelector('.role') ? true : false;
@@ -213,12 +220,13 @@ document.addEventListener('DOMContentLoaded', function() {
         modalModificarOverlay.style.display = 'flex';
     }
 
-    function cerrarModalModificar() {
+    function cerrarModalModificar() { //Funcion para cerrar el modal Modificar
         if (!modalModificarOverlay) return;
         modalModificarOverlay.style.display = 'none';
     }
 
-    if (btnModificar) btnModificar.addEventListener('click', abrirModalModificar);
+    if (btnModificar) btnModificar.addEventListener('click', abrirModalModificar); // Asigna la funcion abrirModalModificar al evento click del botón principal "Modificar Usuario"
+    //Asigna las funciones de cierre a los botones 'Cancelar', 'X' y fondo del modal Modificar
     if (btnCerrarModificar) btnCerrarModificar.addEventListener('click', cerrarModalModificar);
     if (btnCerrarModificarX) btnCerrarModificarX.addEventListener('click', cerrarModalModificar);
     if (modalModificarOverlay) {
@@ -227,19 +235,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    if (formModificarUsuario) {
+    if (formModificarUsuario) { //Logica para cuando se envía el formulario dentro del modal Modificar
         formModificarUsuario.addEventListener('submit', function(event) {
-            event.preventDefault();
+            event.preventDefault(); // # Evita recarga
             console.log("[Modificar] Enviando formulario...");
 
-            const formData = new FormData(formModificarUsuario);
+            const formData = new FormData(formModificarUsuario); // # Recolecta datos
             if (!formData.has('rol')) formData.append('rol', 'false');
             else formData.set('rol', 'true');
 
             const url = formModificarUsuario.action;
             const csrf = formData.get('csrfmiddlewaretoken');
 
-            fetch(url, {
+            fetch(url, { //Envia los datos modificados
                 method: 'POST',
                 body: formData,
                 headers: { 'X-CSRFToken': csrf }
@@ -252,13 +260,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     const msg = (json && (json.error || JSON.stringify(json))) || text || response.statusText;
                     throw new Error(`HTTP ${response.status}: ${msg}`);
                 }
-                return json || {};
+                return json || {}; //Devuelve JSON o {}
             })
-            .then(data => {
+            .then(data => { // # Procesa JSON
                 if (data.success) {
                     alert('Usuario modificado exitosamente.');
                     cerrarModalModificar();
-                    window.location.reload();
+                    window.location.reload(); //Recarga página
                 } else {
                     alert('No se pudo modificar: ' + (data.error || 'Error desconocido.'));
                 }

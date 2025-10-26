@@ -136,72 +136,70 @@
 
 
 <script>
-        // --- Elementos del DOM ---
-        const modalOverlay1 = document.getElementById('ingreso-modal-overlay');
-        const btnAbrirModal1 = document.getElementById('btn-abrir-modal'); 
-        const btnCerrarModal1 = document.getElementById('btn-cerrar-modal'); 
-        const btnCerrarModal1X = document.getElementById('btn-cerrar-modal-x'); 
+        // # Busca los elementos HTML necesarios por sus ID para usarlos en el script(modal)
+        const modalOverlay1 = document.getElementById('ingreso-modal-overlay'); // # El fondo oscuro
+        const btnAbrirModal1 = document.getElementById('btn-abrir-modal'); // # Botón "INGRESAR" principal
+        const btnCerrarModal1 = document.getElementById('btn-cerrar-modal'); // # Botón "Cancelar" del modal
+        const btnCerrarModal1X = document.getElementById('btn-cerrar-modal-x'); // # La 'X' del modal
         
-        // Campos del Modal 1
+        // # Campos de input dentro del modal
         const modal1Ejercicio = document.getElementById('modal-ejercicio');
         const modal1Instrumento = document.getElementById('modal-instrumento');
         const modal1FechaPago = document.getElementById('modal-fecha_pago');
         const modal1Secuencia = document.getElementById('modal-secuencia');
-        const modal1Mercado = document.getElementById('modal-mercado');
+        const modal1Mercado = document.getElementById('modal-mercado'); // # Campo Mercado (readonly)
         const modal1Dividendo = document.getElementById('modal-dividendo');
-        const modal1ISFUT = document.getElementById('modal-isfut'); // El checkbox
+        const modal1ISFUT = document.getElementById('modal-isfut'); // # El checkbox ISFUT
         
-        // Campo "Mercado" del Dashboard
+        // # Campo "Mercado" del HEADER del dashboard (para leer su valor)
         const dashboardMercado = document.getElementById('mercado');
 
-        // Botón "Ingresar" del Modal 1
+        // # Botón "Ingresar" DENTRO del Modal 1 (para pasar al siguiente paso)
         const btnSiguienteModal = document.getElementById('btn-siguiente-modal'); 
 
-        // --- Funciones para Modal 1 ---
+        // --- Funciones para abrir/cerrar Modal 1 ---
         function abrirModal1() { 
+            // # Copia el valor actual Mercado del dashboard al campo del modal
             modal1Mercado.value = dashboardMercado.value; 
+            // # Muestra el modal cambiando su estilo CSS
             modalOverlay1.style.display = 'flex'; 
         }
         function cerrarModal1() { 
+            // # Oculta el modal
             modalOverlay1.style.display = 'none'; 
         }
 
-        // --- Asignar Eventos ---
-        btnAbrirModal1.addEventListener('click', abrirModal1);
+        //Eventos (Listeners)
+        btnAbrirModal1.addEventListener('click', abrirModal1); //Cuando ocurra click en btnAbrirModal1, ejecuta abrirModal1
+        // # Asigna la función de cierre a los botones Cancelar y X
         btnCerrarModal1.addEventListener('click', cerrarModal1);
         btnCerrarModal1X.addEventListener('click', cerrarModal1);
         
-        // Evento para el botón "Ingresar" del Modal 1
-        btnSiguienteModal.addEventListener('click', function() {
-             console.log("Clic en Ingresar Modal 1 - Datos listos para Modal 2");
-             
-             // Leemos los valores (¡ISFUT ahora usa .checked!)
-             const ejercicioVal = modal1Ejercicio.value;
-             const instrumentoVal = modal1Instrumento.value;
-             const fechaPagoVal = modal1FechaPago.value;
-             const secuenciaVal = modal1Secuencia.value;
-             const mercadoVal = modal1Mercado.value;
-             const dividendoVal = modal1Dividendo.value;
-             const isfutVal = modal1ISFUT.checked; // <-- Lee true/false del checkbox
-             
-             console.log("ISFUT Checkbox:", isfutVal); // Para depurar
+        
+        btnSiguienteModal.addEventListener('click', function() { //Evento para el botón "Ingresar" DENTRO del Modal 1
+              console.log("Clic en Ingresar Modal 1 - Datos listos para Modal 2");
+              
+              // # Lee los valores actuales de los campos del modal en el momento del clic
+              const ejercicioVal = modal1Ejercicio.value;
+              const instrumentoVal = modal1Instrumento.value;
+              const fechaPagoVal = modal1FechaPago.value;
+              const secuenciaVal = modal1Secuencia.value;
+              const mercadoVal = modal1Mercado.value; // Ya tiene el valor del dashboard
+              const dividendoVal = modal1Dividendo.value;
+              const isfutVal = modal1ISFUT.checked; // # Lee si el checkbox está marcado (true/false)
+              
+              console.log("ISFUT Checkbox:", isfutVal); // # Mensaje para depurar
 
-             // --- Aquí iría la lógica para pasar estos 7 valores al Modal 2 ---
-             // Por ejemplo:
-             // modal2EjercicioHidden.value = ejercicioVal;
-             // modal2ISFUTHidden.value = isfutVal; // Pasamos true/false
-             // ... etc ...
-             // abrirModal2();
-             
-             cerrarModal1(); // Por ahora, solo cerramos
+              // EN PROCESO 
+              cerrarModal1(); 
         });
 
-        // Cerrar modal si se hace clic fuera
+        // # Evento para cerrar el modal si se hace clic en el fondo
         modalOverlay1.addEventListener('click', (e) => { 
-            if (e.target === modalOverlay1) cerrarModal1(); 
+            if (e.target === modalOverlay1) {
+                 cerrarModal1(); //cierra el modal.
+            }
         });
         
-    </script>
-
-</body>
+    </script> </body>
 </html>
