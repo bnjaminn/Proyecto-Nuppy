@@ -60,12 +60,27 @@
             {% include 'prueba/modal_modificar_usuario.html' %}
 
 
-
-
-            
     <script defer> //Espera a que TODO el HTML este cargado y listo antes de ejecutar el código
 document.addEventListener('DOMContentLoaded', function() { 
     console.log("DOM Cargado. Iniciando TODOS los scripts..."); 
+
+    // Función para limpiar errores
+    function limpiarMensajeError(msg) {
+        if (!msg) return "Error desconocido.";
+        const lower = msg.toLowerCase();
+        if (lower.includes("duplicate key") || lower.includes("correo") || lower.includes("email")) {
+            return "Este correo electrónico ya está registrado.";
+        } else if (lower.includes("400") || lower.includes("bad request")) {
+            return "Verifica los datos ingresados. Es posible que el correo ya exista.";
+        } else if (lower.includes("500")) {
+            return "Error interno del servidor. Intenta más tarde.";
+        } else if (lower.includes("csrf") || lower.includes("token")) {
+            return "Error de seguridad. Recarga la página e inténtalo nuevamente.";
+        } else if (lower.includes("json") || lower.includes("syntax")) {
+            return "Error al procesar la respuesta del servidor.";
+        }
+        return msg.replace(/<[^>]*>?/gm, "").slice(0, 300); // Elimina HTML y limita longitud
+    }
 
     //SECCION 1: Selección/Deseleccion de Usuarios
     const userCards = document.querySelectorAll('.user-card'); //Todas las tarjetas de usuario
@@ -147,16 +162,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Error al crear usuario: ' + (data.error || 'Intenta de nuevo.'));
                 }
             })
-            .catch(error => { // # Atrapa errores de red
-                alert('Error al crear usuario:\n' + error.message);
+            .catch(error => {
+                console.error("Error detallado:", error.message);
+                alert("Error al crear usuario:\n" + limpiarMensajeError(error.message));
             });
         });
     }
     console.log("Lógica del modal Crear Usuario inicializada.");
 
     //SECCION 3: Eliminar Usuario
-    if (btnEliminar) { //Reutiliza la variable btnEliminar de la SecciOn 1
-        btnEliminar.addEventListener('click', function() { //AsignaMOS la logica al evento click del botón Eliminar Usuario
+    if (btnEliminar) { //Reutiliza la variable btnEliminar de la Sección 1
+        btnEliminar.addEventListener('click', function() { //Asigna la lógica al evento click del botón Eliminar Usuario
             const selectedCards = document.querySelectorAll('.user-card.selected'); //Obtiene los ID de todas las tarjetas seleccionadas
             const userIdsToDelete = Array.from(selectedCards).map(card => card.dataset.userId);
 
@@ -164,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert("Selecciona al menos un usuario para eliminar.");
                 return; 
             }
-            if (!confirm(`¿Eliminar ${userIdsToDelete.length} usuario(s)?`)) return; //Pide confirmacion
+            if (!confirm(`¿Eliminar ${userIdsToDelete.length} usuario(s)?`)) return; //Pide confirmación
 
             const url = "{% url 'eliminar_usuarios' %}"; //URL de la vista Django
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value; 
@@ -187,7 +203,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                alert('Error de conexión al eliminar:\n' + error.message);
+                console.error("Error al eliminar:", error.message);
+                alert('Error al eliminar usuario:\n' + limpiarMensajeError(error.message));
             });
         });
     }
@@ -225,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
         modalModificarOverlay.style.display = 'none';
     }
 
-    if (btnModificar) btnModificar.addEventListener('click', abrirModalModificar); // Asigna la funcion abrirModalModificar al evento click del botón principal "Modificar Usuario"
+    if (btnModificar) btnModificar.addEventListener('click', abrirModalModificar); // Asigna la función abrirModalModificar al botón principal
     //Asigna las funciones de cierre a los botones 'Cancelar', 'X' y fondo del modal Modificar
     if (btnCerrarModificar) btnCerrarModificar.addEventListener('click', cerrarModalModificar);
     if (btnCerrarModificarX) btnCerrarModificarX.addEventListener('click', cerrarModalModificar);
@@ -272,7 +289,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                alert('Error al modificar usuario:\n' + error.message);
+                console.error("Error al modificar:", error.message);
+                alert('Error al modificar usuario:\n' + limpiarMensajeError(error.message));
             });
         });
     }
