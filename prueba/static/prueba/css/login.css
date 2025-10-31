@@ -1,22 +1,45 @@
+
 :root {
-    --nuam-orange: #f5550b; /* Naranja principal (Tailwind Amber 500) */
-    --nuam-orange-dark: #d95306; /* Naranja oscuro para hover (Amber 600) */
-    --text-on-orange: #FFFFFF;
+    /* Color Principal */
+    --color-primary: #FF6B00;
+    --color-primary-dark: #E55A00;
+    --color-primary-light: #FFF4E6;
+    --color-primary-hover: #FF8533;
+    
+    /* Textos */
+    --text-primary: #1A1A1A;
+    --text-secondary: #555555;
+    --text-on-primary: #FFFFFF;
+    
+    /* Fondos */
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F9F9F9;
+    --bg-light: #F0F0F0;
+    
+    /* Bordes */
+    --border: #E0E0E0;
+    --border-dark: #CCCCCC;
+    
+    /* Acciones */
+    --color-success: #28A745;
+    --color-danger: #DC3545;
+    --color-warning: #FFC107;
 }
 
 body {
     font-family: Arial, sans-serif;
-    background-color: #f0f2f5;
+    background-color: var(--bg-light);
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
     margin: 0;
+    color: var(--text-primary);
 }
 
 .login-container {
-    background-color: #ffffff;
-    border: 1px solid #ddd;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 2rem;
     width: 350px;
@@ -27,14 +50,14 @@ body {
 .logo-placeholder {
     width: 110px;
     height: 74px;
-    background-color: #eee;
-    border: 1px dashed #ccc;
+    background-color: var(--bg-light);
+    border: 1px dashed var(--border);
     margin: 0 auto 1.5rem auto;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 10px;
-    color: #888;
+    color: var(--text-secondary);
 }
 
 form {
@@ -46,40 +69,36 @@ form {
 .form-input {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 4px;
     box-sizing: border-box; 
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-/* --- ¡CAMBIO! --- */
 .form-input:focus {
-    border-color: var(--nuam-orange);
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2);
     outline: none;
 }
 
 .login-button {
-    /* --- ¡CAMBIO! --- */
-    background-color: var(--nuam-orange);
-    border: 1px solid var(--nuam-orange-dark);
-    color: var(--text-on-orange);
-    /* --- Fin del Cambio --- */
-
+    background-color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    color: var(--text-on-primary);
     padding: 0.75rem;
     border-radius: 4px;
     cursor: pointer;
     font-weight: bold;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, border-color 0.2s;
 }
 
-/* --- ¡CAMBIO! --- */
 .login-button:hover {
-    background-color: var(--nuam-orange-dark);
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
 }
 
 .error-message {
-    color: red;
+    color: var(--color-danger);
     font-size: 0.9rem;
 }
 
@@ -87,12 +106,11 @@ form {
     display: block;
     margin-top: 1.5rem;
     font-size: 0.9rem;
-    color: #555;
+    color: var(--text-secondary);
     text-decoration: none;
     transition: color 0.2s;
 }
 
-/* --- ¡CAMBIO! --- */
 .contact-link:hover {
-    color: var(--nuam-orange);
+    color: var(--color-primary);
 }

@@ -1,0 +1,43 @@
+
+.log-table-container {
+    /* Define una altura máxima y permite scroll vertical */
+    max-height: 75vh; 
+    overflow-y: auto; 
+    background-color: #fff;
+    border-radius: 8px; /* Añade bordes redondeados al contenedor */
+}
+
+.log-table {
+    width: 100%;
+    border-collapse: collapse; /* Bordes de tabla limpios */
+}
+
+.log-table th, .log-table td {
+    border: 1px solid #ddd;
+    padding: 0.75rem;
+    text-align: left;
+    font-size: 0.9rem;
+    /* Permite que el texto se ajuste si es muy largo */
+    white-space: normal; 
+    /* Corta palabras largas (como IDs) si es necesario */
+    word-break: break-all; 
+}
+
+.log-table th {
+    /* Encabezado Naranja NUAM (usa variables de dashboard.css) */
+    background-color: var(--nuam-orange-light); 
+    color: var(--text-on-light-orange); 
+    position: sticky; /* Mantiene el encabezado fijo al hacer scroll */
+    top: 0;
+    z-index: 10; /* Asegura que el header esté sobre las filas */
+}
+
+/* Añade bandas de color (filas pares) para legibilidad */
+.log-table tr:nth-child(even) {
+     background-color: #f9f9f9; 
+}
+
+/* Mejora visual: hover sobre las filas */
+.log-table tbody tr:hover {
+    background-color: #f1f1f1;
+}

@@ -1,284 +1,341 @@
-from django.shortcuts import render, redirect, get_object_or_404 #Funciones de Django
-from django.http import HttpResponseForbidden, JsonResponse, Http404 # JsonResponse: para enviar respuestas a JavaScript (AJAX), HttpResponseForbidden: para mostrar error de "Acceso Denegado",  Http404: para errores "No encontrado"
-import json # Para leer datos enviados como JSON
-from django.views.decorators.http import require_POST, require_GET #para restringir métodos HTTP (POST o GET)
-from .formulario import LoginForm, CalificacionModalForm, UsuarioForm, UsuarioUpdateForm # Importa los formularios definidos en formulario.py
-from .models import usuarios, Calificacion # importamos la clase usuarios de models para trabajar onda aca rescatamos los datos del documento los cuales usaremos para trabajar
+import json
+from django.shortcuts import render, redirect
+from django.http import HttpResponseForbidden, JsonResponse
+from django.views.decorators.http import require_POST, require_GET
+from mongoengine.errors import DoesNotExist
+from bson import ObjectId
+
+from .formulario import LoginForm, CalificacionModalForm, UsuarioForm
+from .models import usuarios, Calificacion, Log
+
+
+# --- Función Auxiliar para crear logs ---
+def _crear_log(usuario_obj, accion_str, documento_afectado=None, usuario_afectado=None):
+    """
+    Guarda un registro de log con información sobre la acción realizada.
+    """
+    try:
+        nuevo_log = Log(
+            Usuarioid=usuario_obj,
+            correoElectronico=usuario_obj.correo,
+            accion=accion_str,
+            iddocumento=documento_afectado,
+            usuario_afectado=usuario_afectado
+        )
+        nuevo_log.save()
+        print(f"Log guardado correctamente: {accion_str} por {usuario_obj.correo}")
+    except Exception as e:
+        print(f"¡¡ADVERTENCIA!! Falló al guardar el log: {e}")
+# --- Fin Función Auxiliar ---
+
 
 def listar_usuarios(request):
-    #Hacemos la consulta a MongoDB usando el modelo rescatado de models
     todos_los_usuarios = usuarios.objects.all()
-
-    # Preparamos el contexto. 
-    context = {
-        'usuarios': todos_los_usuarios 
-    }
-    #lo llevamos al html
-    return render(request, 'prueba/listar.html', context)
+    return render(request, 'prueba/listar.html', {'usuarios': todos_los_usuarios})
 
 
-def login_view(request): #Funcion/vista para el login
-    if 'user_id' in request.session: #Revisamos si en la sesion el user_id existe
-        return redirect('home') #Si existe lo llevamos directo al dashboard
-    form = LoginForm() #Mandamos el formulario del login vacío y sin error para la primera carga con esto usamos el GET
+def login_view(request):
+    if 'user_id' in request.session:
+        return redirect('home')
+
+    form = LoginForm()
     error = None
-    if request.method == 'POST': #se empieza un if para ver si el usuario envio el formulario
-        form = LoginForm(request.POST) #Crea el formulario con los datos enviados por eso el POST
-        if form.is_valid(): #aca se verifica que el formato de los datos sean correctos 
-            # Obtenemos el correo y contra
-            correo_usuario = form.cleaned_data['correo'] 
+
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            correo_usuario = form.cleaned_data['correo']
             contrasena_usuario = form.cleaned_data['contrasena']
+
             try:
-                # Buscamos al usuario en MongoDB por su correo
-                user = usuarios.objects.get(
-                    correo=correo_usuario, 
-                    contrasena=contrasena_usuario
-                )
+                user = usuarios.objects.get(correo=correo_usuario, contrasena=contrasena_usuario)
             except usuarios.DoesNotExist:
                 user = None
+
             if user:
-                # Esto pasa solo si se encuentra con exito al usuario y Guardamos la sesión
                 request.session['user_id'] = str(user.id)
-                request.session['user_nombre'] = user.nombre # Usamos el nombre para saludar
-                
-                return redirect('home') #aca dirige al dashboard si el login fue con exito
-            else: # Si no lo encontró, prepara mensaje de error
-                error = "Correo o contraseña incorrectos."  
-    return render(request, 'prueba/login.html', {'form': form, 'error': error}) #Muestra la plantilla del login.html, pasándole el formulario (vacío) y el mensaje de error si es que existe
+                request.session['user_nombre'] = user.nombre
+                return redirect('home')
+            else:
+                error = "Correo o contraseña incorrectos."
+
+    return render(request, 'prueba/login.html', {'form': form, 'error': error})
 
 
-
-
-
-def home_view(request): #Funcion/vista para el dashboard
-    if 'user_id' not in request.session: #verifica que este el usuario logeado de no ser asi te manda devuelta al login
+def home_view(request):
+    if 'user_id' not in request.session:
         return redirect('login')
-    user_id = request.session['user_id'] #Se obtiene el id guardado en la sesion
-    is_admin = False # Valor por defecto: no es admin por defecto para seguridad
 
-    try: # Buscamos al usuario en MongoDB para obtener su rol
-        current_user = usuarios.objects.get(id=user_id)
-        if current_user.rol == True:
-            is_admin = True # Si tiene rol=True, lo marcamos como admin
-    except usuarios.DoesNotExist: # Si el usuario no existe, lo deslogueamos y mandamos al login inmedidatamente
-        try:
-            del request.session['user_id'] #los del son para limpiar la sesion
-            del request.session['user_nombre']
-        except KeyError: pass
-        return redirect('login') #y aca redirigimos al login
-
-    # Pasamos el nombre Y si es admin (True/False) a la plantilla
-    context = {
-        'user_nombre': request.session.get('user_nombre'),
-        'is_admin': is_admin 
-    }
-    return render(request, 'prueba/home.html', context) #Muestra la plantilla home.html
-
-
-
-
-
-
-def logout_view(request): #Funcion/vista para cerrar la sesion xd
     try:
-        del request.session['user_id'] #los del son para limpiar la sesion
-        del request.session['user_nombre']
-    except KeyError:
-        pass
+        current_user = usuarios.objects.get(id=request.session['user_id'])
+        is_admin = current_user.rol
+    except usuarios.DoesNotExist:
+        request.session.flush()
+        return redirect('login')
 
-    return redirect('login') #Siempre redirige al login
+    return render(request, 'prueba/home.html', {
+        'user_nombre': current_user.nombre,
+        'is_admin': is_admin
+    })
 
 
+def logout_view(request):
+    request.session.flush()
+    return redirect('login')
 
 
-
-#EN ESTADO BETA NO TOCAAAR
 def ingresar_view(request):
     if 'user_id' not in request.session:
         return redirect('login')
-    
+
+    try:
+        current_user = usuarios.objects.get(id=request.session['user_id'])
+    except usuarios.DoesNotExist:
+        request.session.flush()
+        return redirect('login')
+
     if request.method == 'POST':
         form = CalificacionModalForm(request.POST)
         if form.is_valid():
             nueva_calificacion = Calificacion(**form.cleaned_data)
             nueva_calificacion.save()
+            _crear_log(current_user, 'Crear Calificacion', documento_afectado=nueva_calificacion)
             return redirect('home')
     else:
-        #Leemos todos los datos que vienen del modal por la URL
         initial_data = {
-            'Mercado': request.GET.get('mercado', None),
-            'Ejercicio': request.GET.get('ejercicio', None),
-            'Instrumento': request.GET.get('instrumento', None),
-            'FechaPago': request.GET.get('fecha_pago', None),
-            'SecuenciaEvento': request.GET.get('secuencia', None),
+            'Mercado': request.GET.get('mercado'),
+            'Ejercicio': request.GET.get('ejercicio'),
+            'Instrumento': request.GET.get('instrumento'),
+            'FechaPago': request.GET.get('fecha_pago'),
+            'SecuenciaEvento': request.GET.get('secuencia'),
         }
-        
-        #Creamos el formulario con esos valores iniciales
         form = CalificacionModalForm(initial=initial_data)
 
     return render(request, 'prueba/ingresar.html', {'form': form})
 
 
-
-
-
-
-#Funcion/vista para el modulo de administrar
 def administrar_view(request):
-    if 'user_id' not in request.session: #Verificar si está logueado
-        return redirect('login')
-    user_id = request.session['user_id']
-    try: #Verifica si es admin
-        current_user = usuarios.objects.get(id=user_id)
-        if current_user.rol == True:
-            todos_los_usuarios = usuarios.objects.all() #Obtiene la lista completa de usuarios
-            context = { # Se inicia la plantilla a la espera de datos
-                'user_nombre': request.session.get('user_nombre'),
-                'lista_usuarios': todos_los_usuarios # Pasamos la lista a la plantilla
-            }
-            return render(request, 'prueba/administrar.html', context) #Muestra la plantilla administrar.html
-        else:
-            # Si NO es admin, acceso denegado
-            return HttpResponseForbidden("<h1>Acceso Denegado</h1><p>No tienes permisos de administrador para ver esta página.</p><a href='/home/'>Volver al inicio</a>")
-
-    except usuarios.DoesNotExist: #Si el usuario de la sesión no existe, limpiamos y al login
-        try:
-            del request.session['user_id']
-            del request.session['user_nombre']
-        except KeyError: pass
+    if 'user_id' not in request.session:
         return redirect('login')
 
+    try:
+        current_user = usuarios.objects.get(id=request.session['user_id'])
+    except usuarios.DoesNotExist:
+        request.session.flush()
+        return redirect('login')
+
+    if not current_user.rol:
+        return HttpResponseForbidden("<h1>Acceso Denegado</h1><p>No tienes permisos...</p><a href='/home/'>Volver</a>")
+
+    todos_los_usuarios = usuarios.objects.all()
+    return render(request, 'prueba/administrar.html', {
+        'user_nombre': current_user.nombre,
+        'lista_usuarios': todos_los_usuarios,
+        'is_admin': current_user.rol
+    })
 
 
-
-
-
-#Funcion/vista para el modulo de crear usuario
-@require_POST #Solo permite peticiones POST
+@require_POST
 def crear_usuario_view(request):
-    #Verificar si el que hace la petición es admin
-    if 'user_id' not in request.session: return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
-    try: #chequeo de rol
-        admin_user = usuarios.objects.get(id=request.session['user_id'])
-        if not admin_user.rol: return JsonResponse({'success': False, 'error': 'No autorizado'}, status=403)
-    except usuarios.DoesNotExist: return JsonResponse({'success': False, 'error': 'Admin no válido'}, status=401)
-
-    form = UsuarioForm(request.POST) #Validar los datos recibidos en el POST usando el formulario
-    if form.is_valid(): #¿Pasó la validación (requeridos, email, correo no repetido)?
-        try:
-            nuevo_usuario = usuarios( #Crea un objeto usuarios con los datos limpios del form
-                nombre=form.cleaned_data['nombre'],
-                correo=form.cleaned_data['correo'],
-                contrasena=form.cleaned_data['contrasena'],
-                rol=form.cleaned_data['rol']
-            )
-            nuevo_usuario.save() #Guarda en MongoDB
-            return JsonResponse({'success': True}) #Responde al JS con éxito
-        except Exception as e:#Si ocurre un error al guardar en BD
-            print(f"Error al crear usuario: {e}") # Log para el servidor
-            # --- ¡RESPUESTA CORRECTA EN ERROR! ---
-            return JsonResponse({'success': False, 'error': f'Error interno al guardar: {e}'}, status=500) 
-    else:
-        print("Errores de formulario (Crear):", form.errors.as_json()) # Log para el servidor
-        return JsonResponse({'success': False, 'error': form.errors.as_json()}, status=400) 
-
-
-
-
-
-
-#Funcion/vista para el modulo de eliminar usuario
-@require_POST #Solo permite peticiones POST
-def eliminar_usuarios_view(request):
-    #Verificar si el que hace la petición es admin
-    if 'user_id' not in request.session: return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
-    try: #chequeo de rol
-        admin_user = usuarios.objects.get(id=request.session['user_id'])
-        if not admin_user.rol: return JsonResponse({'success': False, 'error': 'No autorizado'}, status=403)
-    except usuarios.DoesNotExist: return JsonResponse({'success': False, 'error': 'Admin no válido'}, status=401)
-    try: #Leer la lista de IDs del cuerpo JSON de la petición
-        data = json.loads(request.body) #Parsea el JSON enviado por fetch
-        user_ids_to_delete = data.get('user_ids', []) #Extrae la lista de ID
-        if not isinstance(user_ids_to_delete, list) or not user_ids_to_delete: #Verifica que sea una lista y no esté vacía
-             return JsonResponse({'success': False, 'error': 'Lista de IDs inválida'}, status=400)
-    except json.JSONDecodeError: # Si el cuerpo no era JSON válido
-        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
-
-    try: #Proceso de Intentar eliminar los usuarios
-        if request.session['user_id'] in user_ids_to_delete: #verificar no autoeliminarse
-             return JsonResponse({'success': False, 'error': 'No puedes eliminarte a ti mismo'}, status=400)
-        delete_result = usuarios.objects(id__in=user_ids_to_delete).delete() 
-        print(f"Usuarios eliminados: {delete_result}") # Log para el servidor
-        return JsonResponse({'success': True, 'deleted_count': delete_result}) 
-    except Exception as e:
-        print(f"Error al eliminar usuarios: {e}") # Log para el servidor
-        # --- ¡RESPUESTA CORRECTA EN ERROR! ---
-        return JsonResponse({'success': False, 'error': f'Error interno al eliminar: {e}'}, status=500) 
-
-
-
-
-
-
-
-#Vista para obtener a los usuarios para el modificar (evaluandose su uso)
-@require_GET
-def obtener_usuario_view(request, user_id):
-     #verificación admin
-     try:
-         usuario = usuarios.objects.get(id=user_id)
-         usuario_data = { # ... datos ...
-            'id': str(usuario.id), 'nombre': usuario.nombre, 'correo': usuario.correo, 'rol': usuario.rol
-         }
-         return JsonResponse({'success': True, 'usuario': usuario_data})
-     except usuarios.DoesNotExist:
-         return JsonResponse({'success': False, 'error': 'Usuario no encontrado'}, status=404)
-     except Exception as e:
-         return JsonResponse({'success': False, 'error': f'Error interno: {e}'}, status=500)
-
-
-
-
-#Funcion/vista para el modulo de modificar usuario
-@require_POST #Solo permite peticiones POST
-def modificar_usuario_view(request):
-    if 'user_id' not in request.session: #Verificar si el que hace la petición es admin
+    if 'user_id' not in request.session:
         return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
-    try: #chequeo de rol
+
+    try:
         admin_user = usuarios.objects.get(id=request.session['user_id'])
         if not admin_user.rol:
             return JsonResponse({'success': False, 'error': 'No autorizado'}, status=403)
     except usuarios.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Admin no válido'}, status=401)
 
-    #Validacion de datos
-    user_id = request.POST.get('user_id') or request.POST.get('id')  # aceptación por si hay nombre distinto
-    if not user_id: # Si no se recibe el ID del usuario a modificar, devuelve error 400
-        return JsonResponse({'success': False, 'error': 'Falta user_id en la petición'}, status=400)
+    form = UsuarioForm(request.POST)
+    if form.is_valid():
+        try:
+            nuevo_usuario = usuarios(**form.cleaned_data)
+            nuevo_usuario.save()
+            _crear_log(admin_user, 'Crear Usuario', usuario_afectado=nuevo_usuario)
+            return JsonResponse({'success': True})
+        except Exception as e:
+            print(f"Error al crear usuario: {e}")
+            return JsonResponse({'success': False, 'error': f'Error interno: {e}'}, status=500)
+    else:
+        return JsonResponse({'success': False, 'error': form.errors.as_json()}, status=400)
 
-    nombre = request.POST.get('nombre', '').strip() # Obtiene 'nombre' y 'correo' del POST
+
+@require_POST
+def eliminar_usuarios_view(request):
+    if 'user_id' not in request.session:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    try:
+        admin_user = usuarios.objects.get(id=request.session['user_id'])
+        if not admin_user.rol:
+            return JsonResponse({'success': False, 'error': 'No autorizado'}, status=403)
+    except usuarios.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Admin no válido'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        user_ids_to_delete_str = data.get('user_ids', [])  # Son strings
+        if not isinstance(user_ids_to_delete_str, list) or not user_ids_to_delete_str:
+            return JsonResponse({'success': False, 'error': 'Lista de IDs inválida'}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    if request.session['user_id'] in user_ids_to_delete_str:
+        return JsonResponse({'success': False, 'error': 'No puedes eliminarte a ti mismo'}, status=400)
+
+    try:
+        # Convertimos los strings del JSON a ObjectIds para la BBDD
+        ids_a_eliminar = [ObjectId(uid) for uid in user_ids_to_delete_str]
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Uno o más IDs tienen un formato inválido'}, status=400)
+
+    # --- INICIA CORRECCIÓN ---
+    # 1. Iterar y guardar un log por CADA usuario a eliminar
+    # Hacemos esto ANTES de borrarlos.
+    for user_id in ids_a_eliminar:
+        _crear_log(
+            admin_user,
+            'Eliminar Usuario',
+            usuario_afectado=user_id  # <--- Pasamos el ObjectId del afectado
+        )
+
+    # 2. Ahora sí, eliminar todos los usuarios de golpe
+    delete_result = usuarios.objects(id__in=ids_a_eliminar).delete()
+    # --- FIN CORRECCIÓN ---
+
+    return JsonResponse({'success': True, 'deleted_count': delete_result})
+
+
+@require_GET
+def obtener_usuario_view(request, user_id):
+    if 'user_id' not in request.session:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    try:
+        admin_user = usuarios.objects.get(id=request.session['user_id'])
+        if not admin_user.rol:
+            return JsonResponse({'success': False, 'error': 'No autorizado'}, status=403)
+    except usuarios.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Admin no válido'}, status=401)
+
+    try:
+        usuario = usuarios.objects.get(id=user_id)
+        usuario_data = {
+            'id': str(usuario.id),
+            'nombre': usuario.nombre,
+            'correo': usuario.correo,
+            'rol': usuario.rol
+        }
+        return JsonResponse({'success': True, 'usuario': usuario_data})
+    except usuarios.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Usuario no encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error interno: {e}'}, status=500)
+
+
+@require_POST
+def modificar_usuario_view(request):
+    if 'user_id' not in request.session:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    try:
+        admin_user = usuarios.objects.get(id=request.session['user_id'])
+        if not admin_user.rol:
+            return JsonResponse({'success': False, 'error': 'No autorizado'}, status=403)
+    except usuarios.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Admin no válido'}, status=401)
+
+    user_id = request.POST.get('user_id') or request.POST.get('id')
+    if not user_id:
+        return JsonResponse({'success': False, 'error': 'Falta user_id'}, status=400)
+
+    nombre = request.POST.get('nombre', '').strip()
     correo = request.POST.get('correo', '').strip()
-    contrasena = request.POST.get('contrasena', '')  #Obtiene la contrasena (puede estar vacía si no se quiere cambiar)
-    rol_raw = request.POST.get('rol', 'false') # Obtiene el valor  del checkbox rol puede ser on. Por defecto es false
+    contrasena = request.POST.get('contrasena', '')
+    rol_raw = request.POST.get('rol', 'false')
     rol = str(rol_raw).lower() in ('true', '1', 'on', 'yes')
 
-    if not nombre or not correo: #Verifica que nombre y correo no estén vacíos
+    if not nombre or not correo:
         return JsonResponse({'success': False, 'error': 'Nombre y correo son obligatorios.'}, status=400)
 
-    try: #Buscar y Actualizar el Usuario en MongoDB
-        usuario = usuarios.objects.get(id=user_id) #Busca al usuario que se quiere modificar usando el user_id recibido
-        usuario.nombre = nombre # Actualiza los campos de usuario con los nuevos valores
-        usuario.correo = correo #Esto no valida si el correo ya existe en otro usuario
-        # Solo actualizar contraseña si se entregó una
+    try:
+        usuario_a_modificar = usuarios.objects.get(id=user_id)
+        usuario_a_modificar.nombre = nombre
+        usuario_a_modificar.correo = correo
         if contrasena:
-            usuario.contrasena = contrasena
-
-        usuario.rol = rol #Actualiza el rol con el valor booleano
-        usuario.save() #Guarda todos los cambios hechos al objeto usuario en la base de datos MongoDB
+            usuario_a_modificar.contrasena = contrasena
+        usuario_a_modificar.rol = rol
+        usuario_a_modificar.save()
+        _crear_log(admin_user, 'Modificar Usuario', usuario_afectado=usuario_a_modificar)
         return JsonResponse({'success': True})
     except usuarios.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Usuario no encontrado'}, status=404)
     except Exception as e:
-        # LOG para servidor
         print("Error interno modificar_usuario_view:", e)
         return JsonResponse({'success': False, 'error': f'Error interno: {str(e)}'}, status=500)
+
+
+def ver_logs_view(request):
+    if 'user_id' not in request.session:
+        return redirect('login')
+
+    try:
+        admin_user = usuarios.objects.get(id=request.session['user_id'])
+        if not admin_user.rol:
+            return HttpResponseForbidden(
+                "<h1>Acceso Denegado</h1>"
+                "<p>No tienes permisos de administrador.</p>"
+                "<a href='/home/'>Volver</a>"
+            )
+    except usuarios.DoesNotExist:
+        del request.session['user_id']
+        del request.session['user_nombre']
+        return redirect('login')
+
+    try:
+        logs_raw = Log.objects.no_dereference().order_by('-fecharegistrada')
+        logs_procesados = []
+
+        for l in logs_raw:
+            # --- Actor (usuario que ejecutó la acción)
+            actor_correo = getattr(l, "correoElectronico", "N/A")
+            actor_id = "N/A"  # Default
+            if hasattr(l, "Usuarioid") and l.Usuarioid:
+                try:
+                    # Simplificado: l.Usuarioid ES el ID
+                    actor_id = str(l.Usuarioid)
+                except Exception:
+                    actor_id = "Desconocido"
+
+            # --- Usuario o elemento afectado (aunque haya sido eliminado)
+            afectado_id = "N/A"  # Default
+            if hasattr(l, "usuario_afectado") and l.usuario_afectado:
+                try:
+                    # Simplificado: l.usuario_afectado ES el ID
+                    afectado_id = str(l.usuario_afectado)
+                except Exception:
+                    afectado_id = "Desconocido (err1)"
+            elif hasattr(l, "iddocumento") and l.iddocumento:
+                try:
+                    # Simplificado: l.iddocumento ES el ID
+                    afectado_id = str(l.iddocumento)
+                except Exception:
+                    afectado_id = "Desconocido (err2)"
+
+            logs_procesados.append({
+                "fecha": getattr(l, "fecharegistrada", None),
+                "actor_correo": actor_correo,
+                "actor_id": actor_id,
+                "accion": getattr(l, "accion", "N/A"),
+                "afectado_id": afectado_id,
+            })
+
+    except Exception as e:
+        return HttpResponseForbidden(f"Error interno al cargar logs: {e}")
+
+    context = {
+        "user_nombre": admin_user.nombre,
+        "lista_logs": logs_procesados,
+    }
+    return render(request, "prueba/ver_logs.html", context)

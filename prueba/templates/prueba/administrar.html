@@ -34,12 +34,20 @@
                 <button class="btn" id="btn-abrir-crear-usuario">Crear Usuario</button>
                 <button class="btn btn-secondary" id="btn-modificar-usuario" disabled>Modificar Usuario</button> 
                 <button class="btn btn-danger" id="btn-eliminar-usuario" disabled>Eliminar Usuario</button> 
-            </div>
+                
+                {% if is_admin %}
+                    <a href="{% url 'ver_logs' %}" class="btn btn-warning" style="margin-left: 10px;">Ver Logs</a>
+                {% endif %}
+                </div>
 
             <div class="user-grid">
                 
                 {% for usuario in lista_usuarios %}
-                    <div class="user-card" data-user-id="{{ usuario.id }}"> 
+                    <div class="user-card" 
+                         data-user-id="{{ usuario.id }}"
+                         data-correo="{{ usuario.correo }}"
+                         data-nombre="{{ usuario.nombre }}"
+                         data-rol="{% if usuario.rol %}true{% else %}false{% endif %}"> 
                         <h4>{{ usuario.nombre }}</h4>
                         <p>{{ usuario.correo }}</p>
                         <p>Rol: 
@@ -56,249 +64,17 @@
 
             </div>
         </div>
-    </main> {% include 'prueba/modal_crear_usuario.html' %}
-            {% include 'prueba/modal_modificar_usuario.html' %}
-
-
-    <script defer> //Espera a que TODO el HTML este cargado y listo antes de ejecutar el código
-document.addEventListener('DOMContentLoaded', function() { 
-    console.log("DOM Cargado. Iniciando TODOS los scripts..."); 
-
-    // Función para limpiar errores
-    function limpiarMensajeError(msg) {
-        if (!msg) return "Error desconocido.";
-        const lower = msg.toLowerCase();
-        if (lower.includes("duplicate key") || lower.includes("correo") || lower.includes("email")) {
-            return "Este correo electrónico ya está registrado.";
-        } else if (lower.includes("400") || lower.includes("bad request")) {
-            return "Verifica los datos ingresados. Es posible que el correo ya exista.";
-        } else if (lower.includes("500")) {
-            return "Error interno del servidor. Intenta más tarde.";
-        } else if (lower.includes("csrf") || lower.includes("token")) {
-            return "Error de seguridad. Recarga la página e inténtalo nuevamente.";
-        } else if (lower.includes("json") || lower.includes("syntax")) {
-            return "Error al procesar la respuesta del servidor.";
-        }
-        return msg.replace(/<[^>]*>?/gm, "").slice(0, 300); // Elimina HTML y limita longitud
-    }
-
-    //SECCION 1: Selección/Deseleccion de Usuarios
-    const userCards = document.querySelectorAll('.user-card'); //Todas las tarjetas de usuario
-    const btnModificar = document.querySelector('#btn-modificar-usuario'); //Boton Modificar
-    const btnEliminar = document.querySelector('#btn-eliminar-usuario');  //Boton eliminar  
-    let selectedUserIds = []; // Array para almacenar los ID de los usuarios seleccionados
-
-    function actualizarBotonesAccion() { //Funcion que se llama cada vez que cambia la seleccion
-        const selectedCards = document.querySelectorAll('.user-card.selected'); //Cuenta cuantas tarjetas tienen la clase selected
-        const count = selectedCards.length;
-        
-        if (btnModificar) btnModificar.disabled = (count !== 1); //Habilita/deshabilita el botón Modificar: solo si hay 1 seleccionado
-        if (btnEliminar) btnEliminar.disabled = (count === 0); 
-
-        selectedUserIds = Array.from(selectedCards).map(card => card.dataset.userId); //Actualiza la lista de ID seleccionados
-        console.log(count + " usuario(s) seleccionado(s):", selectedUserIds);
-    }
-
-    userCards.forEach(card => { //Añade un detector de clics a cada tarjeta de usuario
-        card.addEventListener('click', () => {
-            card.classList.toggle('selected'); //Cuando se hace clic alterna la clase selected (la añade si no está la quita si esta)
-            actualizarBotonesAccion(); //Llama a la función para actualizar el estado de los botones Modificar/Eliminar
-        });
-    });
-
-    actualizarBotonesAccion();  //Llama a la función una vez al cargar la página para establecer el estado inicial (botones deshabilitados)
-    console.log("Lógica de selección de usuarios inicializada.");
-
-    //SECCION 2: Modal Crear Usuario
-    //Busca los elementos HTML del modal Crear por sus ID
-    const modalCrearOverlay = document.getElementById('crear-usuario-modal-overlay');
-    const btnAbrirCrear = document.getElementById('btn-abrir-crear-usuario'); 
-    const btnCerrarCrear = document.getElementById('btn-cerrar-crear-usuario');
-    const btnCerrarCrearX = document.getElementById('btn-cerrar-crear-usuario-x');
-    const formCrearUsuario = document.getElementById('form-crear-usuario');
-
-    function abrirModalCrear() { //Funcion para mostrar el modal crear
-        if (!modalCrearOverlay) return; //si no se encontró el modal no hace nada
-        if (formCrearUsuario) formCrearUsuario.reset(); //Si se encontró el formulario lo resetea (limpia campos)
-        modalCrearOverlay.style.display = 'flex'; //Cambia el estilo CSS para mostrar el modal
-    }
-    function cerrarModalCrear() { //Funcion para ocultar el modal Crear
-        if (!modalCrearOverlay) return;
-        modalCrearOverlay.style.display = 'none'; //Cambia el estilo CSS para ocultarlo
-    }
-
-    if (btnAbrirCrear) btnAbrirCrear.addEventListener('click', abrirModalCrear); // aqui asignamos la función abrirModalCrear al evento del botón principal "Crear Usuario"
-    if (btnCerrarCrear) btnCerrarCrear.addEventListener('click', cerrarModalCrear);
-    if (btnCerrarCrearX) btnCerrarCrearX.addEventListener('click', cerrarModalCrear);
-    if (modalCrearOverlay) {
-        modalCrearOverlay.addEventListener('click', (e) => { 
-            if (e.target === modalCrearOverlay) cerrarModalCrear(); 
-        });
-    }
+    </main> 
     
-    if (formCrearUsuario) { //Logica para cuando se envia el formulario dentro del modal Crear
-        formCrearUsuario.addEventListener('submit', function(event) {
-            event.preventDefault(); //Evita que la pagina se recargue
-            const formData = new FormData(formCrearUsuario); //Recolecta todos los datos del formulario
-            const url = formCrearUsuario.action; //Obtiene la URL de la vista Django
-            if (!formData.has('rol')) { formData.append('rol', 'false'); } else { formData.set('rol', 'true'); } //Manejo especial para el checkbox rol si no esta marcado, no se envía por defecto
+    {% include 'prueba/modal_crear_usuario.html' %}
+    {% include 'prueba/modal_modificar_usuario.html' %}
 
-            // Envia los datos al servidor usando Fetch (AJAX) con metodo POST
-            fetch(url, { 
-                method: 'POST', 
-                body: formData, //Los datos del formulario
-                headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }  //Token de seguridad de Django
-            })
-            .then(response => {  //Procesa la respuesta inicial del servidor junto con los errores
-                if (!response.ok) return response.text().then(text => { throw new Error(`Error ${response.status}: ${text}`) });
-                return response.json();  // Si todo OK intenta leer el cuerpo como JSON
-            })
-            .then(data => {  //Procesa los datos JSON si todo salio bien
-                if (data.success) {
-                    alert('Usuario creado exitosamente!');
-                    cerrarModalCrear(); // # Cierra el modal si todo sale bien
-                    window.location.reload(); 
-                } else { // # Si indica error Muestra los errores
-                    alert('Error al crear usuario: ' + (data.error || 'Intenta de nuevo.'));
-                }
-            })
-            .catch(error => {
-                console.error("Error detallado:", error.message);
-                alert("Error al crear usuario:\n" + limpiarMensajeError(error.message));
-            });
-        });
-    }
-    console.log("Lógica del modal Crear Usuario inicializada.");
-
-    //SECCION 3: Eliminar Usuario
-    if (btnEliminar) { //Reutiliza la variable btnEliminar de la Sección 1
-        btnEliminar.addEventListener('click', function() { //Asigna la lógica al evento click del botón Eliminar Usuario
-            const selectedCards = document.querySelectorAll('.user-card.selected'); //Obtiene los ID de todas las tarjetas seleccionadas
-            const userIdsToDelete = Array.from(selectedCards).map(card => card.dataset.userId);
-
-            if (userIdsToDelete.length === 0) { //Verifica si hay usuarios seleccionados
-                alert("Selecciona al menos un usuario para eliminar.");
-                return; 
-            }
-            if (!confirm(`¿Eliminar ${userIdsToDelete.length} usuario(s)?`)) return; //Pide confirmación
-
-            const url = "{% url 'eliminar_usuarios' %}"; //URL de la vista Django
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value; 
-
-            fetch(url, { //Envía la lista de ID al servidor como JSON usando Fetch y método POST
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }, //Indica que enviamos JSON
-                body: JSON.stringify({ user_ids: userIdsToDelete }) //Convierte la lista a texto JSON
-            })
-            .then(response => {
-                if (!response.ok) return response.text().then(text => { throw new Error(`Error ${response.status}: ${text}`) }); //Manejo de error
-                return response.json();
-            })
-            .then(data => { //Procesa el JSON 
-                if (data.success) {
-                    alert(`${data.deleted_count || userIdsToDelete.length} usuario(s) eliminado(s).`); //Muestra mensaje de éxito
-                    window.location.reload(); //Recarga la página
-                } else {
-                    alert('Error al eliminar: ' + (data.error || 'Intenta de nuevo.'));
-                }
-            })
-            .catch(error => {
-                console.error("Error al eliminar:", error.message);
-                alert('Error al eliminar usuario:\n' + limpiarMensajeError(error.message));
-            });
-        });
-    }
-
-    //SECCION 4: Modal Modificar Usuario
-    //Busca los elementos HTML del modal Modificar
-    const modalModificarOverlay = document.getElementById('modificar-usuario-modal-overlay');
-    const btnCerrarModificar = document.getElementById('btn-cerrar-modificar-usuario');
-    const btnCerrarModificarX = document.getElementById('btn-cerrar-modificar-usuario-x');
-    const formModificarUsuario = document.getElementById('form-modificar-usuario');
-
-    function abrirModalModificar() { //Funciones para abrir/cerrar el modal Modificar
-        if (!modalModificarOverlay) return;
-        const selectedCard = document.querySelector('.user-card.selected');
-        if (!selectedCard) {
-            alert("Selecciona un usuario para modificar.");
-            return;
-        }
-
-        const userId = selectedCard.dataset.userId; //Obtiene el ID del usuario
-        const nombre = selectedCard.querySelector('h4').textContent;
-        const correo = selectedCard.querySelector('p').textContent;
-        const rolText = selectedCard.querySelector('.role') ? true : false;
-
-        document.getElementById('modificar-user-id').value = userId;
-        document.getElementById('modificar-nombre').value = nombre;
-        document.getElementById('modificar-correo').value = correo;
-        document.getElementById('modificar-rol').checked = rolText;
-
-        modalModificarOverlay.style.display = 'flex';
-    }
-
-    function cerrarModalModificar() { //Funcion para cerrar el modal Modificar
-        if (!modalModificarOverlay) return;
-        modalModificarOverlay.style.display = 'none';
-    }
-
-    if (btnModificar) btnModificar.addEventListener('click', abrirModalModificar); // Asigna la función abrirModalModificar al botón principal
-    //Asigna las funciones de cierre a los botones 'Cancelar', 'X' y fondo del modal Modificar
-    if (btnCerrarModificar) btnCerrarModificar.addEventListener('click', cerrarModalModificar);
-    if (btnCerrarModificarX) btnCerrarModificarX.addEventListener('click', cerrarModalModificar);
-    if (modalModificarOverlay) {
-        modalModificarOverlay.addEventListener('click', (e) => {
-            if (e.target === modalModificarOverlay) cerrarModalModificar();
-        });
-    }
-
-    if (formModificarUsuario) { //Logica para cuando se envía el formulario dentro del modal Modificar
-        formModificarUsuario.addEventListener('submit', function(event) {
-            event.preventDefault(); // # Evita recarga
-            console.log("[Modificar] Enviando formulario...");
-
-            const formData = new FormData(formModificarUsuario); // # Recolecta datos
-            if (!formData.has('rol')) formData.append('rol', 'false');
-            else formData.set('rol', 'true');
-
-            const url = formModificarUsuario.action;
-            const csrf = formData.get('csrfmiddlewaretoken');
-
-            fetch(url, { //Envia los datos modificados
-                method: 'POST',
-                body: formData,
-                headers: { 'X-CSRFToken': csrf }
-            })
-            .then(async response => {
-                const text = await response.text();
-                let json = null;
-                try { json = JSON.parse(text); } catch(e) {}
-                if (!response.ok) {
-                    const msg = (json && (json.error || JSON.stringify(json))) || text || response.statusText;
-                    throw new Error(`HTTP ${response.status}: ${msg}`);
-                }
-                return json || {}; //Devuelve JSON o {}
-            })
-            .then(data => { // # Procesa JSON
-                if (data.success) {
-                    alert('Usuario modificado exitosamente.');
-                    cerrarModalModificar();
-                    window.location.reload(); //Recarga página
-                } else {
-                    alert('No se pudo modificar: ' + (data.error || 'Error desconocido.'));
-                }
-            })
-            .catch(error => {
-                console.error("Error al modificar:", error.message);
-                alert('Error al modificar usuario:\n' + limpiarMensajeError(error.message));
-            });
-        });
-    }
-
-    console.log("Script completo cargado y listeners asignados.");  
-});
-</script>
-
+    <script>
+        // Variable global para la URL de eliminar usuarios (necesaria para JavaScript externo)
+        window.ELIMINAR_USUARIOS_URL = "{% url 'eliminar_usuarios' %}";
+    </script>
+    
+    <script src="{% static 'prueba/js/administrar.js' %}"></script>
 
 </body>
 </html>

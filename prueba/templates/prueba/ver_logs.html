@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <title>Historial de Logs del Sistema</title>
+    <link rel="stylesheet" href="{% static 'prueba/css/dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'prueba/css/administrar.css' %}">
+    <link rel="stylesheet" href="{% static 'prueba/css/logs.css' %}">
+</head>
+<body>
+    <main class="admin-container">
+        <h2 style="text-align:center;">Historial de Logs del Sistema</h2>
+        <div class="log-table-container">
+            <table class="log-table">
+                <thead>
+                    <tr>
+                        <th>Fecha y Hora</th>
+                        <th>Usuario</th>
+                        <th>Acción Realizada</th>
+                        <th>Elemento Afectado (ID USUARIO O CALIFICACION)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in lista_logs %}
+                        <tr>
+                            <td>{{ log.fecha|date:"d/m/Y H:i:s" }}</td>
+                            <td>
+                                {{ log.actor_correo }}<br>
+                                <small style="color: gray;">ID: {{ log.actor_id }}</small>
+                            </td>
+                            <td>{{ log.accion }}</td>
+                            <td>
+                                {% if log.afectado_id and log.afectado_id != "N/A" %}
+                                    ID: {{ log.afectado_id }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center;">No hay registros de log en el sistema.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+</body>
+</html>

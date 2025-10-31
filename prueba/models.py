@@ -1,5 +1,5 @@
 #Importamos los tipos de datos de MONGODB que usaremos para crear la base de los documentos, junto con el datetime
-from mongoengine import Document, StringField, FloatField, IntField, ListField, EmbeddedDocument, EmailField, DateTimeField, DecimalField, BooleanField #estas importaciones son OBLIGATORIAS PARA CREAR EL DOCUMENTO
+from mongoengine import Document, StringField, FloatField, IntField, ListField, EmbeddedDocument, EmailField, DateTimeField, DecimalField, BooleanField, ReferenceField #estas importaciones son OBLIGATORIAS PARA CREAR EL DOCUMENTO
 import datetime
 
 #modelo para usuarios
@@ -43,3 +43,27 @@ class Calificacion(Document):
 
     def __str__(self):
         return f"{self.Ejercicio} - {self.Instrumento}"
+
+
+class Log(Document):
+    fecharegistrada = DateTimeField(default=datetime.datetime.now)
+    Usuarioid = ReferenceField(usuarios, required=True) #Guarda el id del usuario que realizó la acción, ReferenceField Crea un enlace directo al documento usuariosrequired=True: Es obligatorio, un log no puede existir sin un usuario
+    usuario_afectado = ReferenceField(usuarios, required=False, null=True)
+    correoElectronico = EmailField()
+    ACCION_CHOICES = ( #accion_CHOICES: Describe la operación (Crear, Modificar, etc.) choices limita las opciones a esta lista
+        'Crear Usuario',
+        'Modificar Usuario',
+        'Eliminar Usuario',
+        'Crear Calificacion',
+        'Modificar Calificacion',
+        'Eliminar Calificacion',
+        'Carga Masiva'
+    )
+    accion = StringField(max_length=50, choices=ACCION_CHOICES, required=True)
+    iddocumento = ReferenceField(Calificacion, required=False, null=True)
+    meta = {
+        'collection': 'log' # Nombre de la colección en MongoDB
+    }
+    def __str__(self):
+        # Muestra el ID (ObjectId), correo y acción
+        return f"[{self.id}] {self.correoElectronico} - {self.accion}"

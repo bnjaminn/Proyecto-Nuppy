@@ -1,32 +1,50 @@
+
 :root {
-    --nuam-orange: #D97706; /* Naranja principal (Amber 500) */
-    --nuam-orange-dark: #f53a0b; /* Naranja oscuro (Amber 600) */
-    --nuam-orange-light: #FEF3C7; /* Naranja claro para fondos (Amber 100) */
-    --text-on-orange: #FFFFFF;
-    --text-on-light-orange: #B45309; /* Texto oscuro para fondos claros (Amber 800) */
+    /* Color Principal */
+    --color-primary: #FF6B00;
+    --color-primary-dark: #E55A00;
+    --color-primary-light: #FFF4E6;
+    --color-primary-hover: #FF8533;
+    
+    /* Textos */
+    --text-primary: #1A1A1A;
+    --text-secondary: #555555;
+    --text-on-primary: #FFFFFF;
+    
+    /* Fondos */
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F9F9F9;
+    --bg-light: #F0F0F0;
+    
+    /* Bordes y separadores */
+    --border: #E0E0E0;
+    --border-dark: #CCCCCC;
+    
+    /* Acciones */
+    --color-success: #28A745;
+    --color-danger: #DC3545;
+    --color-warning: #FFC107;
 }   
 
 body {
     font-family: Arial, sans-serif;
     margin: 0;
-    background-color: #f4f4f4;
+    background-color: var(--bg-light);
     display: flex;
     flex-direction: column;
     height: 100vh;
+    color: var(--text-primary);
 }
 
 /* --- Encabezado y Filtros --- */
 .header {
-    background-color: #f9f9f9;
+    background-color: var(--bg-primary);
     padding: 1rem;
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    
-    /* --- ¡CAMBIO! --- */
-    /* Borde superior naranja para branding */
-    border-top: 4px solid var(--nuam-orange);
+    border-top: 4px solid var(--color-primary);
 }
 
 .header-left, .header-right {
@@ -48,29 +66,28 @@ body {
 
 .filter-group select, .filter-group input {
     padding: 0.4rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 4px;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-/* --- ¡CAMBIO! --- */
 .filter-group select:focus, 
 .filter-group input:focus {
-    border-color: var(--nuam-orange);
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2);
     outline: none;
 }
 
 .logo-placeholder {
     width: 110px;
     height: 74px;
-    border: 1px dashed #999;
+    border: 1px dashed var(--border-dark);
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 10px;
-    color: #888;
-    background-color: #eee;
+    color: var(--text-secondary);
+    background-color: var(--bg-light);
 }
 
 .btn-group {
@@ -80,37 +97,35 @@ body {
 }
 
 .btn {
-    /* --- ¡CAMBIO! --- */
-    background-color: var(--nuam-orange);
-    border: 1px solid var(--nuam-orange-dark);
-    color: var(--text-on-orange);
-    /* --- Fin del Cambio --- */
-    
+    background-color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    color: var(--text-on-primary);
     padding: 0.5rem 1rem;
     border-radius: 4px;
     cursor: pointer;
     text-align: center;
     font-weight: bold;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, border-color 0.2s;
 }
 
-/* --- ¡CAMBIO! --- */
 .btn:hover {
-    background-color: var(--nuam-orange-dark);
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
 }
 
 /* --- Saludo de Usuario y Logout --- */
 .user-info {
     font-size: 0.9rem;
-    color: #333;
+    color: var(--text-primary);
 }
 .user-info a {
-    /* --- ¡CAMBIO! --- */
-    color: var(--nuam-orange-dark);
+    color: var(--color-primary);
     text-decoration: none;
     margin-left: 10px;
+    transition: color 0.2s;
 }
 .user-info a:hover {
+    color: var(--color-primary-dark);
     text-decoration: underline;
 }
 
@@ -118,9 +133,9 @@ body {
 .main-content {
     flex-grow: 1;
     overflow-x: auto;
-    background-color: #fff;
+    background-color: var(--bg-primary);
     margin: 1rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
 }
 
 .data-table {
@@ -130,7 +145,7 @@ body {
 }
 
 .data-table th, .data-table td {
-    border: 1px solid #ddd;
+    border: 1px solid var(--border);
     padding: 0.75rem;
     text-align: left;
     font-size: 0.9rem;
@@ -138,16 +153,13 @@ body {
 }
 
 .data-table th {
-    /* --- ¡CAMBIO! --- */
-    /* Encabezado de tabla con fondo naranja claro */
-    background-color: var(--nuam-orange-light);
-    color: var(--text-on-light-orange);
-    /* --- Fin del Cambio --- */
-    
+    background-color: var(--color-primary-light);
+    color: var(--text-primary);
     position: sticky;
     top: 0;
     text-align: center;
     vertical-align: top;
+    font-weight: 600;
 }
 
 /* Estilo para el nombre de negocio (de la homologación) */
@@ -155,18 +167,18 @@ body {
     display: block;
     margin-top: 5px;
     font-weight: normal;
-    color: #333; /* Texto normal, no naranja */
+    color: var(--text-secondary);
     font-size: 0.8rem;
-    white-space: normal; /* Permite que el texto largo se ajuste */
-    min-width: 150px; /* Ancho mínimo para el nombre de negocio */
+    white-space: normal;
+    min-width: 150px;
 }
 
 
 /* --- Footer (Botones de Acción) --- */
 .footer {
-    background-color: #f9f9f9;
+    background-color: var(--bg-secondary);
     padding: 1rem;
-    border-top: 1px solid #ccc;
+    border-top: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
