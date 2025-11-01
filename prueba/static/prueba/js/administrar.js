@@ -186,59 +186,197 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     console.log("Lógica del modal Crear Usuario inicializada.");
 
-    //SECCION 3: Eliminar Usuario
+    //SECCION 3: Eliminar Usuario con Modal de Confirmación
+    const modalConfirmarEliminar = document.getElementById('confirmar-eliminar-modal-overlay');
+    const btnCerrarConfirmarEliminar = document.getElementById('btn-cancelar-eliminar');
+    const btnCerrarConfirmarEliminarX = document.getElementById('btn-cerrar-confirmar-eliminar-x');
+    const btnConfirmarEliminar = document.getElementById('btn-confirmar-eliminar');
+    const mensajeConfirmarEliminar = document.getElementById('confirmar-eliminar-mensaje');
+    
+    // Modal de advertencia para autoeliminación
+    const modalAdvertenciaAutoeliminar = document.getElementById('advertencia-autoeliminar-modal-overlay');
+    const btnCerrarAdvertenciaAutoeliminar = document.getElementById('btn-cerrar-advertencia-autoeliminar');
+    const btnCerrarAdvertenciaAutoeliminarX = document.getElementById('btn-cerrar-advertencia-autoeliminar-x');
+    
+    let userIdsToDeleteGlobal = []; // Variable para almacenar los IDs temporalmente
+
+    function abrirModalConfirmarEliminar(userIds, nombres) {
+        if (!modalConfirmarEliminar) return;
+        
+        userIdsToDeleteGlobal = userIds;
+        
+        // Personalizar mensaje según cantidad
+        let mensaje = '';
+        if (userIds.length === 1) {
+            mensaje = `¿Estás seguro de que deseas eliminar al usuario <strong>${nombres[0]}</strong>?`;
+        } else {
+            mensaje = `¿Estás seguro de que deseas eliminar <strong>${userIds.length} usuario(s)</strong>?`;
+        }
+        mensajeConfirmarEliminar.innerHTML = mensaje;
+        
+        modalConfirmarEliminar.style.display = 'flex';
+    }
+
+    function cerrarModalConfirmarEliminar() {
+        if (!modalConfirmarEliminar) return;
+        modalConfirmarEliminar.style.display = 'none';
+        userIdsToDeleteGlobal = [];
+    }
+
+    // Event listeners para cerrar modal
+    if (btnCerrarConfirmarEliminar) {
+        btnCerrarConfirmarEliminar.addEventListener('click', cerrarModalConfirmarEliminar);
+    }
+    if (btnCerrarConfirmarEliminarX) {
+        btnCerrarConfirmarEliminarX.addEventListener('click', cerrarModalConfirmarEliminar);
+    }
+
+    // Cerrar modal al hacer clic en el overlay
+    if (modalConfirmarEliminar) {
+        modalConfirmarEliminar.addEventListener('click', function(e) {
+            if (e.target === modalConfirmarEliminar) {
+                cerrarModalConfirmarEliminar();
+            }
+        });
+    }
+
+    // Función para ejecutar la eliminación
+    function ejecutarEliminacion() {
+        if (userIdsToDeleteGlobal.length === 0) {
+            mostrarNotificacion('No hay usuarios seleccionados para eliminar.', 'warning');
+            return;
+        }
+        
+        // Guardar los IDs antes de cerrar el modal (que limpia la variable)
+        const userIdsToDelete = [...userIdsToDeleteGlobal];
+        
+        cerrarModalConfirmarEliminar();
+        mostrarCarga('Eliminando usuario(s)...');
+
+        const url = window.ELIMINAR_USUARIOS_URL || '/administrar/eliminar/';
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+        if (!csrfToken) {
+            ocultarCarga();
+            mostrarNotificacion('Error de seguridad: No se encontró el token CSRF.', 'error');
+            return;
+        }
+
+        console.log('Enviando IDs para eliminar:', userIdsToDelete);
+        
+        fetch(url, {
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ user_ids: userIdsToDelete })
+        })
+        .then(response => {
+            return response.json().then(data => {
+                if (!response.ok) {
+                    // Si el error es por autoeliminación, mostrar el modal de advertencia
+                    if (data && data.error && (
+                        data.error.includes('No puedes eliminarte a ti mismo') || 
+                        data.error.includes('autoeliminarte')
+                    )) {
+                        cerrarModalConfirmarEliminar();
+                        ocultarCarga();
+                        abrirModalAdvertenciaAutoeliminar();
+                        return null;
+                    }
+                    throw new Error(`Error ${response.status}: ${JSON.stringify(data)}`);
+                }
+                return data;
+            }).catch(error => {
+                // Si hay error al parsear JSON, intentar leer como texto
+                if (error.message.includes('JSON')) {
+                    return response.text().then(text => {
+                        throw new Error(`Error ${response.status}: ${text}`);
+                    });
+                }
+                throw error;
+            });
+        })
+        .then(data => {
+            if (data === null) return; // Ya se manejó el caso de autoeliminación
+            
+            ocultarCarga();
+            if (data.success) {
+                mostrarNotificacion(
+                    `${data.deleted_count || userIdsToDelete.length} usuario(s) eliminado(s) exitosamente.`, 
+                    'success'
+                );
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                // También verificar si el error es por autoeliminación en la respuesta
+                if (data.error && data.error.includes('No puedes eliminarte a ti mismo')) {
+                    abrirModalAdvertenciaAutoeliminar();
+                } else {
+                    mostrarNotificacion('Error al eliminar: ' + (data.error || 'Intenta de nuevo.'), 'error');
+                }
+            }
+        })
+        .catch(error => {
+            ocultarCarga();
+            console.error("Error al eliminar:", error.message);
+            mostrarNotificacion('Error al eliminar usuario: ' + limpiarMensajeError(error.message), 'error');
+        });
+    }
+
+    // Event listener para confirmar eliminación
+    if (btnConfirmarEliminar) {
+        btnConfirmarEliminar.addEventListener('click', ejecutarEliminacion);
+    }
+
+    // Funciones para el modal de advertencia de autoeliminación
+    function abrirModalAdvertenciaAutoeliminar() {
+        if (!modalAdvertenciaAutoeliminar) return;
+        modalAdvertenciaAutoeliminar.style.display = 'flex';
+    }
+
+    function cerrarModalAdvertenciaAutoeliminar() {
+        if (!modalAdvertenciaAutoeliminar) return;
+        modalAdvertenciaAutoeliminar.style.display = 'none';
+    }
+
+    // Event listeners para cerrar modal de advertencia
+    if (btnCerrarAdvertenciaAutoeliminar) {
+        btnCerrarAdvertenciaAutoeliminar.addEventListener('click', cerrarModalAdvertenciaAutoeliminar);
+    }
+    if (btnCerrarAdvertenciaAutoeliminarX) {
+        btnCerrarAdvertenciaAutoeliminarX.addEventListener('click', cerrarModalAdvertenciaAutoeliminar);
+    }
+
+    // Cerrar modal de advertencia al hacer clic en el overlay
+    if (modalAdvertenciaAutoeliminar) {
+        modalAdvertenciaAutoeliminar.addEventListener('click', function(e) {
+            if (e.target === modalAdvertenciaAutoeliminar) {
+                cerrarModalAdvertenciaAutoeliminar();
+            }
+        });
+    }
+
+    // Event listener para el botón eliminar
     if (btnEliminar) {
         btnEliminar.addEventListener('click', function() {
             const selectedCards = document.querySelectorAll('.user-card.selected');
             const userIdsToDelete = Array.from(selectedCards).map(card => card.dataset.userId);
+            const nombresUsuarios = Array.from(selectedCards).map(card => {
+                const nombreElement = card.querySelector('h4');
+                return nombreElement ? nombreElement.textContent.trim() : 'Usuario';
+            });
 
             if (userIdsToDelete.length === 0) {
                 mostrarNotificacion("Selecciona al menos un usuario para eliminar.", 'warning');
                 return; 
             }
-            if (!confirm(`¿Eliminar ${userIdsToDelete.length} usuario(s)?`)) return;
-
-            mostrarCarga('Eliminando usuario(s)...');
-
-            const url = window.ELIMINAR_USUARIOS_URL || '/administrar/eliminar/';
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-
-            if (!csrfToken) {
-                ocultarCarga();
-                mostrarNotificacion('Error de seguridad: No se encontró el token CSRF.', 'error');
+            
+            // Verificar si el usuario intenta eliminarse a sí mismo
+            const currentUserId = window.CURRENT_USER_ID;
+            if (currentUserId && userIdsToDelete.includes(currentUserId)) {
+                abrirModalAdvertenciaAutoeliminar();
                 return;
             }
-
-            fetch(url, {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({ user_ids: userIdsToDelete })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.text().then(text => { 
-                        throw new Error(`Error ${response.status}: ${text}`); 
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                ocultarCarga();
-                if (data.success) {
-                    mostrarNotificacion(
-                        `${data.deleted_count || userIdsToDelete.length} usuario(s) eliminado(s) exitosamente.`, 
-                        'success'
-                    );
-                    setTimeout(() => window.location.reload(), 1000);
-                } else {
-                    mostrarNotificacion('Error al eliminar: ' + (data.error || 'Intenta de nuevo.'), 'error');
-                }
-            })
-            .catch(error => {
-                ocultarCarga();
-                console.error("Error al eliminar:", error.message);
-                mostrarNotificacion('Error al eliminar usuario: ' + limpiarMensajeError(error.message), 'error');
-            });
+            
+            abrirModalConfirmarEliminar(userIdsToDelete, nombresUsuarios);
         });
     }
 

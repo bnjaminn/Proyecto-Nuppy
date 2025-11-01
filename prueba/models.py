@@ -8,7 +8,8 @@ class usuarios(Document):
     nombre = StringField(max_length=200, required=True)
     correo = EmailField(required=True, unique=True) 
     contrasena = StringField(max_length=200, required=True) 
-    rol = BooleanField(default=False) 
+    rol = BooleanField(default=False)
+    foto_perfil = StringField(max_length=500, required=False, default=None)  # Ruta de la foto de perfil 
     meta = {
         'collection': 'usuarios' #meta es para hacer referencia a que carpeta/coleccion se guardara el documento de la base de datos en este caso es usuarios
     }

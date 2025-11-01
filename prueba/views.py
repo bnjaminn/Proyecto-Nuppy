@@ -1,12 +1,122 @@
-import json
-from django.shortcuts import render, redirect
-from django.http import HttpResponseForbidden, JsonResponse
-from django.views.decorators.http import require_POST, require_GET
-from mongoengine.errors import DoesNotExist
-from bson import ObjectId
+import json  # Para manejar datos JSON en las respuestas de API (crear_usuario_view, eliminar_usuarios_view, etc.)
+import re  # Para expresiones regulares - usado en _extraer_object_id() para parsear DBRef y extraer ObjectIds
+import os  # Para operaciones del sistema de archivos usado en _guardar_foto_perfil() para manejar rutas y extensiones
+from django.shortcuts import render, redirect  # render: renderizar templates HTML | redirect: redirigir a otras URLs
+from django.http import HttpResponseForbidden, JsonResponse, HttpResponseServerError  # Respuestas HTTP: Forbidden(403), JSON, ServerError(500)
+from django.views.decorators.http import require_POST, require_GET  # Decoradores para restringir métodos HTTP (POST/GET)
+from django.conf import settings  # Acceso a configuración de Django usado en _guardar_foto_perfil() para MEDIA_ROOT
+from mongoengine.errors import DoesNotExist  # Excepción cuando un documento no existe en MongoDB
+from bson import ObjectId  # Tipo ObjectId de MongoDB - usado en _extraer_object_id() y operaciones con IDs
+try:
+    from PIL import Image  # librería para procesamiento de imágenes - usado en _guardar_foto_perfil() para redimensionar fotos
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False  # Si no está instalado Pillow, las imágenes no se redimensionarán pero la app funcionará
+from .formulario import LoginForm, CalificacionModalForm, UsuarioForm  # Formularios Django para validación de datos
+from .models import usuarios, Calificacion, Log  # Modelos de MongoDB (Documentos) para interactuar con la base de datos
 
-from .formulario import LoginForm, CalificacionModalForm, UsuarioForm
-from .models import usuarios, Calificacion, Log
+
+# --- Función Auxiliar para extraer ObjectId de DBRef o ObjectId ---
+def _extraer_object_id(valor):
+    """
+    Extrae el ObjectId desde un DBRef, ObjectId o cualquier otro tipo.
+    Retorna el string del ObjectId o None si no puede extraerlo.
+    """
+    if not valor:
+        return None
+    
+    try:
+        # Si es un DBRef (cuando usas no_dereference())
+        # MongoEngine DBRef tiene el ObjectId en el atributo 'id'
+        if hasattr(valor, 'id'):
+            obj_id = valor.id
+            # Si el atributo id es un ObjectId, convertirlo a string
+            if isinstance(obj_id, ObjectId):
+                return str(obj_id)
+            # Si ya es string, validar que sea un ObjectId válido
+            elif isinstance(obj_id, str):
+                ObjectId(obj_id)  # Validar formato
+                return obj_id
+            else:
+                return str(obj_id)
+        # Si ya es un ObjectId directamente
+        elif isinstance(valor, ObjectId):
+            return str(valor)
+        # Si es una string que representa un ObjectId
+        elif isinstance(valor, str):
+            # Si contiene DBRef, extraer el ObjectId del string
+            if "DBRef" in valor and "ObjectId" in valor:
+                # Extraer ObjectId de strings como "DBRef('usuarios', ObjectId('690540200087edb1055cda79'))"
+                match = re.search(r"ObjectId\('([a-f0-9]{24})'\)", valor)
+                if match:
+                    return match.group(1)
+            # Intentar convertir a ObjectId para validar y luego retornar string
+            ObjectId(valor)
+            return valor
+        # Si tiene atributo pk (algunos objetos MongoEngine)
+        elif hasattr(valor, 'pk'):
+            return str(valor.pk)
+        # Último recurso: convertir a string y verificar si es ObjectId válido
+        else:
+            str_valor = str(valor)
+            # Si el string contiene un DBRef, intentar extraerlo
+            if "DBRef" in str_valor and "ObjectId" in str_valor:
+                match = re.search(r"ObjectId\('([a-f0-9]{24})'\)", str_valor)
+                if match:
+                    return match.group(1)
+            return str_valor
+    except Exception as e:
+        print(f"Error al extraer ObjectId: {e}, valor: {valor}")
+        return None
+# --- Fin Función Auxiliar ---
+
+
+# --- Función Auxiliar para manejar fotos de perfil ---
+def _guardar_foto_perfil(archivo, usuario_id):
+    """
+    Guarda la foto de perfil del usuario y retorna la ruta relativa.
+    Redimensiona la imagen si es muy grande.
+    """
+    if not archivo:
+        return None
+    
+    # Validar tamaño (5MB máximo)
+    if archivo.size > 5 * 1024 * 1024:
+        raise ValueError("La imagen es demasiado grande. Máximo 5MB.")
+    
+    # Validar tipo de archivo
+    extension = os.path.splitext(archivo.name)[1].lower()
+    if extension not in ['.jpg', '.jpeg', '.png', '.gif']:
+        raise ValueError("Formato de imagen no válido. Use JPG, PNG o GIF.")
+    
+    # Crear directorio si no existe
+    media_dir = settings.MEDIA_ROOT / 'fotos_perfil'
+    media_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Nombre único del archivo
+    nombre_archivo = f"usuario_{usuario_id}_{archivo.name}"
+    ruta_completa = media_dir / nombre_archivo
+    
+    # Guardar archivo
+    with open(ruta_completa, 'wb+') as destino:
+        for chunk in archivo.chunks():
+            destino.write(chunk)
+    
+    # Redimensionar si es necesario (máximo 500x500)
+    if HAS_PIL:
+        try:
+            img = Image.open(ruta_completa)
+            if img.width > 500 or img.height > 500:
+                img.thumbnail((500, 500), Image.Resampling.LANCZOS)
+                img.save(ruta_completa, optimize=True, quality=85)
+        except Exception as e:
+            print(f"Error al redimensionar imagen: {e}")
+    else:
+        print("Pillow no está instalado. Las imágenes no se redimensionarán automáticamente.")
+    
+    # Retornar ruta relativa para guardar en MongoDB
+    return f"fotos_perfil/{nombre_archivo}"
+# --- Fin Función Auxiliar ---
 
 
 # --- Función Auxiliar para crear logs ---
@@ -75,7 +185,8 @@ def home_view(request):
 
     return render(request, 'prueba/home.html', {
         'user_nombre': current_user.nombre,
-        'is_admin': is_admin
+        'is_admin': is_admin,
+        'current_user': current_user
     })
 
 
@@ -131,7 +242,8 @@ def administrar_view(request):
     return render(request, 'prueba/administrar.html', {
         'user_nombre': current_user.nombre,
         'lista_usuarios': todos_los_usuarios,
-        'is_admin': current_user.rol
+        'is_admin': current_user.rol,
+        'current_user_id': str(current_user.id)
     })
 
 
@@ -150,8 +262,24 @@ def crear_usuario_view(request):
     form = UsuarioForm(request.POST)
     if form.is_valid():
         try:
+            # Crear usuario con datos del formulario
             nuevo_usuario = usuarios(**form.cleaned_data)
-            nuevo_usuario.save()
+            nuevo_usuario.save()  # Guardar primero para obtener el ID
+            
+            # Manejar foto de perfil si se proporciona
+            if 'foto_perfil' in request.FILES:
+                try:
+                    foto_ruta = _guardar_foto_perfil(request.FILES['foto_perfil'], str(nuevo_usuario.id))
+                    nuevo_usuario.foto_perfil = foto_ruta
+                    nuevo_usuario.save()  # Guardar nuevamente con la foto
+                except ValueError as e:
+                    nuevo_usuario.delete()  # Eliminar usuario si falla la foto
+                    return JsonResponse({'success': False, 'error': str(e)}, status=400)
+                except Exception as e:
+                    nuevo_usuario.delete()  # Eliminar usuario si falla la foto
+                    print(f"Error al guardar foto: {e}")
+                    return JsonResponse({'success': False, 'error': f'Error al guardar foto: {e}'}, status=500)
+            
             _crear_log(admin_user, 'Crear Usuario', usuario_afectado=nuevo_usuario)
             return JsonResponse({'success': True})
         except Exception as e:
@@ -192,13 +320,23 @@ def eliminar_usuarios_view(request):
 
     # --- INICIA CORRECCIÓN ---
     # 1. Iterar y guardar un log por CADA usuario a eliminar
-    # Hacemos esto ANTES de borrarlos.
+    # Hacemos esto ANTES de borrarlos para mantener referencia válida
     for user_id in ids_a_eliminar:
-        _crear_log(
-            admin_user,
-            'Eliminar Usuario',
-            usuario_afectado=user_id  # <--- Pasamos el ObjectId del afectado
-        )
+        try:
+            # Intentamos obtener el usuario antes de eliminarlo para el log
+            usuario_eliminado = usuarios.objects.get(id=user_id)
+            _crear_log(
+                admin_user,
+                'Eliminar Usuario',
+                usuario_afectado=usuario_eliminado
+            )
+        except usuarios.DoesNotExist:
+            # Si ya no existe, creamos el log con el ID directamente
+            _crear_log(
+                admin_user,
+                'Eliminar Usuario',
+                usuario_afectado=user_id
+            )
 
     # 2. Ahora sí, eliminar todos los usuarios de golpe
     delete_result = usuarios.objects(id__in=ids_a_eliminar).delete()
@@ -225,7 +363,8 @@ def obtener_usuario_view(request, user_id):
             'id': str(usuario.id),
             'nombre': usuario.nombre,
             'correo': usuario.correo,
-            'rol': usuario.rol
+            'rol': usuario.rol,
+            'foto_perfil': usuario.foto_perfil if usuario.foto_perfil else None
         }
         return JsonResponse({'success': True, 'usuario': usuario_data})
     except usuarios.DoesNotExist:
@@ -266,6 +405,24 @@ def modificar_usuario_view(request):
         if contrasena:
             usuario_a_modificar.contrasena = contrasena
         usuario_a_modificar.rol = rol
+        
+        # Manejar foto de perfil si se proporciona
+        if 'foto_perfil' in request.FILES:
+            try:
+                # Eliminar foto anterior si existe
+                if usuario_a_modificar.foto_perfil:
+                    foto_antigua = settings.MEDIA_ROOT / usuario_a_modificar.foto_perfil
+                    if foto_antigua.exists():
+                        foto_antigua.unlink()
+                
+                foto_ruta = _guardar_foto_perfil(request.FILES['foto_perfil'], str(usuario_a_modificar.id))
+                usuario_a_modificar.foto_perfil = foto_ruta
+            except ValueError as e:
+                return JsonResponse({'success': False, 'error': str(e)}, status=400)
+            except Exception as e:
+                print(f"Error al guardar foto: {e}")
+                return JsonResponse({'success': False, 'error': f'Error al guardar foto: {e}'}, status=500)
+        
         usuario_a_modificar.save()
         _crear_log(admin_user, 'Modificar Usuario', usuario_afectado=usuario_a_modificar)
         return JsonResponse({'success': True})
@@ -298,41 +455,55 @@ def ver_logs_view(request):
         logs_procesados = []
 
         for l in logs_raw:
-            # --- Actor (usuario que ejecutó la acción)
+            # --- Actor (usuario que ejecutó la acción) ---
             actor_correo = getattr(l, "correoElectronico", "N/A")
-            actor_id = "N/A"  # Default
+            actor_id = "N/A"
+            actor_nombre = "N/A"
+            
             if hasattr(l, "Usuarioid") and l.Usuarioid:
-                try:
-                    # Simplificado: l.Usuarioid ES el ID
-                    actor_id = str(l.Usuarioid)
-                except Exception:
-                    actor_id = "Desconocido"
+                actor_id_obj = _extraer_object_id(l.Usuarioid)
+                if actor_id_obj:
+                    actor_id = actor_id_obj
+                    # Intentar obtener el nombre del actor si aún existe
+                    try:
+                        actor_usuario = usuarios.objects.get(id=actor_id_obj)
+                        actor_nombre = actor_usuario.nombre
+                    except usuarios.DoesNotExist:
+                        pass  # El usuario ya no existe, mantener N/A
 
-            # --- Usuario o elemento afectado (aunque haya sido eliminado)
-            afectado_id = "N/A"  # Default
+            # --- Usuario o elemento afectado (aunque haya sido eliminado) ---
+            afectado_id = "N/A"
+            tipo_afectado = "N/A"  # 'Usuario' o 'Calificacion'
+            
             if hasattr(l, "usuario_afectado") and l.usuario_afectado:
-                try:
-                    # Simplificado: l.usuario_afectado ES el ID
-                    afectado_id = str(l.usuario_afectado)
-                except Exception:
-                    afectado_id = "Desconocido (err1)"
+                afectado_id_obj = _extraer_object_id(l.usuario_afectado)
+                if afectado_id_obj:
+                    afectado_id = afectado_id_obj
+                    tipo_afectado = "Usuario"
             elif hasattr(l, "iddocumento") and l.iddocumento:
-                try:
-                    # Simplificado: l.iddocumento ES el ID
-                    afectado_id = str(l.iddocumento)
-                except Exception:
-                    afectado_id = "Desconocido (err2)"
+                afectado_id_obj = _extraer_object_id(l.iddocumento)
+                if afectado_id_obj:
+                    afectado_id = afectado_id_obj
+                    tipo_afectado = "Calificacion"
 
             logs_procesados.append({
                 "fecha": getattr(l, "fecharegistrada", None),
                 "actor_correo": actor_correo,
                 "actor_id": actor_id,
+                "actor_nombre": actor_nombre,
                 "accion": getattr(l, "accion", "N/A"),
                 "afectado_id": afectado_id,
+                "tipo_afectado": tipo_afectado,
             })
 
     except Exception as e:
-        return HttpResponseForbidden(f"Error interno al cargar logs: {e}")
+        print(f"Error al cargar logs: {e}")
+        return HttpResponseServerError(
+            f"<h1>Error Interno</h1>"
+            f"<p>No se pudieron cargar los logs del sistema.</p>"
+            f"<p>Error: {e}</p>"
+            f"<a href='/home/'>Volver</a>"
+        )
 
     context = {
         "user_nombre": admin_user.nombre,

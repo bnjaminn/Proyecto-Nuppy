@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administración de Usuarios - NUAM</title>
     
+    <link rel="icon" type="image/png" href="{% static 'prueba/img/Nuam.png' %}">
     <link rel="stylesheet" href="{% static 'prueba/css/dashboard.css' %}">
     <link rel="stylesheet" href="{% static 'prueba/css/administrar.css' %}">
     <link rel="stylesheet" href="{% static 'prueba/css/modal.css' %}">
@@ -15,6 +16,11 @@
 
     <header class="header">
         <div class="header-left">
+            <div class="logo-container">
+                <a href="{% url 'home' %}">
+                    <img src="{% static 'prueba/img/Nuam.png' %}" alt="NUAM Logo" class="nuam-logo">
+                </a>
+            </div>
             <h2>Administración de Usuarios</h2>
         </div>
         <div class="header-right">
@@ -48,15 +54,26 @@
                          data-correo="{{ usuario.correo }}"
                          data-nombre="{{ usuario.nombre }}"
                          data-rol="{% if usuario.rol %}true{% else %}false{% endif %}"> 
-                        <h4>{{ usuario.nombre }}</h4>
-                        <p>{{ usuario.correo }}</p>
-                        <p>Rol: 
-                            {% if usuario.rol %}
-                                <span class="role">Administrador</span>
+                        <div class="user-card-avatar-container">
+                            {% if usuario.foto_perfil %}
+                                <img src="/media/{{ usuario.foto_perfil }}" alt="Foto de {{ usuario.nombre }}" class="user-card-avatar">
                             {% else %}
-                                Usuario Estándar
+                                <div class="user-card-avatar user-card-avatar-placeholder">
+                                    <span>{{ usuario.nombre|first|upper }}</span>
+                                </div>
                             {% endif %}
-                        </p>
+                        </div>
+                        <div class="user-card-body">
+                            <h4 class="user-card-name">{{ usuario.nombre }}</h4>
+                            <p class="user-card-email">{{ usuario.correo }}</p>
+                            <div class="user-card-role">
+                                {% if usuario.rol %}
+                                    <span class="role-badge role-admin">Administrador</span>
+                                {% else %}
+                                    <span class="role-badge role-user">Corredor de Bolsa</span>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 {% empty %}
                     <p>No hay usuarios registrados.</p>
@@ -68,10 +85,14 @@
     
     {% include 'prueba/modal_crear_usuario.html' %}
     {% include 'prueba/modal_modificar_usuario.html' %}
+    {% include 'prueba/modal_confirmar_eliminar.html' %}
+    {% include 'prueba/modal_advertencia_autoeliminar.html' %}
 
     <script>
         // Variable global para la URL de eliminar usuarios (necesaria para JavaScript externo)
         window.ELIMINAR_USUARIOS_URL = "{% url 'eliminar_usuarios' %}";
+        // ID del usuario actual para prevenir autoeliminación
+        window.CURRENT_USER_ID = "{{ current_user_id }}";
     </script>
     
     <script src="{% static 'prueba/js/administrar.js' %}"></script>

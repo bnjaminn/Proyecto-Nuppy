@@ -3,21 +3,37 @@
 <html lang="es">
 <head>
     <title>Historial de Logs del Sistema</title>
+    <link rel="icon" type="image/png" href="{% static 'prueba/img/Nuam.png' %}">
     <link rel="stylesheet" href="{% static 'prueba/css/dashboard.css' %}">
     <link rel="stylesheet" href="{% static 'prueba/css/administrar.css' %}">
     <link rel="stylesheet" href="{% static 'prueba/css/logs.css' %}">
 </head>
 <body>
+    <header class="header">
+        <div class="header-left">
+            <div class="logo-container">
+                <a href="{% url 'home' %}">
+                    <img src="{% static 'prueba/img/Nuam.png' %}" alt="NUAM Logo" class="nuam-logo">
+                </a>
+            </div>
+            <h2>Historial de Logs del Sistema</h2>
+        </div>
+        <div class="header-right">
+            <div class="user-info">
+                <a href="{% url 'administrar' %}" class="btn btn-secondary" style="margin-left: 1rem;">(Volver a Administración)</a>
+                <a href="{% url 'home' %}" class="btn btn-secondary" style="margin-left: 0.5rem;">(Volver al Dashboard)</a>
+            </div>
+        </div>
+    </header>
     <main class="admin-container">
-        <h2 style="text-align:center;">Historial de Logs del Sistema</h2>
         <div class="log-table-container">
             <table class="log-table">
                 <thead>
                     <tr>
                         <th>Fecha y Hora</th>
-                        <th>Usuario</th>
+                        <th>Usuario que Realizó la Acción</th>
                         <th>Acción Realizada</th>
-                        <th>Elemento Afectado (ID USUARIO O CALIFICACION)</th>
+                        <th>Elemento Afectado</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -25,21 +41,41 @@
                         <tr>
                             <td>{{ log.fecha|date:"d/m/Y H:i:s" }}</td>
                             <td>
+                                {% if log.actor_nombre != "N/A" %}
+                                    <strong>{{ log.actor_nombre }}</strong><br>
+                                {% endif %}
                                 {{ log.actor_correo }}<br>
-                                <small style="color: gray;">ID: {{ log.actor_id }}</small>
+                                <small style="color: #666;">ID: {{ log.actor_id }}</small>
                             </td>
-                            <td>{{ log.accion }}</td>
+                            <td>
+                                {% if 'Crear' in log.accion %}
+                                    <span class="accion-badge accion-crear">{{ log.accion }}</span>
+                                {% elif 'Modificar' in log.accion %}
+                                    <span class="accion-badge accion-modificar">{{ log.accion }}</span>
+                                {% elif 'Eliminar' in log.accion %}
+                                    <span class="accion-badge accion-eliminar">{{ log.accion }}</span>
+                                {% elif 'Carga' in log.accion %}
+                                    <span class="accion-badge accion-carga">{{ log.accion }}</span>
+                                {% else %}
+                                    <span class="accion-badge">{{ log.accion }}</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if log.afectado_id and log.afectado_id != "N/A" %}
-                                    ID: {{ log.afectado_id }}
+                                    <span class="tipo-afectado tipo-{{ log.tipo_afectado|lower }}">
+                                        {{ log.tipo_afectado }}
+                                    </span><br>
+                                    <small style="color: #666; font-family: monospace;">{{ log.afectado_id }}</small>
                                 {% else %}
-                                    N/A
+                                    <span style="color: #999;">N/A</span>
                                 {% endif %}
                             </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="4" style="text-align: center;">No hay registros de log en el sistema.</td>
+                            <td colspan="4" style="text-align: center; padding: 40px; color: #999;">
+                                No hay registros de log en el sistema.
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>

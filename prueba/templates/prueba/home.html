@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pagina principal (calificaciones tributarias)</title>
     
+    <link rel="icon" type="image/png" href="{% static 'prueba/img/Nuam.png' %}">
     <link rel="stylesheet" href="{% static 'prueba/css/dashboard.css' %}">
     
     <link rel="stylesheet" href="{% static 'prueba/css/modal.css' %}">
@@ -37,13 +38,21 @@
 
         <div class="header-right">
             <div class="user-info">
-                Hola, <strong>{{ user_nombre }}</strong>
+                {% if current_user.foto_perfil %}
+                    <img src="/media/{{ current_user.foto_perfil }}" alt="Foto de {{ user_nombre }}" class="user-avatar-header">
+                {% else %}
+                    <div class="user-avatar-header user-avatar-placeholder">
+                        <span>{{ user_nombre|first|upper }}</span>
+                    </div>
+                {% endif %}
+                <span>Hola, <strong>{{ user_nombre }}</strong></span>
                 <a href="{% url 'logout' %}">(Cerrar Sesión)</a>
             </div>
 
-            <div class="logo-placeholder">
-                110 x 74<br>
-                NUAM LOGO
+            <div class="logo-container">
+                <a href="{% url 'home' %}">
+                    <img src="{% static 'prueba/img/Nuam.png' %}" alt="NUAM Logo" class="nuam-logo">
+                </a>
             </div>
             
             <div class="btn-group">

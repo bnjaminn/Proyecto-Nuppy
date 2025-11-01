@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pagina inicio (login)</title>
+    <link rel="icon" type="image/png" href="{% static 'prueba/img/Nuam.png' %}">
     <link rel="stylesheet" href="{% static 'prueba/css/login.css' %}">
     
 </head>
@@ -12,9 +13,8 @@
 
     <div class="login-container">
         
-        <div class="logo-placeholder">
-            110 x 74<br>
-            NUAM LOGO <!-- logo que debe ir de nuam -->
+        <div class="logo-container">
+            <img src="{% static 'prueba/img/Nuam.png' %}" alt="NUAM Logo" class="nuam-logo">
         </div>
 
         {% if request.session.user_id %}

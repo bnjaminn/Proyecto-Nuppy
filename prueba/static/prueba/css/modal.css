@@ -33,18 +33,23 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(3px);
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    animation: fadeInOverlay 0.2s ease-out;
 }
 
 .modal-content {
     background-color: var(--bg-primary);
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 107, 0, 0.1);
     width: 90%;
-    animation: fadeIn 0.3s ease-out;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: fadeInScale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border-top: 4px solid var(--color-primary);
 }
 
 /* --- Tamaño específico para Modal 1 --- */
@@ -52,17 +57,50 @@
     max-width: 700px; 
 }
 
+.modal-small {
+    max-width: 500px;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--bg-primary) 100%);
+    border-bottom: 2px solid var(--color-primary-light);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    position: relative;
+}
+
+.modal-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
 }
 
 .modal-header h2 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modal-header h2::before {
+    content: '';
+    width: 4px;
+    height: 24px;
+    background: var(--color-primary);
+    border-radius: 2px;
 }
 
 .modal-close {
@@ -71,13 +109,25 @@
     color: var(--text-secondary);
     cursor: pointer;
     line-height: 1;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    background-color: transparent;
 }
+
 .modal-close:hover {
-    color: var(--text-primary);
+    color: var(--color-primary);
+    background-color: var(--color-primary-light);
+    transform: rotate(90deg);
 }
 
 .modal-body {
-    padding: 1.5rem;
+    padding: 2rem;
+    background-color: var(--bg-primary);
 }
 
 /* --- Layout de Grilla para Modal 1 --- */
@@ -97,22 +147,43 @@
 }
 
 .form-field label {
-    font-weight: bold;
+    font-weight: 600;
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 .form-field input[type="text"],
+.form-field input[type="email"],
+.form-field input[type="password"],
 .form-field input[type="date"],
 .form-field input[type="number"] {
-    padding: 0.6rem;
-    border: 1px solid var(--border);
-    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
 }
+
+.form-field input:hover {
+    border-color: var(--border-dark);
+}
+
 .form-field input:focus {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2);
+    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.15);
     outline: none;
+    background-color: var(--bg-primary);
+}
+
+.form-field input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
 }
 .readonly-field {
     background-color: var(--bg-light);
@@ -123,12 +194,34 @@
 .modal-footer {
     display: flex;
     justify-content: flex-end;
-    gap: 0.75rem;
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--border);
-    background-color: var(--bg-secondary);
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    border-top: 2px solid var(--border);
+    background: linear-gradient(to bottom, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+/* Estilos mejorados para botones en modales */
+.modal-footer .btn {
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 2px solid transparent;
+    min-width: 120px;
+}
+
+.modal-footer .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.modal-footer .btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-secondary {
@@ -136,9 +229,40 @@
     border-color: var(--text-secondary);
     color: var(--text-on-primary);
 }
+
 .btn-secondary:hover {
     background-color: var(--text-primary);
     border-color: var(--text-primary);
+    color: var(--text-on-primary);
+}
+
+/* Botón primario en modal */
+.modal-footer .btn:not(.btn-secondary) {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+    border-color: var(--color-primary);
+    color: var(--text-on-primary);
+}
+
+.modal-footer .btn:not(.btn-secondary):hover {
+    background: linear-gradient(135deg, var(--color-primary-hover) 0%, var(--color-primary-dark) 100%);
+    border-color: var(--color-primary-dark);
+}
+
+/* Animaciones mejoradas */
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeInScale {
+    from { 
+        opacity: 0; 
+        transform: scale(0.9) translateY(-20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: scale(1) translateY(0); 
+    }
 }
 
 @keyframes fadeIn {
@@ -157,14 +281,160 @@
 }
 
 .form-field-checkbox input[type="checkbox"] {
-    /* Tamaño del checkbox */
-    width: 1.2rem; 
-    height: 1.2rem;
+    /* Tamaño del checkbox mejorado */
+    width: 1.25rem; 
+    height: 1.25rem;
     cursor: pointer;
+    accent-color: var(--color-primary);
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.form-field-checkbox input[type="checkbox"]:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+}
+
+.form-field-checkbox input[type="checkbox"]:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
 }
 
 .form-field-checkbox label {
     /* Quitamos el margen inferior que tenían las otras etiquetas */
     margin-bottom: 0; 
-    font-weight: normal; /* Opcional: etiqueta no en negrita */
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Estilos mejorados para file input */
+.form-field input[type="file"] {
+    padding: 0.75rem;
+    border: 2px dashed var(--border);
+    border-radius: 6px;
+    background-color: var(--bg-light);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.form-field input[type="file"]:hover {
+    border-color: var(--color-primary);
+    background-color: var(--color-primary-light);
+}
+
+.form-field input[type="file"]:focus {
+    border-color: var(--color-primary);
+    border-style: solid;
+    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.15);
+    outline: none;
+}
+
+.form-field small {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    display: block;
+    font-style: italic;
+}
+
+/* Mejoras para grid vertical */
+.modal-form-grid-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Scrollbar personalizado para modales */
+.modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: var(--bg-light);
+    border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary-dark);
+}
+
+/* Mejora visual para los inputs de tipo email y password */
+.form-field input[type="email"]:valid,
+.form-field input[type="password"]:valid {
+    border-color: var(--color-success);
+}
+
+.form-field input[type="email"]:invalid:not(:placeholder-shown),
+.form-field input[type="password"]:invalid:not(:placeholder-shown) {
+    border-color: var(--color-danger);
+}
+
+/* Efecto de transición suave para todos los elementos */
+.modal-content * {
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Estilos para modal de confirmación de eliminación */
+.confirmar-eliminar-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.confirmar-eliminar-icono {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-on-primary);
+    font-size: 1.5rem;
+    font-weight: bold;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+}
+
+.confirmar-eliminar-texto {
+    flex: 1;
+}
+
+.confirmar-eliminar-mensaje {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+.confirmar-eliminar-advertencia {
+    margin: 0.5rem 0 0 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Botón de peligro para modal de eliminación */
+.btn-danger-modal {
+    background: linear-gradient(135deg, var(--color-danger) 0%, #C82333 100%);
+    border-color: var(--color-danger);
+    color: var(--text-on-primary);
+}
+
+.btn-danger-modal:hover {
+    background: linear-gradient(135deg, #C82333 0%, #BD2130 100%);
+    border-color: #C82333;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 }

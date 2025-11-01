@@ -6,7 +6,7 @@
         </div>
         
         <div class="modal-body">
-            <form id="form-crear-usuario" method="post" action="{% url 'crear_usuario' %}">
+            <form id="form-crear-usuario" method="post" action="{% url 'crear_usuario' %}" enctype="multipart/form-data">
                 {% csrf_token %} 
                 <div class="modal-form-grid-vertical"> 
                     <div class="form-field">
@@ -20,6 +20,11 @@
                     <div class="form-field">
                         <label for="crear-contrasena">Contraseña:</label>
                         <input type="password" id="crear-contrasena" name="contrasena" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="crear-foto-perfil">Foto de Perfil (opcional):</label>
+                        <input type="file" id="crear-foto-perfil" name="foto_perfil" accept="image/*">
+                        <small style="color: #666;">Formatos: JPG, PNG, GIF. Máx. 5MB</small>
                     </div>
                     <div class="form-field form-field-checkbox"> 
                         <input type="checkbox" id="crear-rol" name="rol">
