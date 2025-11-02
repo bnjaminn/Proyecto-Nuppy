@@ -71,12 +71,8 @@ def _extraer_object_id(valor):
 # --- Fin Función Auxiliar ---
 
 
-# --- Función Auxiliar para manejar fotos de perfil ---
-def _guardar_foto_perfil(archivo, usuario_id):
-    """
-    Guarda la foto de perfil del usuario y retorna la ruta relativa.
-    Redimensiona la imagen si es muy grande.
-    """
+#Función Auxiliar para manejar fotos de perfil
+def _guardar_foto_perfil(archivo, usuario_id):#Guarda la foto de perfil del usuario y retorna la ruta. Redimensiona la imagen si es muy grande.
     if not archivo:
         return None
     
@@ -119,11 +115,8 @@ def _guardar_foto_perfil(archivo, usuario_id):
 # --- Fin Función Auxiliar ---
 
 
-# --- Función Auxiliar para crear logs ---
-def _crear_log(usuario_obj, accion_str, documento_afectado=None, usuario_afectado=None):
-    """
-    Guarda un registro de log con información sobre la acción realizada.
-    """
+#Función para crear logs
+def _crear_log(usuario_obj, accion_str, documento_afectado=None, usuario_afectado=None):#Guarda un registro de log con información sobre la acción realizada.
     try:
         nuevo_log = Log(
             Usuarioid=usuario_obj,
@@ -318,29 +311,33 @@ def eliminar_usuarios_view(request):
     except Exception:
         return JsonResponse({'success': False, 'error': 'Uno o más IDs tienen un formato inválido'}, status=400)
 
-    # --- INICIA CORRECCIÓN ---
-    # 1. Iterar y guardar un log por CADA usuario a eliminar
-    # Hacemos esto ANTES de borrarlos para mantener referencia válida
     for user_id in ids_a_eliminar:
         try:
-            # Intentamos obtener el usuario antes de eliminarlo para el log
+            # Intentamos obtener el usuario antes de eliminarlo para el log y eliminar su foto
             usuario_eliminado = usuarios.objects.get(id=user_id)
+            
+            # Eliminar foto de perfil si existe
+            if usuario_eliminado.foto_perfil:
+                try:
+                    foto_path = settings.MEDIA_ROOT / usuario_eliminado.foto_perfil
+                    if foto_path.exists():
+                        foto_path.unlink()
+                        print(f"Foto de perfil eliminada: {foto_path}")
+                except Exception as e:
+                    print(f"Error al eliminar foto de perfil: {e}")
+            
             _crear_log(
                 admin_user,
                 'Eliminar Usuario',
                 usuario_afectado=usuario_eliminado
             )
-        except usuarios.DoesNotExist:
-            # Si ya no existe, creamos el log con el ID directamente
+        except usuarios.DoesNotExist: # Si ya no existe, creamos el log con el ID directamente
             _crear_log(
                 admin_user,
                 'Eliminar Usuario',
                 usuario_afectado=user_id
             )
-
-    # 2. Ahora sí, eliminar todos los usuarios de golpe
     delete_result = usuarios.objects(id__in=ids_a_eliminar).delete()
-    # --- FIN CORRECCIÓN ---
 
     return JsonResponse({'success': True, 'deleted_count': delete_result})
 
