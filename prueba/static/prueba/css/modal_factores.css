@@ -1,0 +1,272 @@
+/* ============================================
+   CSS ESPECÍFICO PARA MODAL DE FACTORES
+   (Modal de ingreso de montos para calificación tributaria)
+   ============================================ */
+
+:root {
+    /* Colores específicos para modal factores */
+    --factores-primary: #FF6B00;
+    --factores-bg-light: #F9F9F9;
+    --factores-border: #E0E0E0;
+    --factores-text-primary: #1A1A1A;
+    --factores-text-secondary: #555555;
+}
+
+/* Tamaño extra grande para modal de factores */
+.modal-extra-large {
+    max-width: 1200px;
+    width: 95%;
+}
+
+/* Grid de información superior (header de factores) */
+.factores-info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, var(--factores-bg-light) 0%, #FFFFFF 100%);
+    border-radius: 8px;
+    border: 1px solid var(--factores-border);
+}
+
+.factores-info-grid .form-field {
+    margin-bottom: 0;
+}
+
+.factores-info-grid .form-field label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--factores-text-secondary);
+    margin-bottom: 0.4rem;
+}
+
+.factores-info-grid .form-field input {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+}
+
+/* Grid de factores en 3 columnas - Diseño tipo cartas */
+.factores-grid-3cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+    align-items: start; /* Alinea todas las cartas desde arriba */
+}
+
+.factores-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Diseño de carta/tarjeta para cada factor */
+.factores-col .form-field {
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: #FFFFFF;
+    border: 1px solid var(--factores-border);
+    border-radius: 8px;
+    padding: 1rem;
+    min-height: 120px; /* Altura mínima para consistencia */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.2s ease;
+}
+
+.factores-col .form-field:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.factores-col .form-field label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--factores-text-primary);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex-grow: 1; /* Ocupa todo el espacio disponible arriba */
+}
+
+.factores-col .form-field label small {
+    font-size: 0.75rem;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--factores-text-secondary);
+    font-style: italic;
+    line-height: 1.4;
+    display: block;
+    margin-top: 0.25rem;
+}
+
+/* Los labels descriptivos ahora también tienen input, así que usan el mismo estilo que los demás */
+
+.factores-col .form-field input.factor-input {
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--factores-border);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background-color: var(--factores-bg-light);
+    color: var(--factores-text-primary);
+    transition: all 0.2s ease;
+    width: 100%;
+    margin-top: auto; /* Empuja el input al final de la carta */
+    flex-shrink: 0;
+    height: 42px; /* Altura fija para todos los inputs */
+    box-sizing: border-box;
+}
+
+.factores-col .form-field input.factor-input:hover {
+    border-color: var(--factores-primary);
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+}
+
+.factores-col .form-field input.factor-input:focus {
+    border-color: var(--factores-primary);
+    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.15);
+    outline: none;
+    background-color: #FFFFFF;
+}
+
+/* Estilos para el radio button "Ingreso por montos" */
+.factores-info-grid .form-field input[type="radio"] {
+    margin-right: 0.5rem;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.factores-info-grid .form-field label[for="factores-ingreso-montos"] {
+    display: inline;
+    font-weight: 500;
+    color: var(--factores-text-secondary);
+    cursor: default;
+}
+
+/* Modal footer específico para factores - botones en orden: Cancelar, Calcular, Grabar */
+#factores-modal-overlay .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    border-top: 2px solid var(--factores-border);
+    background: linear-gradient(to bottom, var(--factores-bg-light) 0%, #FFFFFF 100%);
+}
+
+#factores-modal-overlay .modal-footer .btn {
+    min-width: 120px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 2px solid transparent;
+}
+
+#factores-modal-overlay .modal-footer .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+#factores-modal-overlay .modal-footer .btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Botones específicos para modal factores */
+#factores-modal-overlay .modal-footer .btn-secondary {
+    background-color: var(--factores-text-secondary);
+    border-color: var(--factores-text-secondary);
+    color: #FFFFFF;
+}
+
+#factores-modal-overlay .modal-footer .btn-secondary:hover {
+    background-color: var(--factores-text-primary);
+    border-color: var(--factores-text-primary);
+}
+
+#factores-modal-overlay .modal-footer .btn:not(.btn-secondary) {
+    background: linear-gradient(135deg, var(--factores-primary) 0%, #FF8533 100%);
+    border-color: var(--factores-primary);
+    color: #FFFFFF;
+}
+
+#factores-modal-overlay .modal-footer .btn:not(.btn-secondary):hover {
+    background: linear-gradient(135deg, #FF8533 0%, #E55A00 100%);
+    border-color: #E55A00;
+}
+
+/* Responsive para pantallas más pequeñas */
+@media (max-width: 1024px) {
+    .factores-info-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .factores-grid-3cols {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .modal-extra-large {
+        max-width: 95%;
+        width: 95%;
+    }
+    
+    .factores-info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .factores-grid-3cols {
+        grid-template-columns: 1fr;
+    }
+    
+    #factores-modal-overlay .modal-footer {
+        flex-direction: column;
+    }
+    
+    #factores-modal-overlay .modal-footer .btn {
+        width: 100%;
+    }
+}
+
+/* Scrollbar personalizado para el contenido del modal */
+#factores-modal-overlay .modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+#factores-modal-overlay .modal-content::-webkit-scrollbar-track {
+    background: var(--factores-bg-light);
+    border-radius: 4px;
+}
+
+#factores-modal-overlay .modal-content::-webkit-scrollbar-thumb {
+    background: var(--factores-primary);
+    border-radius: 4px;
+}
+
+#factores-modal-overlay .modal-content::-webkit-scrollbar-thumb:hover {
+    background: #E55A00;
+}
+
+/* Animación específica para abrir modal factores */
+@keyframes fadeInFactores {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+#factores-modal-overlay .modal-content {
+    animation: fadeInFactores 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+

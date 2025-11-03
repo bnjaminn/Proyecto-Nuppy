@@ -21,6 +21,7 @@ class Calificacion(Document):
     Mercado = StringField(max_length=100, required=False) 
     Ejercicio = IntField(required=True) 
     Instrumento = StringField(max_length=50, required=False) 
+    EventoCapital = StringField(max_length=100, required=False)  # Campo agregado según mockup
     FechaPago = DateTimeField(required=False)
     SecuenciaEvento = IntField(required=False)
     Descripcion = StringField(required=False)
@@ -35,10 +36,41 @@ class Calificacion(Document):
     FactorActualizacion = DecimalField(precision=8, default=0.0)
     Anho = IntField(required=False)
 
-    
+    # Factores del 8 al 37 (30 campos total)
     Factor08 = DecimalField(precision=8, default=0.0)
-    
+    Factor09 = DecimalField(precision=8, default=0.0)
+    Factor10 = DecimalField(precision=8, default=0.0)
+    Factor11 = DecimalField(precision=8, default=0.0)
+    Factor12 = DecimalField(precision=8, default=0.0)
+    Factor13 = DecimalField(precision=8, default=0.0)
+    Factor14 = DecimalField(precision=8, default=0.0)
+    Factor15 = DecimalField(precision=8, default=0.0)
+    Factor16 = DecimalField(precision=8, default=0.0)
+    Factor17 = DecimalField(precision=8, default=0.0)
+    Factor18 = DecimalField(precision=8, default=0.0)
+    Factor19 = DecimalField(precision=8, default=0.0)
+    Factor20 = DecimalField(precision=8, default=0.0)
+    Factor21 = DecimalField(precision=8, default=0.0)
+    Factor22 = DecimalField(precision=8, default=0.0)
+    Factor23 = DecimalField(precision=8, default=0.0)
+    Factor24 = DecimalField(precision=8, default=0.0)
+    Factor25 = DecimalField(precision=8, default=0.0)
+    Factor26 = DecimalField(precision=8, default=0.0)
+    Factor27 = DecimalField(precision=8, default=0.0)
+    Factor28 = DecimalField(precision=8, default=0.0)
+    Factor29 = DecimalField(precision=8, default=0.0)
+    Factor30 = DecimalField(precision=8, default=0.0)
+    Factor31 = DecimalField(precision=8, default=0.0)
+    Factor32 = DecimalField(precision=8, default=0.0)
+    Factor33 = DecimalField(precision=8, default=0.0)
+    Factor34 = DecimalField(precision=8, default=0.0)
+    Factor35 = DecimalField(precision=8, default=0.0)
+    Factor36 = DecimalField(precision=8, default=0.0)
     Factor37 = DecimalField(precision=8, default=0.0)
+    
+    # Campos adicionales según mockup
+    RentasExentas = DecimalField(precision=8, default=0.0)  # Rentas Exentas de Impto. GC Y/O Impto Adicional
+    Factor19A = DecimalField(precision=8, default=0.0)  # Factor-19A Ingreso no Constitutivos de Renta
 
     meta = { 'collection': 'calificaciones' }
 

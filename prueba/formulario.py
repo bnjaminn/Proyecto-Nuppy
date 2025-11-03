@@ -78,3 +78,45 @@ class UsuarioUpdateForm(forms.Form):
         if existing_user:
             self.add_error('correo', "Este correo electrónico ya está registrado por otro usuario.")  
         return cleaned_data
+
+#formulario para ingresar factores (segunda ventana modal)
+class FactoresForm(forms.Form):
+    # Campo oculto para el ID de la calificación
+    calificacion_id = forms.CharField(widget=forms.HiddenInput(), required=True)
+    
+    # Factores del 8 al 37 (30 campos total)
+    # Todos son DecimalField con 8 decimales, opcionales, inicializados en 0
+    Factor08 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor09 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor10 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor11 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor12 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor13 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor14 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor15 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor16 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor17 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor18 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor19 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor20 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor21 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor22 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor23 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor24 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor25 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor26 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor27 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor28 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor29 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor30 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor31 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor32 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor33 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor34 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor35 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor36 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor37 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    
+    # Campos adicionales según mockup
+    RentasExentas = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
+    Factor19A = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)

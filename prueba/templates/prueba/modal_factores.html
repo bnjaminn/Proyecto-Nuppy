@@ -1,0 +1,196 @@
+<div id="factores-modal-overlay" class="modal-overlay">
+    <div class="modal-content modal-extra-large"> 
+        
+        <div class="modal-header">
+            <h2>Ingreso de montos para la calificación tributaria</h2>
+            <span id="btn-cerrar-modal-factores-x" class="modal-close">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <form onsubmit="return false;" id="form-factores">
+                <!-- Campo oculto para almacenar el ID de la calificación -->
+                <input type="hidden" id="calificacion_id" name="calificacion_id" value="">
+                <!-- Información general en la parte superior -->
+                <div class="factores-info-grid">
+                    <div class="form-field">
+                        <label for="factores-mercado">Mercado:</label>
+                        <input type="text" id="factores-mercado" name="factores_mercado" readonly class="readonly-field">
+                    </div>
+                    <div class="form-field">
+                        <label for="factores-instrumento">Instrumento:</label>
+                        <input type="text" id="factores-instrumento" name="factores_instrumento" readonly class="readonly-field">
+                    </div>
+                    <div class="form-field">
+                        <label for="factores-evento_capital">Evento Capital:</label>
+                        <input type="text" id="factores-evento_capital" name="factores_evento_capital" readonly class="readonly-field">
+                    </div>
+                    <div class="form-field">
+                        <label for="factores-fecha_pago">Fecha Pago:</label>
+                        <input type="date" id="factores-fecha_pago" name="factores_fecha_pago" readonly class="readonly-field">
+                    </div>
+                    <div class="form-field">
+                        <label for="factores-secuencia">Secuencia Evento:</label>
+                        <input type="number" id="factores-secuencia" name="factores_secuencia" readonly class="readonly-field">
+                    </div>
+                    <div class="form-field">
+                        <label for="factores-anho">Año:</label>
+                        <input type="number" id="factores-anho" name="factores_anho" readonly class="readonly-field">
+                    </div>
+                    <div class="form-field">
+                        <label for="factores-valor_historico">Valor Histórico:</label>
+                        <input type="number" step="0.00000001" id="factores-valor_historico" name="factores_valor_historico" readonly class="readonly-field">
+                    </div>
+                    <div class="form-field">
+                        <label for="factores-descripcion">Descripción:</label>
+                        <input type="text" id="factores-descripcion" name="factores_descripcion" readonly class="readonly-field">
+                    </div>
+                    <div class="form-field">
+                        <label for="factores-ingreso-montos">Ingreso por Montos:</label>
+                        <input type="text" id="factores-ingreso-montos" name="factores_ingreso_montos" value="O" readonly class="readonly-field">
+                    </div>
+                </div>
+
+                <!-- Factores organizados en 3 columnas según mockup exacto -->
+                <div class="factores-grid-3cols">
+                    <!-- Columna 1: 10 factores -->
+                    <div class="factores-col">
+                        <div class="form-field">
+                            <label for="Factor08">Factor-08<small>No Constitutiva de Renta No Acogido a Impto.</small></label>
+                            <input type="number" step="0.00000001" id="Factor08" name="Factor08" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor11">Factor-11<small>Incremento Impuesto 1ra Categoría</small></label>
+                            <input type="number" step="0.00000001" id="Factor11" name="Factor11" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor14">Factor-14<small>Impto. 1ra Categ. Exento Gl. Comp. Sin Devolución</small></label>
+                            <input type="number" step="0.00000001" id="Factor14" name="Factor14" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor17">Factor-17<small>No Constitutiva de Renta Devolución de Capital Art.17</small></label>
+                            <input type="number" step="0.00000001" id="Factor17" name="Factor17" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor20">Factor-20<small>Sin Derecho a Devolucion</small></label>
+                            <input type="number" step="0.00000001" id="Factor20" name="Factor20" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor23">Factor-23<small>Con Derecho a Devolucion</small></label>
+                            <input type="number" step="0.00000001" id="Factor23" name="Factor23" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor26">Factor-26<small>Sin Derecho a Devolucion</small></label>
+                            <input type="number" step="0.00000001" id="Factor26" name="Factor26" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor29">Factor-29<small>Sin Derecho a Devolucion</small></label>
+                            <input type="number" step="0.00000001" id="Factor29" name="Factor29" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor32">Factor-32<small>Con Derecho a Devolucion</small></label>
+                            <input type="number" step="0.00000001" id="Factor32" name="Factor32" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor35">Factor-35<small>Tasa Efectiva Del Cred. Del FUT (TEF)</small></label>
+                            <input type="number" step="0.00000001" id="Factor35" name="Factor35" value="0.0" class="factor-input">
+                        </div>
+                    </div>
+
+                    <!-- Columna 2: 9 factores + 1 label descriptivo = 10 items -->
+                    <div class="factores-col">
+                        <div class="form-field">
+                            <label for="Factor09">Factor-09<small>Impto. 1ra Categ. Afecto Gl. Comp. Con Devolución</small></label>
+                            <input type="number" step="0.00000001" id="Factor09" name="Factor09" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor12">Factor-12<small>Impto. 1ra Categ. Exento Gl. Comp. Con Devolución</small></label>
+                            <input type="number" step="0.00000001" id="Factor12" name="Factor12" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor15">Factor-15<small>Impto. Créditos pro Impuestos Externos</small></label>
+                            <input type="number" step="0.00000001" id="Factor15" name="Factor15" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="RentasExentas">Rentas Exentas de Impto. GC Y/O Impto Adicional</label>
+                            <input type="number" step="0.00000001" id="RentasExentas" name="RentasExentas" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor21">Factor-21<small>Con Derecho a Devolucion</small></label>
+                            <input type="number" step="0.00000001" id="Factor21" name="Factor21" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor24">Factor-24<small>Sin Derecho a Devolucion</small></label>
+                            <input type="number" step="0.00000001" id="Factor24" name="Factor24" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor27">Factor-27<small>Con Derecho a Devolucion</small></label>
+                            <input type="number" step="0.00000001" id="Factor27" name="Factor27" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor30">Factor-30<small>Con Derecho a Devolucion</small></label>
+                            <input type="number" step="0.00000001" id="Factor30" name="Factor30" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor33">Factor-33<small>Credito por IPE</small></label>
+                            <input type="number" step="0.00000001" id="Factor33" name="Factor33" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor36">Factor-36<small>Tasa Efectiva Del Cred. Del FUNT (TEX)</small></label>
+                            <input type="number" step="0.00000001" id="Factor36" name="Factor36" value="0.0" class="factor-input">
+                        </div>
+                    </div>
+
+                    <!-- Columna 3: 9 factores + 1 label descriptivo = 10 items -->
+                    <div class="factores-col">
+                        <div class="form-field">
+                            <label for="Factor10">Factor-10<small>Impuesto Tasa Adicional Exento Art. 21</small></label>
+                            <input type="number" step="0.00000001" id="Factor10" name="Factor10" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor13">Factor-13<small>Impto. 1ra Categ. Afecto Gl. Comp. Sin Devolución</small></label>
+                            <input type="number" step="0.00000001" id="Factor13" name="Factor13" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor16">Factor-16<small>No Constitutiva de Renta Acogido a Impto.</small></label>
+                            <input type="number" step="0.00000001" id="Factor16" name="Factor16" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor19A">Factor-19A Ingreso no Constitutivos de Renta</label>
+                            <input type="number" step="0.00000001" id="Factor19A" name="Factor19A" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor22">Factor-22<small>Sin Derecho a Devolucion</small></label>
+                            <input type="number" step="0.00000001" id="Factor22" name="Factor22" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor25">Factor-25<small>Con Derecho a Devolucion</small></label>
+                            <input type="number" step="0.00000001" id="Factor25" name="Factor25" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor28">Factor-28<small>Credito por IPE</small></label>
+                            <input type="number" step="0.00000001" id="Factor28" name="Factor28" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor31">Factor-31<small>Sin Derecho a Devolucion</small></label>
+                            <input type="number" step="0.00000001" id="Factor31" name="Factor31" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor34">Factor-34<small>Cred. Por Impto. Tasa Adicional, Ex Art. 21 LIR</small></label>
+                            <input type="number" step="0.00000001" id="Factor34" name="Factor34" value="0.0" class="factor-input">
+                        </div>
+                        <div class="form-field">
+                            <label for="Factor37">Factor-37<small>Devolucion de Capital Art. 17 num 7 LIR</small></label>
+                            <input type="number" step="0.00000001" id="Factor37" name="Factor37" value="0.0" class="factor-input">
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" id="btn-cerrar-modal-factores" class="btn btn-secondary">Cancelar</button>
+            <button type="button" id="btn-grabar-factores" class="btn">Grabar</button>
+        </div>
+    </div>
+</div>
+

@@ -7,15 +7,20 @@
         </div>
         
         <div class="modal-body">
-            <form onsubmit="return false;">
+            <form id="form-ingreso" onsubmit="return false;">
                 <div class="modal-form-grid-3rows"> 
+                    <!-- Columna Izquierda -->
                     <div class="form-field">
-                        <label for="modal-ejercicio">Ejercicio:</label>
-                        <input type="number" id="modal-ejercicio" name="ejercicio">
+                        <label for="modal-mercado">Mercado:</label>
+                        <input type="text" id="modal-mercado" name="mercado" readonly class="readonly-field"> 
                     </div>
                     <div class="form-field">
                         <label for="modal-instrumento">Instrumento:</label>
-                        <input type="text" id="modal-instrumento" name="instrumento">
+                        <input type="text" id="modal-instrumento" name="instrumento" maxlength="50">
+                    </div>
+                    <div class="form-field">
+                        <label for="modal-descripcion">Descripción:</label>
+                        <input type="text" id="modal-descripcion" name="descripcion">
                     </div>
                     <div class="form-field">
                         <label for="modal-fecha_pago">Fecha Pago:</label>
@@ -23,19 +28,33 @@
                     </div>
                     <div class="form-field">
                         <label for="modal-secuencia">Secuencia Evento:</label>
-                        <input type="number" id="modal-secuencia" name="secuencia">
-                    </div>
-                    <div class="form-field">
-                        <label for="modal-mercado">Mercado:</label>
-                         <input type="text" id="modal-mercado" name="mercado" readonly class="readonly-field"> 
+                        <input type="number" id="modal-secuencia" name="secuencia" min="10001">
                     </div>
                     <div class="form-field">
                         <label for="modal-dividendo">Dividendo:</label>
-                        <input type="number" step="any" id="modal-dividendo" name="dividendo" value="0.0"> 
+                        <input type="number" step="0.00000001" id="modal-dividendo" name="dividendo" value="0.0"> 
+                    </div>
+                    <div class="form-field">
+                        <label for="modal-valor_historico">Valor Histórico:</label>
+                        <input type="number" step="0.00000001" id="modal-valor_historico" name="valor_historico" value="0.0">
+                    </div>
+                    
+                    <!-- Columna Derecha -->
+                    <div class="form-field">
+                        <label for="modal-factor_actualizacion">Factor de Actualización:</label>
+                        <input type="number" step="0.00000001" id="modal-factor_actualizacion" name="factor_actualizacion" value="0.0">
+                    </div>
+                    <div class="form-field">
+                        <label for="modal-anho">Año:</label>
+                        <input type="number" id="modal-anho" name="anho" readonly class="readonly-field">
                     </div>
                     <div class="form-field form-field-checkbox full-width"> 
                         <input type="checkbox" id="modal-isfut" name="isfut">
                         <label for="modal-isfut">ISFUT</label> 
+                    </div>
+                    <div class="form-field" style="display: none;">
+                        <label for="modal-ejercicio">Ejercicio:</label>
+                        <input type="number" id="modal-ejercicio" name="ejercicio">
                     </div>
                 </div>
             </form>

@@ -12,7 +12,7 @@ try:
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False  # Si no está instalado Pillow, las imágenes no se redimensionarán pero la app funcionará
-from .formulario import LoginForm, CalificacionModalForm, UsuarioForm  # Formularios Django para validación de datos
+from .formulario import LoginForm, CalificacionModalForm, UsuarioForm, FactoresForm  # Formularios Django para validación de datos
 from .models import usuarios, Calificacion, Log  # Modelos de MongoDB (Documentos) para interactuar con la base de datos
 
 
@@ -201,10 +201,41 @@ def ingresar_view(request):
     if request.method == 'POST':
         form = CalificacionModalForm(request.POST)
         if form.is_valid():
-            nueva_calificacion = Calificacion(**form.cleaned_data)
+            # Convertir FechaPago de string a DateTime si viene como string
+            cleaned_data = form.cleaned_data.copy()
+            if 'FechaPago' in cleaned_data and cleaned_data['FechaPago']:
+                if isinstance(cleaned_data['FechaPago'], str):
+                    from datetime import datetime
+                    try:
+                        cleaned_data['FechaPago'] = datetime.strptime(cleaned_data['FechaPago'], '%Y-%m-%d')
+                    except:
+                        pass
+            
+            # Validar que SecuenciaEvento sea mayor a 10000
+            if 'SecuenciaEvento' in cleaned_data and cleaned_data['SecuenciaEvento']:
+                if cleaned_data['SecuenciaEvento'] <= 10000:
+                    return JsonResponse({'success': False, 'error': 'La secuencia de evento debe ser mayor a 10,000.'}, status=400)
+            
+            nueva_calificacion = Calificacion(**cleaned_data)
             nueva_calificacion.save()
             _crear_log(current_user, 'Crear Calificacion', documento_afectado=nueva_calificacion)
-            return redirect('home')
+            # Retornar JSON con el ID de la calificación para abrir el segundo modal
+            return JsonResponse({
+                'success': True,
+                'calificacion_id': str(nueva_calificacion.id),
+                'data': {
+                    'mercado': nueva_calificacion.Mercado or '',
+                    'instrumento': nueva_calificacion.Instrumento or '',
+                    'evento_capital': nueva_calificacion.EventoCapital or '',
+                    'fecha_pago': nueva_calificacion.FechaPago.strftime('%Y-%m-%d') if nueva_calificacion.FechaPago else '',
+                    'secuencia': nueva_calificacion.SecuenciaEvento or '',
+                    'anho': nueva_calificacion.Anho or nueva_calificacion.Ejercicio or '',
+                    'valor_historico': str(nueva_calificacion.ValorHistorico or 0.0),
+                    'descripcion': nueva_calificacion.Descripcion or ''
+                }
+            })
+        else:
+            return JsonResponse({'success': False, 'error': form.errors.as_json()}, status=400)
     else:
         initial_data = {
             'Mercado': request.GET.get('mercado'),
@@ -216,6 +247,59 @@ def ingresar_view(request):
         form = CalificacionModalForm(initial=initial_data)
 
     return render(request, 'prueba/ingresar.html', {'form': form})
+
+
+@require_POST
+def guardar_factores_view(request):
+    """Vista para guardar los factores después de completar los datos básicos"""
+    if 'user_id' not in request.session:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    try:
+        current_user = usuarios.objects.get(id=request.session['user_id'])
+    except usuarios.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Usuario no válido'}, status=401)
+
+    calificacion_id = request.POST.get('calificacion_id')
+    if not calificacion_id:
+        return JsonResponse({'success': False, 'error': 'Falta calificacion_id'}, status=400)
+
+    try:
+        calificacion = Calificacion.objects.get(id=calificacion_id)
+    except Calificacion.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Calificación no encontrada'}, status=404)
+
+    # Crear formulario con los factores
+    form = FactoresForm(request.POST)
+    if form.is_valid():
+        # Actualizar todos los factores en la calificación
+        for i in range(8, 38):  # Del 8 al 37
+            field_name = f'Factor{i:02d}'
+            if field_name in form.cleaned_data:
+                setattr(calificacion, field_name, form.cleaned_data[field_name] or 0.0)
+        
+        # Actualizar campos adicionales según mockup
+        if 'RentasExentas' in form.cleaned_data:
+            calificacion.RentasExentas = form.cleaned_data['RentasExentas'] or 0.0
+        if 'Factor19A' in form.cleaned_data:
+            calificacion.Factor19A = form.cleaned_data['Factor19A'] or 0.0
+        
+        calificacion.save()
+        _crear_log(current_user, 'Modificar Calificacion', documento_afectado=calificacion)
+        return JsonResponse({'success': True})
+    else:
+        return JsonResponse({'success': False, 'error': form.errors.as_json()}, status=400)
+
+
+@require_POST
+def calcular_factores_view(request):
+    """Vista para calcular factores (placeholder - implementar lógica de cálculo)"""
+    if 'user_id' not in request.session:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    # TODO: Implementar lógica de cálculo según los requisitos del negocio
+    # Por ahora solo retorna éxito
+    return JsonResponse({'success': True, 'message': 'Cálculo realizado (función pendiente de implementar)'})
 
 
 def administrar_view(request):
