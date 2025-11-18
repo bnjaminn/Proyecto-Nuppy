@@ -27,6 +27,7 @@ class LoginForm(forms.Form): #especificamos que es de tipo forms esto se hace co
 class CalificacionModalForm(forms.Form):
     #Aca definimos los campos para el primer formulario de ingresar osea la primera ventana
     Mercado = forms.CharField(required=False)
+    Origen = forms.CharField(required=False)  # Campo para el origen (Corredor, CSV)
     Ejercicio = forms.IntegerField()
     Instrumento = forms.CharField(max_length=50, required=False)
     FechaPago = forms.DateField(required=False, input_formats=['%Y-%m-%d']) 

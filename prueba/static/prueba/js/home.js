@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Campos del dashboard
     const dashboardMercado = document.getElementById('mercado');
+    const dashboardOrigen = document.getElementById('origen');
     const dashboardPeriodo = document.getElementById('periodo');
 
     // Botón "Ingresar" DENTRO del Modal 1
@@ -103,6 +104,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Preparar FormData con todos los campos
             const formData = new FormData();
             formData.append('Mercado', modal1Mercado ? modal1Mercado.value || '' : '');
+            // Obtener el origen del dashboard
+            const origenValue = dashboardOrigen ? dashboardOrigen.value || '' : '';
+            formData.append('Origen', origenValue);
             formData.append('Ejercicio', modal1Ejercicio ? modal1Ejercicio.value || modal1Anho.value : modal1Anho ? modal1Anho.value : '');
             formData.append('Instrumento', modal1Instrumento.value || '');
             formData.append('Descripcion', modal1Descripcion ? modal1Descripcion.value || '' : '');
@@ -155,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Obtener URLs desde window.DJANGO_URLS (configurado en el template)
     const guardarFactoresUrl = window.DJANGO_URLS ? window.DJANGO_URLS.guardarFactores : '/guardar-factores/';
+    const calcularFactoresUrl = window.DJANGO_URLS ? window.DJANGO_URLS.calcularFactores : '/calcular-factores/';
 
     function abrirModal2(data) {
         // Llenar campos del modal de factores con los datos recibidos
@@ -207,6 +212,80 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Botón Calcular
+    const btnCalcularFactores = document.getElementById('btn-calcular-factores');
+    if (btnCalcularFactores) {
+        btnCalcularFactores.addEventListener('click', function() {
+            const formFactores = document.getElementById('form-factores');
+            if (!formFactores) {
+                alert('Error: No se encontró el formulario de factores');
+                return;
+            }
+
+            const calificacionId = document.getElementById('calificacion_id');
+            if (!calificacionId || !calificacionId.value) {
+                alert('Error: No se encontró el ID de la calificación');
+                return;
+            }
+
+            // Enviar todos los valores del formulario para calcular
+            const formData = new FormData(formFactores);
+
+            fetch(calcularFactoresUrl, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': csrftoken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Mostrar información de debug en la consola
+                    if (data.debug) {
+                        console.log('=== Información de Cálculo ===');
+                        console.log('Suma 8-10:', data.debug.suma_8_a_10);
+                        console.log('Suma 8-19:', data.debug.suma_8_a_19);
+                        console.log('Rentas Exentas:', data.debug.rentas_exentas);
+                        console.log('Factor19A:', data.debug.factor19a);
+                        console.log('==============================');
+                    }
+                    
+                    // Actualizar los campos de factores con los valores calculados
+                    if (data.factores) {
+                        let actualizados = 0;
+                        for (const [fieldName, value] of Object.entries(data.factores)) {
+                            const input = document.getElementById(fieldName);
+                            if (input) {
+                                // Convertir el valor a número y formatearlo correctamente
+                                const numValue = parseFloat(value);
+                                if (!isNaN(numValue)) {
+                                    // Formatear con hasta 8 decimales
+                                    const formattedValue = numValue.toFixed(8).replace(/\.?0+$/, '');
+                                    input.value = formattedValue === '' ? '0' : formattedValue;
+                                    actualizados++;
+                                    console.log(`${fieldName}: ${input.value}`);
+                                } else {
+                                    input.value = value || '0';
+                                    actualizados++;
+                                }
+                            }
+                        }
+                        console.log(`Total de factores actualizados: ${actualizados}`);
+                    }
+                    alert('Factores calculados exitosamente. Los valores han sido actualizados en el formulario.\n\nRevisa la consola del navegador (F12) para ver los detalles del cálculo.');
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudieron calcular los factores'));
+                    console.error('Error en cálculo:', data);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al calcular. Por favor, intente nuevamente.');
+            });
+        });
+    }
+
     // Botón Grabar
     if (btnGrabarFactores) {
         btnGrabarFactores.addEventListener('click', function() {
@@ -240,6 +319,146 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error:', error);
                 alert('Error al guardar. Por favor, intente nuevamente.');
             });
+        });
+    }
+
+    // ========== BOTÓN BUSCAR ==========
+    const btnBuscar = document.getElementById('btn-buscar');
+    const btnLimpiar = document.getElementById('btn-limpiar');
+    const buscarCalificacionesUrl = window.DJANGO_URLS ? window.DJANGO_URLS.buscarCalificaciones : '/buscar-calificaciones/';
+    const tablaBody = document.getElementById('tabla-calificaciones-body');
+
+    function formatearNumero(valor) {
+        if (!valor || valor === '0' || valor === '0.0' || valor === '0.00000000') {
+            return '0';
+        }
+        const num = parseFloat(valor);
+        if (isNaN(num)) return '0';
+        // Formatear con hasta 8 decimales, eliminando ceros innecesarios
+        return num.toFixed(8).replace(/\.?0+$/, '');
+    }
+
+    function renderizarCalificaciones(calificaciones) {
+        if (!tablaBody) return;
+
+        if (!calificaciones || calificaciones.length === 0) {
+            tablaBody.innerHTML = `
+                <tr>
+                    <td colspan="37" style="text-align: center; padding: 20px;">
+                        <em>No se encontraron calificaciones con los filtros seleccionados</em>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        let html = '';
+        calificaciones.forEach(cal => {
+            html += '<tr>';
+            // Columnas básicas
+            html += `<td>${cal.ejercicio || ''}</td>`;
+            html += `<td>${cal.instrumento || ''}</td>`;
+            html += `<td>${cal.fecha_pago || ''}</td>`;
+            html += `<td>${cal.descripcion || ''}</td>`;
+            html += `<td>${cal.secuencia_evento || ''}</td>`;
+            html += `<td>${cal.fecha_act || ''}</td>`;
+            
+            // Factores 8-37
+            for (let i = 8; i < 38; i++) {
+                const factorName = `Factor${i.toString().padStart(2, '0')}`;
+                const valor = cal.factores && cal.factores[factorName] ? cal.factores[factorName] : '0.0';
+                html += `<td>${formatearNumero(valor)}</td>`;
+            }
+            
+            html += '</tr>';
+        });
+
+        tablaBody.innerHTML = html;
+    }
+
+    if (btnBuscar) {
+        btnBuscar.addEventListener('click', function() {
+            const mercado = dashboardMercado ? dashboardMercado.value : '';
+            const origen = dashboardOrigen ? dashboardOrigen.value : '';
+            const periodo = dashboardPeriodo ? dashboardPeriodo.value : '';
+
+            // Construir URL con parámetros
+            const params = new URLSearchParams();
+            if (mercado) params.append('mercado', mercado);
+            if (origen) params.append('origen', origen);
+            if (periodo) params.append('periodo', periodo);
+
+            const url = `${buscarCalificacionesUrl}?${params.toString()}`;
+
+            // Mostrar mensaje de carga
+            if (tablaBody) {
+                tablaBody.innerHTML = `
+                    <tr>
+                        <td colspan="37" style="text-align: center; padding: 20px;">
+                            <em>Buscando calificaciones...</em>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    renderizarCalificaciones(data.calificaciones);
+                    console.log(`Se encontraron ${data.total} calificación(es)`);
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudieron buscar las calificaciones'));
+                    if (tablaBody) {
+                        tablaBody.innerHTML = `
+                            <tr>
+                                <td colspan="37" style="text-align: center; padding: 20px; color: red;">
+                                    <em>Error al buscar calificaciones</em>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al buscar. Por favor, intente nuevamente.');
+                if (tablaBody) {
+                    tablaBody.innerHTML = `
+                        <tr>
+                            <td colspan="37" style="text-align: center; padding: 20px; color: red;">
+                                <em>Error al buscar calificaciones</em>
+                            </td>
+                        </tr>
+                    `;
+                }
+            });
+        });
+    }
+
+    // ========== BOTÓN LIMPIAR ==========
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', function() {
+            // Resetear filtros a valores por defecto
+            if (dashboardMercado) dashboardMercado.value = 'chile';
+            if (dashboardOrigen) dashboardOrigen.value = 'corredor';
+            if (dashboardPeriodo) dashboardPeriodo.value = new Date().getFullYear().toString();
+
+            // Limpiar tabla
+            if (tablaBody) {
+                tablaBody.innerHTML = `
+                    <tr>
+                        <td colspan="37" style="text-align: center; padding: 20px;">
+                            <em>Seleccione los filtros y haga clic en "buscar" para ver las calificaciones</em>
+                        </td>
+                    </tr>
+                `;
+            }
         });
     }
 });

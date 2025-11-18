@@ -19,6 +19,7 @@ class usuarios(Document):
 #sin terminar aun no funciona IGNORAR
 class Calificacion(Document):
     Mercado = StringField(max_length=100, required=False) 
+    Origen = StringField(max_length=100, required=False)  # Campo para guardar el origen (Corredor, CSV)
     Ejercicio = IntField(required=True) 
     Instrumento = StringField(max_length=50, required=False) 
     EventoCapital = StringField(max_length=100, required=False)  # Campo agregado según mockup

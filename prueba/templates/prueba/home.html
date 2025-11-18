@@ -17,7 +17,9 @@
         // Pasar URLs de Django al JavaScript
         window.DJANGO_URLS = {
             ingresar: '{% url "ingresar" %}',
-            guardarFactores: '{% url "guardar_factores" %}'
+            guardarFactores: '{% url "guardar_factores" %}',
+            calcularFactores: '{% url "calcular_factores" %}',
+            buscarCalificaciones: '{% url "buscar_calificaciones" %}'
         };
     </script>
 </head>
@@ -29,14 +31,16 @@
             <div class="filter-group">
                 <label for="mercado">Mercado:</label>
                 <select id="mercado" name="mercado">
-                    <option value="acciones">ACCIONES</option>
-                    <option value="calif_pendiente">Calificacion pendiente</option>
+                    <option value="chile">Chile</option>
+                    <option value="peru">Perú</option>
+                    <option value="colombia">Colombia</option>
                 </select>
             </div>
             <div class="filter-group">
                 <label for="origen">Origen:</label>
                 <select id="origen" name="origen">
                     <option value="corredor">Corredor</option>
+                    <option value="csv">CSV</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -65,8 +69,8 @@
             </div>
             
             <div class="btn-group">
-                <button class="btn">buscar</button>
-                <button class="btn">limpiar</button>
+                <button type="button" id="btn-buscar" class="btn">buscar</button>
+                <button type="button" id="btn-limpiar" class="btn">limpiar</button>
                 
                 {% if is_admin %}
                     <a href="{% url 'administrar' %}" class="btn">administrar</a>
@@ -118,17 +122,11 @@
                     <th>Factor-37<small>(Columna 37)</small></th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="tabla-calificaciones-body">
                 <tr>
-                    <td>...</td><td>...</td><td>...</td><td>...</td>
-                    <td>...</td><td>...</td><td>...</td><td>...</td>
-                    <td>...</td><td>...</td><td>...</td><td>...</td>
-                    <td>...</td><td>...</td><td>...</td><td>...</td>
-                    <td>...</td><td>...</td><td>...</td><td>...</td>
-                    <td>...</td><td>...</td><td>...</td><td>...</td>
-                    <td>...</td><td>...</td><td>...</td><td>...</td>
-                    <td>...</td><td>...</td><td>...</td><td>...</td>
-                    <td>...</td><td>...</td><td>...</td><td>...</td>
+                    <td colspan="37" style="text-align: center; padding: 20px;">
+                        <em>Seleccione los filtros y haga clic en "buscar" para ver las calificaciones</em>
+                    </td>
                 </tr>
             </tbody>
         </table>

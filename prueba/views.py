@@ -176,11 +176,96 @@ def home_view(request):
         request.session.flush()
         return redirect('login')
 
+    # Obtener calificaciones si hay filtros
+    calificaciones = []
+    if request.method == 'GET':
+        mercado = request.GET.get('mercado', '')
+        origen = request.GET.get('origen', '')
+        periodo = request.GET.get('periodo', '')
+        
+        if mercado or origen or periodo:
+            query = {}
+            if mercado:
+                query['Mercado'] = mercado
+            if origen:
+                query['Origen'] = origen
+            if periodo:
+                try:
+                    periodo_int = int(periodo)
+                    query['Ejercicio'] = periodo_int
+                except ValueError:
+                    pass
+            
+            calificaciones = Calificacion.objects(**query).order_by('-FechaAct')
+
     return render(request, 'prueba/home.html', {
         'user_nombre': current_user.nombre,
         'is_admin': is_admin,
-        'current_user': current_user
+        'current_user': current_user,
+        'calificaciones': calificaciones
     })
+
+
+@require_GET
+def buscar_calificaciones_view(request):
+    """Vista para buscar calificaciones según filtros de mercado, origen y periodo"""
+    if 'user_id' not in request.session:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    try:
+        mercado = request.GET.get('mercado', '').strip()
+        origen = request.GET.get('origen', '').strip()
+        periodo = request.GET.get('periodo', '').strip()
+
+        # Construir query de filtrado
+        query = {}
+        if mercado:
+            query['Mercado'] = mercado
+        if origen:
+            query['Origen'] = origen
+        if periodo:
+            try:
+                periodo_int = int(periodo)
+                query['Ejercicio'] = periodo_int
+            except ValueError:
+                pass
+
+        # Buscar calificaciones
+        calificaciones = Calificacion.objects(**query).order_by('-FechaAct')
+
+        # Convertir a formato JSON
+        calificaciones_data = []
+        for cal in calificaciones:
+            cal_data = {
+                'id': str(cal.id),
+                'ejercicio': cal.Ejercicio or '',
+                'instrumento': cal.Instrumento or '',
+                'fecha_pago': cal.FechaPago.strftime('%Y-%m-%d') if cal.FechaPago else '',
+                'descripcion': cal.Descripcion or '',
+                'secuencia_evento': cal.SecuenciaEvento or '',
+                'fecha_act': cal.FechaAct.strftime('%Y-%m-%d %H:%M:%S') if cal.FechaAct else '',
+                'mercado': cal.Mercado or '',
+                'origen': cal.Origen or '',
+                'factores': {}
+            }
+            
+            # Agregar todos los factores
+            for i in range(8, 38):
+                field_name = f'Factor{i:02d}'
+                valor = getattr(cal, field_name, 0.0)
+                cal_data['factores'][field_name] = str(valor) if valor else '0.0'
+            
+            calificaciones_data.append(cal_data)
+
+        return JsonResponse({
+            'success': True,
+            'calificaciones': calificaciones_data,
+            'total': len(calificaciones_data)
+        })
+
+    except Exception as e:
+        print(f"Error al buscar calificaciones: {e}")
+        return JsonResponse({'success': False, 'error': f'Error al buscar: {str(e)}'}, status=500)
 
 
 def logout_view(request):
@@ -225,6 +310,7 @@ def ingresar_view(request):
                 'calificacion_id': str(nueva_calificacion.id),
                 'data': {
                     'mercado': nueva_calificacion.Mercado or '',
+                    'origen': nueva_calificacion.Origen or '',
                     'instrumento': nueva_calificacion.Instrumento or '',
                     'evento_capital': nueva_calificacion.EventoCapital or '',
                     'fecha_pago': nueva_calificacion.FechaPago.strftime('%Y-%m-%d') if nueva_calificacion.FechaPago else '',
@@ -293,13 +379,157 @@ def guardar_factores_view(request):
 
 @require_POST
 def calcular_factores_view(request):
-    """Vista para calcular factores (placeholder - implementar lógica de cálculo)"""
+    """Vista para calcular factores basándose en las reglas del Excel"""
     if 'user_id' not in request.session:
         return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
 
-    # TODO: Implementar lógica de cálculo según los requisitos del negocio
-    # Por ahora solo retorna éxito
-    return JsonResponse({'success': True, 'message': 'Cálculo realizado (función pendiente de implementar)'})
+    try:
+        current_user = usuarios.objects.get(id=request.session['user_id'])
+    except usuarios.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Usuario no válido'}, status=401)
+
+    calificacion_id = request.POST.get('calificacion_id')
+    if not calificacion_id:
+        return JsonResponse({'success': False, 'error': 'Falta calificacion_id'}, status=400)
+
+    try:
+        calificacion = Calificacion.objects.get(id=calificacion_id)
+    except Calificacion.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Calificación no encontrada'}, status=404)
+
+    # Función auxiliar para redondear al 8vo decimal y limitar a 1
+    def calcular_factor(numerador, denominador):
+        if denominador == 0:
+            return 0.0
+        resultado = float(numerador) / float(denominador)
+        resultado = min(resultado, 1.0)  # No puede ser mayor que 1
+        return round(resultado, 8)  # Redondeo al 8vo decimal
+
+    try:
+        # Obtener valores de los factores desde el formulario (POST) - estos son los MONTOS ingresados
+        factores_montos = {}
+        for i in range(8, 38):
+            field_name = f'Factor{i:02d}'
+            valor_post = request.POST.get(field_name, '0.0')
+            try:
+                factores_montos[field_name] = float(valor_post) if valor_post else 0.0
+            except (ValueError, TypeError):
+                factores_montos[field_name] = 0.0
+
+        # Obtener otros campos necesarios desde el formulario
+        rentas_exentas = float(request.POST.get('RentasExentas', '0.0') or 0.0)
+        factor19a = float(request.POST.get('Factor19A', '0.0') or 0.0)
+
+        # IMPORTANTE: Los factores 8-12 son MONTOS BASE que se ingresan
+        # Los factores 13-37 también son MONTOS que se ingresan
+        # Para calcular las PROPORCIONES, necesitamos:
+        # - Suma de factores 8 a 10 (para Factor18)
+        # - Suma de factores 8 a 19 (para factores 13-17, 19-37)
+
+        # Calcular suma de columnas 8 a 10 (Factor08, Factor09, Factor10) - MONTOS BASE
+        suma_8_a_10 = factores_montos['Factor08'] + factores_montos['Factor09'] + factores_montos['Factor10']
+
+        # Calcular suma de columnas 8 a 19 (Factor08 a Factor19)
+        # IMPORTANTE: Factor18 y Factor19 son CALCULADOS, no se incluyen en la suma
+        # La suma 8-19 incluye: Factor08 a Factor17 (montos ingresados)
+        suma_8_a_12 = sum(factores_montos[f'Factor{i:02d}'] for i in range(8, 13))
+        suma_8_a_17 = suma_8_a_12 + factores_montos['Factor13'] + factores_montos['Factor14'] + factores_montos['Factor15'] + factores_montos['Factor16'] + factores_montos['Factor17']
+        # Para la suma 8-19, usamos 8-17 ya que 18 y 19 son calculados
+        suma_8_a_19 = suma_8_a_17
+
+        # REGLAS DE CÁLCULO BASADAS EN EL EXCEL
+        # Los factores 13-37 se calculan dividiendo los MONTOS ingresados entre las sumas correspondientes
+        # Los factores 8-12 NO se calculan, son valores base
+
+        # Factor 13: Divide el monto de Factor13 / Suma de columnas 8 a 19
+        if suma_8_a_19 > 0:
+            calificacion.Factor13 = calcular_factor(factores_montos['Factor13'], suma_8_a_19)
+        else:
+            calificacion.Factor13 = 0.0
+
+        # Factor 14: Divide el monto de Factor14 / Suma de columnas 8 a 19
+        if suma_8_a_19 > 0:
+            calificacion.Factor14 = calcular_factor(factores_montos['Factor14'], suma_8_a_19)
+        else:
+            calificacion.Factor14 = 0.0
+
+        # Factor 15: Divide el monto de Factor15 / Suma de columnas 8 a 19
+        if suma_8_a_19 > 0:
+            calificacion.Factor15 = calcular_factor(factores_montos['Factor15'], suma_8_a_19)
+        else:
+            calificacion.Factor15 = 0.0
+
+        # Factor 16: Divide el monto de Factor16 / Suma de columnas 8 a 19
+        if suma_8_a_19 > 0:
+            calificacion.Factor16 = calcular_factor(factores_montos['Factor16'], suma_8_a_19)
+        else:
+            calificacion.Factor16 = 0.0
+
+        # Factor 17: Divide el monto de Factor17 / Suma de columnas 8 a 19
+        if suma_8_a_19 > 0:
+            calificacion.Factor17 = calcular_factor(factores_montos['Factor17'], suma_8_a_19)
+        else:
+            calificacion.Factor17 = 0.0
+
+        # Factor 18: Divide RentasExentas / Suma de columna 8 a la 10
+        if suma_8_a_10 > 0:
+            calificacion.Factor18 = calcular_factor(rentas_exentas, suma_8_a_10)
+        else:
+            calificacion.Factor18 = 0.0
+
+        # Factor 19: Divide Factor19A / Suma de columna 8 a 19
+        if suma_8_a_19 > 0:
+            calificacion.Factor19 = calcular_factor(factor19a, suma_8_a_19)
+        else:
+            calificacion.Factor19 = 0.0
+
+        # Factores 20-37: Divide el monto de cada factor / Suma de columna 8 a la 19
+        for i in range(20, 38):
+            field_name = f'Factor{i:02d}'
+            if suma_8_a_19 > 0:
+                setattr(calificacion, field_name, calcular_factor(factores_montos[field_name], suma_8_a_19))
+            else:
+                setattr(calificacion, field_name, 0.0)
+
+        # Guardar los cambios
+        calificacion.save()
+        _crear_log(current_user, 'Modificar Calificacion', documento_afectado=calificacion)
+
+        # Retornar los factores calculados
+        factores_calculados = {}
+        for i in range(8, 38):
+            field_name = f'Factor{i:02d}'
+            valor = getattr(calificacion, field_name, 0.0)
+            # Asegurar que el valor sea un número y formatearlo correctamente
+            if valor is None:
+                valor = 0.0
+            try:
+                valor_float = float(valor)
+                # Formatear con 8 decimales
+                factores_calculados[field_name] = f"{valor_float:.8f}".rstrip('0').rstrip('.')
+                if factores_calculados[field_name] == '':
+                    factores_calculados[field_name] = '0'
+            except (ValueError, TypeError):
+                factores_calculados[field_name] = '0.0'
+
+        # Agregar información de debug (solo en desarrollo)
+        debug_info = {
+            'suma_8_a_10': f"{suma_8_a_10:.8f}",
+            'suma_8_a_19': f"{suma_8_a_19:.8f}",
+            'rentas_exentas': f"{rentas_exentas:.8f}",
+            'factor19a': f"{factor19a:.8f}"
+        }
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Factores calculados exitosamente',
+            'factores': factores_calculados,
+            'debug': debug_info  # Información de debug para verificar cálculos
+        })
+
+    except Exception as e:
+        print(f"Error al calcular factores: {e}")
+        return JsonResponse({'success': False, 'error': f'Error al calcular: {str(e)}'}, status=500)
 
 
 def administrar_view(request):
