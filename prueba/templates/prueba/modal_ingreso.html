@@ -12,7 +12,15 @@
                     <!-- Columna Izquierda -->
                     <div class="form-field">
                         <label for="modal-mercado">Mercado:</label>
-                        <input type="text" id="modal-mercado" name="mercado" readonly class="readonly-field"> 
+                        <!-- Input readonly (se mostrará cuando hay un mercado específico) -->
+                        <input type="text" id="modal-mercado" name="mercado" readonly class="readonly-field" style="display: none;">
+                        <!-- Select (se mostrará cuando el dashboard tenga "Todos" seleccionado) -->
+                        <select id="modal-mercado-select" name="mercado" style="display: none;">
+                            <option value="">Seleccione...</option>
+                            <option value="acciones">Acciones</option>
+                            <option value="CFI">CFI</option>
+                            <option value="Fondos mutuos">Fondos mutuos</option>
+                        </select>
                     </div>
                     <div class="form-field">
                         <label for="modal-instrumento">Instrumento:</label>

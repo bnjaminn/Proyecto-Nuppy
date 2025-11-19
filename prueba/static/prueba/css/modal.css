@@ -41,6 +41,17 @@
     animation: fadeInOverlay 0.2s ease-out;
 }
 
+/* Z-index más alto para modales de carga */
+#carga-factor-modal-overlay,
+#carga-monto-modal-overlay {
+    z-index: 10001 !important;
+}
+
+/* Z-index aún más alto para modal de mensajes (debe aparecer sobre los modales de carga) */
+#mensaje-modal-overlay {
+    z-index: 10002 !important;
+}
+
 .modal-content {
     background-color: var(--bg-primary);
     border-radius: 12px;
@@ -59,6 +70,11 @@
 
 .modal-small {
     max-width: 500px;
+}
+
+.modal-extra-large {
+    max-width: 95%;
+    width: 95%;
 }
 
 .modal-header {
@@ -530,4 +546,353 @@
 .factor-display:focus {
     border-color: #4CAF50;
     box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
+/* ===== ESTILOS PARA MODAL DE OPCIONES ===== */
+.opciones-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1rem 0;
+}
+
+.opcion-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background-color: var(--bg-secondary);
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.opcion-item:hover {
+    background-color: var(--bg-light);
+    border-color: var(--color-primary);
+}
+
+.opcion-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.opcion-label {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.opcion-description {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+    margin-left: 1rem;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 26px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: var(--color-primary);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
+.toggle-switch input:focus + .toggle-slider {
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2);
+}
+
+.toggle-switch:hover .toggle-slider {
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+}
+
+/* ===== TEMA OSCURO PARA MODALES ===== */
+body.dark-theme .modal-content {
+    background-color: var(--bg-primary);
+    border-color: var(--border);
+}
+
+body.dark-theme .modal-header {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--bg-primary) 100%);
+    border-bottom-color: var(--border);
+}
+
+body.dark-theme .modal-body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+body.dark-theme .modal-footer {
+    background: linear-gradient(to bottom, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+    border-top-color: var(--border);
+}
+
+body.dark-theme .form-field input,
+body.dark-theme .form-field select,
+body.dark-theme .form-field textarea {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+body.dark-theme .form-field input:focus,
+body.dark-theme .form-field select:focus,
+body.dark-theme .form-field textarea:focus {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--color-primary);
+}
+
+body.dark-theme .form-field input::placeholder,
+body.dark-theme .form-field textarea::placeholder {
+    color: var(--text-secondary);
+}
+
+body.dark-theme .readonly-field {
+    background-color: var(--bg-light);
+    color: var(--text-secondary);
+}
+
+body.dark-theme .opcion-item {
+    background-color: var(--bg-secondary);
+    border-color: var(--border);
+}
+
+body.dark-theme .opcion-item:hover {
+    background-color: var(--bg-light);
+}
+
+/* Tema oscuro para tablas dentro de modales */
+body.dark-theme table {
+    color: var(--text-primary);
+}
+
+body.dark-theme table th {
+    color: var(--text-on-primary);
+}
+
+body.dark-theme table td {
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+body.dark-theme table tbody tr {
+    background-color: var(--bg-primary);
+}
+
+body.dark-theme table tbody tr:nth-child(even) {
+    background-color: var(--bg-secondary);
+}
+
+body.dark-theme table tbody tr:hover {
+    background-color: var(--color-primary-light);
+}
+
+/* Tema oscuro para inputs de archivo */
+body.dark-theme input[type="file"] {
+    color: var(--text-primary);
+}
+
+body.dark-theme input[type="file"]::file-selector-button {
+    background-color: var(--color-primary);
+    color: var(--text-on-primary);
+    border-color: var(--color-primary);
+}
+
+body.dark-theme input[type="file"]::file-selector-button:hover {
+    background-color: var(--color-primary-hover);
+}
+
+/* Tema oscuro para pequeños textos */
+body.dark-theme small {
+    color: var(--text-secondary);
+}
+
+/* Tema oscuro para mensajes de error y texto en modales */
+body.dark-theme .error-message,
+body.dark-theme .mensaje-error {
+    color: #ff6b6b;
+}
+
+body.dark-theme .mensaje-exito {
+    color: #51cf66;
+}
+
+/* Tema oscuro para select dentro de modales */
+body.dark-theme .form-field select {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+body.dark-theme .form-field select:focus {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Tema oscuro para checkbox */
+body.dark-theme .form-field-checkbox input[type="checkbox"] {
+    accent-color: var(--color-primary);
+}
+
+/* Tema oscuro para modal-close */
+body.dark-theme .modal-close {
+    color: var(--text-secondary);
+}
+
+body.dark-theme .modal-close:hover {
+    color: var(--color-primary);
+    background-color: var(--color-primary-light);
+}
+
+/* ===== ESTILOS ESPECÍFICOS PARA MODALES DE CARGA ===== */
+/* Contenedor de archivo */
+.archivo-input-container {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.archivo-nombre-input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+body.dark-theme .archivo-nombre-input {
+    background-color: var(--bg-secondary);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+/* Contenedor de preview de tabla */
+.preview-table-container {
+    max-height: 60vh;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background-color: var(--bg-primary);
+}
+
+body.dark-theme .preview-table-container {
+    background-color: var(--bg-primary);
+    border-color: var(--border);
+}
+
+/* Tabla de preview */
+.preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--bg-primary);
+}
+
+.preview-table thead {
+    background-color: var(--bg-secondary);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+body.dark-theme .preview-table thead {
+    background-color: var(--bg-secondary);
+}
+
+.preview-table th {
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+}
+
+body.dark-theme .preview-table th {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+.preview-table td {
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+}
+
+body.dark-theme .preview-table td {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+.preview-table tbody tr:nth-child(even) td {
+    background-color: var(--bg-secondary);
+}
+
+body.dark-theme .preview-table tbody tr:nth-child(even) td {
+    background-color: var(--bg-secondary);
+}
+
+.preview-table tbody tr:hover td {
+    background-color: var(--color-primary-light);
+}
+
+body.dark-theme .preview-table tbody tr:hover td {
+    background-color: var(--color-primary-light);
+}
+
+/* Mensaje de tabla vacía */
+.preview-empty-message {
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+body.dark-theme .preview-empty-message {
+    color: var(--text-secondary);
 }

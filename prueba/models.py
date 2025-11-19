@@ -72,6 +72,41 @@ class Calificacion(Document):
     # Campos adicionales según mockup
     RentasExentas = DecimalField(precision=8, default=0.0)  # Rentas Exentas de Impto. GC Y/O Impto Adicional
     Factor19A = DecimalField(precision=8, default=0.0)  # Factor-19A Ingreso no Constitutivos de Renta
+    
+    # Montos del 8 al 37 (para poder recuperarlos al modificar/copiar)
+    Monto08 = DecimalField(precision=2, default=0.0)
+    Monto09 = DecimalField(precision=2, default=0.0)
+    Monto10 = DecimalField(precision=2, default=0.0)
+    Monto11 = DecimalField(precision=2, default=0.0)
+    Monto12 = DecimalField(precision=2, default=0.0)
+    Monto13 = DecimalField(precision=2, default=0.0)
+    Monto14 = DecimalField(precision=2, default=0.0)
+    Monto15 = DecimalField(precision=2, default=0.0)
+    Monto16 = DecimalField(precision=2, default=0.0)
+    Monto17 = DecimalField(precision=2, default=0.0)
+    Monto18 = DecimalField(precision=2, default=0.0)
+    Monto19 = DecimalField(precision=2, default=0.0)
+    Monto20 = DecimalField(precision=2, default=0.0)
+    Monto21 = DecimalField(precision=2, default=0.0)
+    Monto22 = DecimalField(precision=2, default=0.0)
+    Monto23 = DecimalField(precision=2, default=0.0)
+    Monto24 = DecimalField(precision=2, default=0.0)
+    Monto25 = DecimalField(precision=2, default=0.0)
+    Monto26 = DecimalField(precision=2, default=0.0)
+    Monto27 = DecimalField(precision=2, default=0.0)
+    Monto28 = DecimalField(precision=2, default=0.0)
+    Monto29 = DecimalField(precision=2, default=0.0)
+    Monto30 = DecimalField(precision=2, default=0.0)
+    Monto31 = DecimalField(precision=2, default=0.0)
+    Monto32 = DecimalField(precision=2, default=0.0)
+    Monto33 = DecimalField(precision=2, default=0.0)
+    Monto34 = DecimalField(precision=2, default=0.0)
+    Monto35 = DecimalField(precision=2, default=0.0)
+    Monto36 = DecimalField(precision=2, default=0.0)
+    Monto37 = DecimalField(precision=2, default=0.0)
+    
+    # Suma base (suma de montos del 8 al 19) para poder hacer el cálculo inverso
+    SumaBase = DecimalField(precision=2, default=0.0)
 
     meta = { 'collection': 'calificaciones' }
 
@@ -95,6 +130,8 @@ class Log(Document):
     )
     accion = StringField(max_length=50, choices=ACCION_CHOICES, required=True)
     iddocumento = ReferenceField(Calificacion, required=False, null=True)
+    # Campo para guardar los cambios detallados (campos modificados, valores anteriores y nuevos)
+    cambios_detallados = StringField(required=False)  # JSON string con los cambios
     meta = {
         'collection': 'log' # Nombre de la colección en MongoDB
     }

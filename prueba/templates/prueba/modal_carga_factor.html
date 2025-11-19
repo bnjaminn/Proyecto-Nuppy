@@ -1,0 +1,77 @@
+<!-- Modal para Carga X Factor -->
+<div id="carga-factor-modal-overlay" class="modal-overlay">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>Cargar archivo carga x factor</h2>
+            <span id="btn-cerrar-carga-factor-x" class="modal-close">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <div style="margin-bottom: 1.5rem;">
+                <label for="archivo-factor-input" class="form-field" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Archivo</label>
+                <input type="file" id="archivo-factor-input" accept=".csv" style="display: none;">
+                <div class="archivo-input-container">
+                    <input type="text" id="archivo-factor-nombre" readonly class="archivo-nombre-input" placeholder="Ningún archivo seleccionado">
+                    <button type="button" id="btn-seleccionar-archivo-factor" class="btn">SELECCIONAR ARCHIVO</button>
+                </div>
+            </div>
+            
+            <div class="preview-table-container">
+                <table id="tabla-preview-factor" class="preview-table">
+                    <thead>
+                        <tr>
+                            <th>Ejercicio</th>
+                            <th>Mercado</th>
+                            <th>Instrumento</th>
+                            <th>FEC_PAGO</th>
+                            <th>SEC_EVE</th>
+                            <th>DESCRIPCION</th>
+                            <th>F8</th>
+                            <th>F9</th>
+                            <th>F10</th>
+                            <th>F11</th>
+                            <th>F12</th>
+                            <th>F13</th>
+                            <th>F14</th>
+                            <th>F15</th>
+                            <th>F16</th>
+                            <th>F17</th>
+                            <th>F18</th>
+                            <th>F19</th>
+                            <th>F20</th>
+                            <th>F21</th>
+                            <th>F22</th>
+                            <th>F23</th>
+                            <th>F24</th>
+                            <th>F25</th>
+                            <th>F26</th>
+                            <th>F27</th>
+                            <th>F28</th>
+                            <th>F29</th>
+                            <th>F30</th>
+                            <th>F31</th>
+                            <th>F32</th>
+                            <th>F33</th>
+                            <th>F34</th>
+                            <th>F35</th>
+                            <th>F36</th>
+                            <th>F37</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-preview-factor-body">
+                        <tr>
+                            <td colspan="38" class="preview-empty-message">No hay datos para mostrar. Seleccione un archivo CSV.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button type="button" id="btn-grabar-factor" class="btn" disabled>GRABAR</button>
+            <button type="button" id="btn-cancelar-factor" class="btn btn-secondary">CANCELAR</button>
+            <button type="button" id="btn-ver-formato-factor" class="btn">VER FORMATO</button>
+        </div>
+    </div>
+</div>
+

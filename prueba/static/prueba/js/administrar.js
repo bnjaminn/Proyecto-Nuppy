@@ -140,15 +140,42 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnAbrirCrear) btnAbrirCrear.addEventListener('click', abrirModalCrear);
     if (btnCerrarCrear) btnCerrarCrear.addEventListener('click', cerrarModalCrear);
     if (btnCerrarCrearX) btnCerrarCrearX.addEventListener('click', cerrarModalCrear);
-    if (modalCrearOverlay) {
-        modalCrearOverlay.addEventListener('click', (e) => { 
-            if (e.target === modalCrearOverlay) cerrarModalCrear(); 
-        });
-    }
+    // Event listener para cerrar modal al hacer clic fuera eliminado por solicitud del usuario
     
     if (formCrearUsuario) {
         formCrearUsuario.addEventListener('submit', function(event) {
             event.preventDefault();
+            
+            // Validación del lado del cliente para contraseñas
+            const contrasena = document.getElementById('crear-contrasena').value;
+            const confirmarContrasena = document.getElementById('crear-confirmar-contrasena').value;
+            
+            // Verificar que las contraseñas coincidan
+            if (contrasena !== confirmarContrasena) {
+                mostrarMensaje('Error', 'Las contraseñas no coinciden. Por favor, verifique que ambas sean iguales.', 'error');
+                return;
+            }
+            
+            // Verificar requisitos de la contraseña
+            const errores = [];
+            if (contrasena.length < 8) {
+                errores.push('La contraseña debe tener al menos 8 caracteres.');
+            }
+            if (!/[A-Z]/.test(contrasena)) {
+                errores.push('La contraseña debe contener al menos una letra mayúscula.');
+            }
+            if (!/[a-z]/.test(contrasena)) {
+                errores.push('La contraseña debe contener al menos una letra minúscula.');
+            }
+            if (!/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(contrasena)) {
+                errores.push('La contraseña debe contener al menos un símbolo especial (!@#$%^&*()_+-=[]{}|;:,.<>?).');
+            }
+            
+            if (errores.length > 0) {
+                mostrarMensaje('Error de validación', errores.join('\n'), 'error');
+                return;
+            }
+            
             mostrarCarga('Creando usuario...');
 
             const formData = new FormData(formCrearUsuario);
@@ -373,15 +400,49 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnModificar) btnModificar.addEventListener('click', abrirModalModificar);
     if (btnCerrarModificar) btnCerrarModificar.addEventListener('click', cerrarModalModificar);
     if (btnCerrarModificarX) btnCerrarModificarX.addEventListener('click', cerrarModalModificar);
-    if (modalModificarOverlay) {
-        modalModificarOverlay.addEventListener('click', (e) => {
-            if (e.target === modalModificarOverlay) cerrarModalModificar();
-        });
-    }
+    // Event listener para cerrar modal al hacer clic fuera eliminado por solicitud del usuario
 
     if (formModificarUsuario) {
         formModificarUsuario.addEventListener('submit', function(event) {
             event.preventDefault();
+            
+            // Validación del lado del cliente para contraseñas
+            const contrasena = document.getElementById('modificar-contrasena').value;
+            const confirmarContrasena = document.getElementById('modificar-confirmar-contrasena').value;
+            
+            // Si se proporciona contraseña, validar
+            if (contrasena && contrasena.trim() !== '') {
+                // Verificar que las contraseñas coincidan
+                if (contrasena !== confirmarContrasena) {
+                    mostrarMensaje('Error', 'Las contraseñas no coinciden. Por favor, verifique que ambas sean iguales.', 'error');
+                    return;
+                }
+                
+                // Verificar requisitos de la contraseña
+                const errores = [];
+                if (contrasena.length < 8) {
+                    errores.push('La contraseña debe tener al menos 8 caracteres.');
+                }
+                if (!/[A-Z]/.test(contrasena)) {
+                    errores.push('La contraseña debe contener al menos una letra mayúscula.');
+                }
+                if (!/[a-z]/.test(contrasena)) {
+                    errores.push('La contraseña debe contener al menos una letra minúscula.');
+                }
+                if (!/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(contrasena)) {
+                    errores.push('La contraseña debe contener al menos un símbolo especial (!@#$%^&*()_+-=[]{}|;:,.<>?).');
+                }
+                
+                if (errores.length > 0) {
+                    mostrarMensaje('Error de validación', errores.join('\n'), 'error');
+                    return;
+                }
+            } else if (confirmarContrasena && confirmarContrasena.trim() !== '') {
+                // Si se proporciona confirmación pero no contraseña, es un error
+                mostrarMensaje('Error', 'Debe ingresar la nueva contraseña si desea cambiarla.', 'error');
+                return;
+            }
+            
             mostrarCarga('Modificando usuario...');
             console.log("[Modificar] Enviando formulario...");
 

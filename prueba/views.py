@@ -1,4 +1,5 @@
 import json  # Para manejar datos JSON en las respuestas de API (crear_usuario_view, eliminar_usuarios_view, etc.)
+import bcrypt  # Para hashear contraseñas de forma segura
 import re  # Para expresiones regulares - usado en _extraer_object_id() para parsear DBRef y extraer ObjectIds
 import os  # Para operaciones del sistema de archivos usado en _guardar_foto_perfil() para manejar rutas y extensiones
 import datetime  # Para manejar fechas y horas
@@ -14,7 +15,7 @@ try:
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False  # Si no está instalado Pillow, las imágenes no se redimensionarán pero la app funcionará
-from .formulario import LoginForm, CalificacionModalForm, UsuarioForm, FactoresForm, MontosForm  # Formularios Django para validación de datos
+from .formulario import LoginForm, CalificacionModalForm, UsuarioForm, UsuarioUpdateForm, FactoresForm, MontosForm  # Formularios Django para validación de datos
 from .models import usuarios, Calificacion, Log  # Modelos de MongoDB (Documentos) para interactuar con la base de datos
 
 
@@ -117,15 +118,40 @@ def _guardar_foto_perfil(archivo, usuario_id):#Guarda la foto de perfil del usua
 # --- Fin Función Auxiliar ---
 
 
-#Función para crear logs
-def _crear_log(usuario_obj, accion_str, documento_afectado=None, usuario_afectado=None):#Guarda un registro de log con información sobre la acción realizada.
+# --- Funciones auxiliares para hashear contraseñas ---
+def _hash_password(password):
+    """Hashea una contraseña usando bcrypt"""
+    if not password:
+        return None
+    # Generar salt y hashear la contraseña
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+
+def _check_password(password, hashed_password):
+    """Verifica si una contraseña coincide con su hash"""
+    if not password or not hashed_password:
+        return False
     try:
+        return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
+#Función para crear logs
+def _crear_log(usuario_obj, accion_str, documento_afectado=None, usuario_afectado=None, cambios_detallados=None):#Guarda un registro de log con información sobre la acción realizada.
+    try:
+        cambios_json = None
+        if cambios_detallados:
+            import json
+            cambios_json = json.dumps(cambios_detallados, default=str)  # default=str para manejar Decimal, datetime, etc.
+        
         nuevo_log = Log(
             Usuarioid=usuario_obj,
             correoElectronico=usuario_obj.correo,
             accion=accion_str,
             iddocumento=documento_afectado,
-            usuario_afectado=usuario_afectado
+            usuario_afectado=usuario_afectado,
+            cambios_detallados=cambios_json
         )
         nuevo_log.save()
         print(f"Log guardado correctamente: {accion_str} por {usuario_obj.correo}")
@@ -153,7 +179,10 @@ def login_view(request):
             contrasena_usuario = form.cleaned_data['contrasena']
 
             try:
-                user = usuarios.objects.get(correo=correo_usuario, contrasena=contrasena_usuario)
+                user = usuarios.objects.get(correo=correo_usuario)
+                # Verificar contraseña usando bcrypt
+                if not _check_password(contrasena_usuario, user.contrasena):
+                    user = None
             except usuarios.DoesNotExist:
                 user = None
 
@@ -178,33 +207,92 @@ def home_view(request):
         request.session.flush()
         return redirect('login')
 
-    # Obtener calificaciones si hay filtros
+    # Obtener calificaciones
     calificaciones = []
     if request.method == 'GET':
-        mercado = request.GET.get('mercado', '')
+        mercado_raw = request.GET.get('mercado', '')
         origen = request.GET.get('origen', '')
         periodo = request.GET.get('periodo', '')
         
-        if mercado or origen or periodo:
-            query = {}
-            if mercado:
-                query['Mercado'] = mercado
-            if origen:
-                query['Origen'] = origen
-            if periodo:
-                try:
-                    periodo_int = int(periodo)
-                    query['Ejercicio'] = periodo_int
-                except ValueError:
-                    pass
-            
+        # Normalizar mercado a los valores válidos (acciones, CFI, Fondos mutuos)
+        mercado_normalizado = mercado_raw
+        if mercado_raw and mercado_raw != 'Todos':
+            mercado_lower = mercado_raw.lower().strip()
+            if mercado_lower == 'acciones' or mercado_lower == 'accion':
+                mercado_normalizado = 'acciones'
+            elif mercado_lower == 'cfi':
+                mercado_normalizado = 'CFI'
+            elif mercado_lower == 'fondos mutuos' or mercado_lower == 'fondosmutuos' or mercado_lower == 'fondo mutuo':
+                mercado_normalizado = 'Fondos mutuos'
+            else:
+                mercado_normalizado = mercado_raw  # Mantener el valor original si no coincide
+        
+        # Normalizar origen a los valores válidos (csv, corredor)
+        origen_normalizado = origen
+        if origen:
+            origen_lower = origen.lower().strip()
+            if origen_lower == 'csv':
+                origen_normalizado = 'csv'
+            elif origen_lower == 'corredor':
+                origen_normalizado = 'corredor'
+        
+        query = {}
+        if mercado_normalizado and mercado_normalizado != 'Todos':
+            query['Mercado'] = mercado_normalizado
+        if origen_normalizado:
+            query['Origen'] = origen_normalizado
+        if periodo:
+            try:
+                periodo_int = int(periodo)
+                query['Ejercicio'] = periodo_int
+            except ValueError:
+                pass
+        
+        # Solo cargar calificaciones si hay filtros aplicados
+        # Si no hay filtros, no cargar ninguna calificación
+        if query:
             calificaciones = Calificacion.objects(**query).order_by('-FechaAct')
+        else:
+            calificaciones = []
 
+    # Serializar calificaciones a formato JSON para el JavaScript (mismo formato que buscar_calificaciones_view)
+    import json
+    calificaciones_data = []
+    for cal in calificaciones:
+        # Asegurar que el ID esté disponible
+        cal_id = str(cal.id) if cal.id else ''
+        if not cal_id:
+            continue  # Saltar calificaciones sin ID
+        
+        cal_data = {
+            'id': cal_id,
+            'ejercicio': cal.Ejercicio or '',
+            'instrumento': cal.Instrumento or '',
+            'fecha_pago': cal.FechaPago.strftime('%Y-%m-%d') if cal.FechaPago else '',
+            'descripcion': cal.Descripcion or '',
+            'secuencia_evento': cal.SecuenciaEvento or '',
+            'fecha_act': cal.FechaAct.strftime('%Y-%m-%d %H:%M:%S') if cal.FechaAct else '',
+            'mercado': cal.Mercado or '',
+            'origen': cal.Origen or '',
+            'factores': {}
+        }
+        
+        # Agregar todos los factores
+        for i in range(8, 38):
+            field_name = f'Factor{i:02d}'
+            valor = getattr(cal, field_name, 0.0)
+            cal_data['factores'][field_name] = str(valor) if valor else '0.0'
+        
+        calificaciones_data.append(cal_data)
+    
+    calificaciones_json = json.dumps(calificaciones_data)
+    
     return render(request, 'prueba/home.html', {
         'user_nombre': current_user.nombre,
         'is_admin': is_admin,
         'current_user': current_user,
-        'calificaciones': calificaciones
+        'calificaciones': calificaciones,
+        'calificaciones_json': calificaciones_json
     })
 
 
@@ -215,16 +303,36 @@ def buscar_calificaciones_view(request):
         return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
 
     try:
-        mercado = request.GET.get('mercado', '').strip()
+        mercado_raw = request.GET.get('mercado', '').strip()
         origen = request.GET.get('origen', '').strip()
         periodo = request.GET.get('periodo', '').strip()
 
+        # Normalizar mercado a los valores válidos (acciones, CFI, Fondos mutuos)
+        mercado_normalizado = mercado_raw
+        if mercado_raw:
+            mercado_lower = mercado_raw.lower().strip()
+            if mercado_lower == 'acciones' or mercado_lower == 'accion':
+                mercado_normalizado = 'acciones'
+            elif mercado_lower == 'cfi':
+                mercado_normalizado = 'CFI'
+            elif mercado_lower == 'fondos mutuos' or mercado_lower == 'fondosmutuos' or mercado_lower == 'fondo mutuo':
+                mercado_normalizado = 'Fondos mutuos'
+
+        # Normalizar origen a los valores válidos (csv, corredor)
+        origen_normalizado = origen
+        if origen:
+            origen_lower = origen.lower().strip()
+            if origen_lower == 'csv':
+                origen_normalizado = 'csv'
+            elif origen_lower == 'corredor':
+                origen_normalizado = 'corredor'
+        
         # Construir query de filtrado
         query = {}
-        if mercado:
-            query['Mercado'] = mercado
-        if origen:
-            query['Origen'] = origen
+        if mercado_normalizado and mercado_normalizado != 'Todos':
+            query['Mercado'] = mercado_normalizado
+        if origen_normalizado:
+            query['Origen'] = origen_normalizado
         if periodo:
             try:
                 periodo_int = int(periodo)
@@ -232,8 +340,12 @@ def buscar_calificaciones_view(request):
             except ValueError:
                 pass
 
-        # Buscar calificaciones
-        calificaciones = Calificacion.objects(**query).order_by('-FechaAct')
+        # Buscar calificaciones (si no hay filtros, devolver todas)
+        if query:
+            calificaciones = Calificacion.objects(**query).order_by('-FechaAct')
+        else:
+            # Si no hay filtros, devolver todas las calificaciones
+            calificaciones = Calificacion.objects().order_by('-FechaAct')
 
         # Convertir a formato JSON
         calificaciones_data = []
@@ -309,18 +421,100 @@ def ingresar_view(request):
                 if cleaned_data['SecuenciaEvento'] <= 10000:
                     return JsonResponse({'success': False, 'error': 'La secuencia de evento debe ser mayor a 10,000.'}, status=400)
             
+            # Normalizar mercado antes de guardar
+            mercado_raw = cleaned_data.get('Mercado', '')
+            if mercado_raw:
+                mercado_lower = mercado_raw.lower().strip()
+                if mercado_lower == 'acciones' or mercado_lower == 'accion':
+                    cleaned_data['Mercado'] = 'acciones'
+                elif mercado_lower == 'cfi':
+                    cleaned_data['Mercado'] = 'CFI'
+                elif mercado_lower == 'fondos mutuos' or mercado_lower == 'fondosmutuos' or mercado_lower == 'fondo mutuo':
+                    cleaned_data['Mercado'] = 'Fondos mutuos'
+            
+            # Normalizar origen antes de guardar
+            origen_raw = cleaned_data.get('Origen', 'corredor')
+            if origen_raw:
+                origen_lower = origen_raw.lower().strip()
+                if origen_lower == 'csv':
+                    cleaned_data['Origen'] = 'csv'
+                elif origen_lower == 'corredor' or origen_lower == 'manual':
+                    cleaned_data['Origen'] = 'corredor'
+            else:
+                cleaned_data['Origen'] = 'corredor'  # Valor por defecto
+            
             # Verificar si es una actualización o creación
             calificacion_id = request.POST.get('calificacion_id')
             if calificacion_id:
                 # Actualizar calificación existente
                 try:
                     calificacion = Calificacion.objects.get(id=calificacion_id)
-                    # Actualizar campos
+                    # Capturar cambios antes de actualizar
+                    cambios_detallados = []
+                    campos_actualizados = False
+                    
                     for key, value in cleaned_data.items():
-                        setattr(calificacion, key, value)
-                    calificacion.FechaAct = datetime.datetime.now()  # Actualizar fecha de modificación
-                    calificacion.save()
-                    _crear_log(current_user, 'Modificar Calificacion', documento_afectado=calificacion)
+                        # Verificar si el campo fue enviado en el POST original
+                        if key in request.POST:
+                            # Obtener valor actual antes de modificar
+                            valor_actual = getattr(calificacion, key, None)
+                            
+                            # Formatear valores para comparación y visualización
+                            def formatear_valor(val):
+                                if val is None:
+                                    return None
+                                if isinstance(val, datetime.datetime):
+                                    return val.strftime('%Y-%m-%d %H:%M:%S')
+                                if isinstance(val, bool):
+                                    return 'Sí' if val else 'No'
+                                return str(val)
+                            
+                            valor_anterior_str = formatear_valor(valor_actual)
+                            valor_nuevo_str = formatear_valor(value)
+                            
+                            # Solo actualizar si el valor es diferente del actual
+                            cambio_realizado = False
+                            
+                            # Para campos booleanos, comparar directamente
+                            if isinstance(value, bool):
+                                if valor_actual != value:
+                                    setattr(calificacion, key, value)
+                                    campos_actualizados = True
+                                    cambio_realizado = True
+                            # Para campos numéricos, comparar valores
+                            elif isinstance(value, (int, float)):
+                                if valor_actual != value:
+                                    setattr(calificacion, key, value)
+                                    campos_actualizados = True
+                                    cambio_realizado = True
+                            # Para strings, actualizar si no está vacío y es diferente
+                            elif isinstance(value, str):
+                                if value.strip() != '' and valor_actual != value:
+                                    setattr(calificacion, key, value)
+                                    campos_actualizados = True
+                                    cambio_realizado = True
+                            # Para fechas y otros tipos, comparar si no es None
+                            elif value is not None:
+                                if valor_actual != value:
+                                    setattr(calificacion, key, value)
+                                    campos_actualizados = True
+                                    cambio_realizado = True
+                            
+                            # Si hubo cambio, agregar a la lista de cambios
+                            if cambio_realizado:
+                                cambios_detallados.append({
+                                    'campo': key,
+                                    'valor_anterior': valor_anterior_str,
+                                    'valor_nuevo': valor_nuevo_str
+                                })
+                    
+                    # Actualizar fecha de modificación solo si realmente se modificó algo
+                    if campos_actualizados:
+                        calificacion.FechaAct = datetime.datetime.now()
+                        calificacion.save()
+                        _crear_log(current_user, 'Modificar Calificacion', documento_afectado=calificacion, cambios_detallados=cambios_detallados if cambios_detallados else None)
+                    else:
+                        _crear_log(current_user, 'Modificar Calificacion', documento_afectado=calificacion)
                     return JsonResponse({
                         'success': True,
                         'calificacion_id': str(calificacion.id),
@@ -417,9 +611,33 @@ def ingresar_calificacion(request):
                 
                 # 4. Asignar los datos generales (usando nombres correctos del modelo)
                 nueva_calificacion.Ejercicio = form.cleaned_data.get('Ejercicio')
-                nueva_calificacion.Mercado = form.cleaned_data.get('Mercado', '')
+                
+                # Normalizar mercado antes de guardar
+                mercado_raw = form.cleaned_data.get('Mercado', '')
+                mercado_normalizado = mercado_raw
+                if mercado_raw:
+                    mercado_lower = mercado_raw.lower().strip()
+                    if mercado_lower == 'acciones' or mercado_lower == 'accion':
+                        mercado_normalizado = 'acciones'
+                    elif mercado_lower == 'cfi':
+                        mercado_normalizado = 'CFI'
+                    elif mercado_lower == 'fondos mutuos' or mercado_lower == 'fondosmutuos' or mercado_lower == 'fondo mutuo':
+                        mercado_normalizado = 'Fondos mutuos'
+                
+                nueva_calificacion.Mercado = mercado_normalizado
                 nueva_calificacion.Instrumento = form.cleaned_data.get('Instrumento', '')
-                nueva_calificacion.Origen = form.cleaned_data.get('Origen', 'MANUAL')
+                
+                # Normalizar origen antes de guardar
+                origen_raw = form.cleaned_data.get('Origen', 'corredor')
+                origen_normalizado = origen_raw
+                if origen_raw:
+                    origen_lower = origen_raw.lower().strip()
+                    if origen_lower == 'csv':
+                        origen_normalizado = 'csv'
+                    elif origen_lower == 'corredor' or origen_lower == 'manual':
+                        origen_normalizado = 'corredor'
+                
+                nueva_calificacion.Origen = origen_normalizado
                 
                 # 5. ¡LA MAGIA! Calcular y asignar cada FACTOR
                 # El requisito dice "Decimal redondeado al 8vo decimal"
@@ -490,18 +708,41 @@ def guardar_factores_view(request):
         from decimal import Decimal
         
         # Los factores ya fueron calculados y están en el formulario
-        # Actualizar todos los factores en la calificación desde el POST
+        # IMPORTANTE: Los montos ya fueron guardados cuando se calcularon los factores
+        # No debemos sobrescribir los montos aquí, solo guardar los factores calculados
+        # Actualizar solo los factores que fueron enviados en el POST
+        cambios_detallados = []
+        factores_actualizados = False
         for i in range(8, 38):
             factor_field = f'Factor{i:02d}'
-            valor_post = request.POST.get(factor_field, '0.0')
-            try:
-                valor_decimal = Decimal(str(valor_post)) if valor_post else Decimal(0)
-                setattr(calificacion, factor_field, valor_decimal)
-            except (ValueError, TypeError):
-                setattr(calificacion, factor_field, Decimal(0))
+            valor_post = request.POST.get(factor_field)
+            # Solo actualizar si el valor fue enviado (no None)
+            if valor_post is not None:
+                try:
+                    valor_decimal = Decimal(str(valor_post)) if valor_post else Decimal(0)
+                    # Solo actualizar si el valor es diferente al actual
+                    valor_actual = getattr(calificacion, factor_field, Decimal(0))
+                    if valor_decimal != valor_actual:
+                        cambios_detallados.append({
+                            'campo': factor_field,
+                            'valor_anterior': str(valor_actual),
+                            'valor_nuevo': str(valor_decimal)
+                        })
+                        setattr(calificacion, factor_field, valor_decimal)
+                        factores_actualizados = True
+                except (ValueError, TypeError):
+                    # Si hay error, mantener el valor actual
+                    pass
         
-        calificacion.save()
-        _crear_log(current_user, 'Modificar Calificacion', documento_afectado=calificacion)
+        # NO guardar montos aquí - ya fueron guardados cuando se calcularon los factores
+        # Solo guardar los factores calculados
+        # Actualizar la fecha de modificación solo si se actualizaron factores
+        if factores_actualizados:
+            calificacion.FechaAct = datetime.datetime.now()
+            calificacion.save()
+            _crear_log(current_user, 'Modificar Calificacion', documento_afectado=calificacion, cambios_detallados=cambios_detallados if cambios_detallados else None)
+        else:
+            _crear_log(current_user, 'Modificar Calificacion', documento_afectado=calificacion)
         return JsonResponse({'success': True})
     except Exception as e:
         print(f"Error al guardar factores: {e}")
@@ -546,7 +787,44 @@ def calcular_factores_view(request):
         for i in range(8, 20):  # Del 8 al 19 inclusive
             suma_base += montos.get(i, Decimal(0))
 
-        # 3. Calcular todos los factores (8-37) dividiendo cada monto por la Suma Base
+        # 3. Guardar solo los montos que fueron enviados y son diferentes de 0
+        # Si un monto no se envía o es 0, mantener el valor actual
+        cambios_detallados = []
+        montos_actualizados = False
+        for i in range(8, 38):
+            monto_field = f'Monto{i:02d}'
+            monto_value = montos.get(i, Decimal(0))
+            # Solo actualizar si el monto fue enviado y es diferente del actual
+            valor_actual = getattr(calificacion, monto_field, Decimal(0))
+            if monto_value != valor_actual:
+                cambios_detallados.append({
+                    'campo': monto_field,
+                    'valor_anterior': str(valor_actual),
+                    'valor_nuevo': str(monto_value)
+                })
+                setattr(calificacion, monto_field, monto_value)
+                montos_actualizados = True
+        
+        # Guardar la suma base para poder hacer el cálculo inverso después
+        # Solo actualizar si cambió
+        suma_base_actual = getattr(calificacion, 'SumaBase', Decimal(0))
+        if suma_base != suma_base_actual:
+            cambios_detallados.append({
+                'campo': 'SumaBase',
+                'valor_anterior': str(suma_base_actual),
+                'valor_nuevo': str(suma_base)
+            })
+            calificacion.SumaBase = suma_base
+            montos_actualizados = True
+        
+        # Actualizar la fecha de modificación solo si se actualizaron montos
+        if montos_actualizados:
+            calificacion.FechaAct = datetime.datetime.now()
+            calificacion.save()
+            # Guardar log con cambios detallados
+            _crear_log(current_user, 'Modificar Calificacion', documento_afectado=calificacion, cambios_detallados=cambios_detallados if cambios_detallados else None)
+        
+        # 4. Calcular todos los factores (8-37) dividiendo cada monto por la Suma Base
         EIGHT_PLACES = Decimal('0.00000001')
         factores_calculados = {}
         
@@ -632,7 +910,14 @@ def crear_usuario_view(request):
     if form.is_valid():
         try:
             # Crear usuario con datos del formulario
-            nuevo_usuario = usuarios(**form.cleaned_data)
+            cleaned_data = form.cleaned_data.copy()
+            # Eliminar confirmar_contrasena ya que solo es para validación
+            cleaned_data.pop('confirmar_contrasena', None)
+            # Hashear la contraseña antes de guardar
+            if 'contrasena' in cleaned_data and cleaned_data['contrasena']:
+                cleaned_data['contrasena'] = _hash_password(cleaned_data['contrasena'])
+            
+            nuevo_usuario = usuarios(**cleaned_data)
             nuevo_usuario.save()  # Guardar primero para obtener el ID
             
             # Manejar foto de perfil si se proporciona
@@ -758,15 +1043,23 @@ def modificar_usuario_view(request):
     except usuarios.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Admin no válido'}, status=401)
 
-    user_id = request.POST.get('user_id') or request.POST.get('id')
+    # Usar el formulario para validación
+    form = UsuarioUpdateForm(request.POST, request.FILES)
+    if not form.is_valid():
+        # Retornar errores del formulario
+        errors_dict = {}
+        for field, errors in form.errors.items():
+            errors_dict[field] = errors
+        return JsonResponse({'success': False, 'error': errors_dict}, status=400)
+    
+    user_id = form.cleaned_data.get('user_id')
     if not user_id:
         return JsonResponse({'success': False, 'error': 'Falta user_id'}, status=400)
 
-    nombre = request.POST.get('nombre', '').strip()
-    correo = request.POST.get('correo', '').strip()
-    contrasena = request.POST.get('contrasena', '')
-    rol_raw = request.POST.get('rol', 'false')
-    rol = str(rol_raw).lower() in ('true', '1', 'on', 'yes')
+    nombre = form.cleaned_data.get('nombre', '').strip()
+    correo = form.cleaned_data.get('correo', '').strip()
+    contrasena = form.cleaned_data.get('contrasena', '')
+    rol = form.cleaned_data.get('rol', False)
 
     if not nombre or not correo:
         return JsonResponse({'success': False, 'error': 'Nombre y correo son obligatorios.'}, status=400)
@@ -775,8 +1068,10 @@ def modificar_usuario_view(request):
         usuario_a_modificar = usuarios.objects.get(id=user_id)
         usuario_a_modificar.nombre = nombre
         usuario_a_modificar.correo = correo
-        if contrasena:
-            usuario_a_modificar.contrasena = contrasena
+        # Solo actualizar contraseña si se proporciona (y no está vacía)
+        if contrasena and contrasena.strip():
+            # Hashear la nueva contraseña antes de guardar
+            usuario_a_modificar.contrasena = _hash_password(contrasena)
         usuario_a_modificar.rol = rol
         
         # Manejar foto de perfil si se proporciona
@@ -892,6 +1187,7 @@ def obtener_calificacion_view(request, calificacion_id):
         return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
 
     try:
+        from decimal import Decimal
         calificacion = Calificacion.objects.get(id=calificacion_id)
         
         # Preparar datos para retornar
@@ -909,7 +1205,28 @@ def obtener_calificacion_view(request, calificacion_id):
             'anho': calificacion.Anho or calificacion.Ejercicio or '',
             'valor_historico': str(calificacion.ValorHistorico or 0.0),
             'factor_actualizacion': str(calificacion.FactorActualizacion or 0.0),
+            'montos': {},
+            'factores': {}
         }
+        
+        # Obtener la suma base guardada
+        suma_base = calificacion.SumaBase or Decimal(0)
+        
+        # Calcular los montos a partir de los factores guardados (cálculo inverso)
+        # monto = factor * suma_base
+        for i in range(8, 38):
+            factor_field = f'Factor{i:02d}'
+            factor_value = getattr(calificacion, factor_field, Decimal(0))
+            if suma_base > 0:
+                monto_calculado = (factor_value * suma_base).quantize(Decimal('0.01'))
+            else:
+                monto_calculado = Decimal(0)
+            
+            monto_field = f'Monto{i:02d}'
+            calificacion_data['montos'][monto_field] = str(monto_calculado) if monto_calculado else '0.0'
+            
+            # También incluir los factores para referencia
+            calificacion_data['factores'][factor_field] = str(factor_value) if factor_value else '0.0'
         
         return JsonResponse({
             'success': True,
@@ -941,3 +1258,888 @@ def eliminar_calificacion_view(request, calificacion_id):
         return JsonResponse({'success': False, 'error': 'Calificación no encontrada'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'}, status=500)
+
+
+@require_POST
+def copiar_calificacion_view(request, calificacion_id):
+    """Vista para copiar una calificación completa con un nuevo ID"""
+    print(f"[COPiar] Iniciando copia de calificación ID: {calificacion_id}")
+    
+    if 'user_id' not in request.session:
+        print("[COPiar] Error: No autenticado")
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    try:
+        current_user = usuarios.objects.get(id=request.session['user_id'])
+        print(f"[COPiar] Usuario autenticado: {current_user.correo}")
+    except usuarios.DoesNotExist:
+        print("[COPiar] Error: Usuario no válido")
+        return JsonResponse({'success': False, 'error': 'Usuario no válido'}, status=401)
+
+    try:
+        from decimal import Decimal
+        
+        # Obtener la calificación original
+        print(f"[COPiar] Obteniendo calificación original: {calificacion_id}")
+        calificacion_original = Calificacion.objects.get(id=calificacion_id)
+        print(f"[COPiar] Calificación encontrada: {calificacion_original.Instrumento}")
+        
+        # Crear una nueva calificación copiando todos los campos
+        nueva_calificacion = Calificacion()
+        
+        # Copiar campos básicos
+        nueva_calificacion.Mercado = calificacion_original.Mercado
+        nueva_calificacion.Origen = calificacion_original.Origen
+        nueva_calificacion.Ejercicio = calificacion_original.Ejercicio
+        nueva_calificacion.Instrumento = calificacion_original.Instrumento
+        nueva_calificacion.EventoCapital = calificacion_original.EventoCapital
+        nueva_calificacion.FechaPago = calificacion_original.FechaPago
+        nueva_calificacion.SecuenciaEvento = calificacion_original.SecuenciaEvento
+        nueva_calificacion.Descripcion = calificacion_original.Descripcion
+        nueva_calificacion.Dividendo = calificacion_original.Dividendo
+        nueva_calificacion.ISFUT = calificacion_original.ISFUT
+        nueva_calificacion.ValorHistorico = calificacion_original.ValorHistorico
+        nueva_calificacion.FactorActualizacion = calificacion_original.FactorActualizacion
+        nueva_calificacion.Anho = calificacion_original.Anho
+        nueva_calificacion.RentasExentas = calificacion_original.RentasExentas
+        nueva_calificacion.Factor19A = calificacion_original.Factor19A
+        
+        # Copiar todos los factores (Factor08 a Factor37)
+        print("[COPiar] Copiando factores...")
+        for i in range(8, 38):
+            factor_field = f'Factor{i:02d}'
+            valor_factor = getattr(calificacion_original, factor_field, Decimal(0))
+            setattr(nueva_calificacion, factor_field, valor_factor)
+        
+        # Copiar todos los montos (Monto08 a Monto37)
+        print("[COPiar] Copiando montos...")
+        for i in range(8, 38):
+            monto_field = f'Monto{i:02d}'
+            valor_monto = getattr(calificacion_original, monto_field, Decimal(0))
+            setattr(nueva_calificacion, monto_field, valor_monto)
+        
+        # Copiar SumaBase
+        nueva_calificacion.SumaBase = calificacion_original.SumaBase
+        
+        # FechaAct se establecerá automáticamente al guardar (default=datetime.datetime.now)
+        nueva_calificacion.FechaAct = datetime.datetime.now()
+        
+        # Guardar la nueva calificación
+        print("[COPiar] Guardando nueva calificación...")
+        nueva_calificacion.save()
+        print(f"[COPiar] Nueva calificación guardada con ID: {nueva_calificacion.id}")
+        
+        # Crear log de la acción
+        try:
+            _crear_log(current_user, 'Crear Calificacion', documento_afectado=nueva_calificacion)
+            print("[COPiar] Log creado exitosamente")
+        except Exception as log_error:
+            print(f"[COPiar] Advertencia: Error al crear log: {log_error}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Calificación copiada exitosamente',
+            'nueva_calificacion_id': str(nueva_calificacion.id)
+        })
+        
+    except Calificacion.DoesNotExist:
+        print(f"[COPiar] Error: Calificación no encontrada: {calificacion_id}")
+        return JsonResponse({'success': False, 'error': 'Calificación no encontrada'}, status=404)
+    except Exception as e:
+        import traceback
+        print(f"[COPiar] Error al copiar calificación: {e}")
+        print(f"[COPiar] Traceback: {traceback.format_exc()}")
+        return JsonResponse({'success': False, 'error': f'Error al copiar: {str(e)}'}, status=500)
+
+
+@require_POST
+def preview_factor_view(request):
+    """Vista para previsualizar archivo CSV con factores"""
+    if 'user_id' not in request.session:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    try:
+        current_user = usuarios.objects.get(id=request.session['user_id'])
+    except usuarios.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Usuario no válido'}, status=401)
+
+    try:
+        import pandas as pd
+        from decimal import Decimal
+        
+        if 'archivo' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'No se recibió ningún archivo'}, status=400)
+        
+        archivo = request.FILES['archivo']
+        
+        # Leer CSV con pandas
+        try:
+            # Intentar diferentes encodings
+            try:
+                df = pd.read_csv(archivo, encoding='utf-8')
+            except UnicodeDecodeError:
+                archivo.seek(0)
+                df = pd.read_csv(archivo, encoding='latin-1')
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error al leer el archivo CSV: {str(e)}'}, status=400)
+        
+        # Limpiar nombres de columnas (eliminar espacios)
+        df.columns = df.columns.str.strip()
+        
+        # Eliminar filas completamente vacías
+        df = df.dropna(how='all')
+        
+        # Convertir a lista de diccionarios
+        datos = []
+        errores = []
+        
+        for idx, row in df.iterrows():
+            try:
+                # Convertir la fila a diccionario
+                fila = row.to_dict()
+                
+                # Convertir valores NaN a strings vacíos y limpiar
+                fila_limpia = {}
+                for key, value in fila.items():
+                    if pd.isna(value):
+                        fila_limpia[key] = ''
+                    else:
+                        fila_limpia[key] = str(value).strip() if value else ''
+                
+                # Validar campos requeridos (buscar con diferentes variaciones)
+                ejercicio = fila_limpia.get('Ejercicio') or fila_limpia.get('ejercicio') or ''
+                mercado = fila_limpia.get('Mercado') or fila_limpia.get('mercado') or ''
+                
+                if not ejercicio or not mercado:
+                    errores.append(f'Fila {idx + 2}: Faltan campos requeridos (Ejercicio, Mercado)')
+                    continue
+                
+                datos.append(fila_limpia)
+                
+            except Exception as e:
+                errores.append(f'Fila {idx + 2}: {str(e)}')
+                continue
+        
+        return JsonResponse({
+            'success': True,
+            'datos': datos,
+            'errores': errores,
+            'total': len(datos)
+        })
+        
+    except Exception as e:
+        print(f"Error al previsualizar factor: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': f'Error al procesar: {str(e)}'}, status=500)
+
+
+@require_POST
+def preview_monto_view(request):
+    """Vista para previsualizar archivo CSV con montos"""
+    if 'user_id' not in request.session:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    try:
+        current_user = usuarios.objects.get(id=request.session['user_id'])
+    except usuarios.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Usuario no válido'}, status=401)
+
+    try:
+        import pandas as pd
+        from decimal import Decimal
+        
+        if 'archivo' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'No se recibió ningún archivo'}, status=400)
+        
+        archivo = request.FILES['archivo']
+        
+        # Leer CSV con pandas
+        try:
+            # Intentar diferentes encodings
+            try:
+                df = pd.read_csv(archivo, encoding='utf-8')
+            except UnicodeDecodeError:
+                archivo.seek(0)
+                df = pd.read_csv(archivo, encoding='latin-1')
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error al leer el archivo CSV: {str(e)}'}, status=400)
+        
+        # Limpiar nombres de columnas (eliminar espacios)
+        df.columns = df.columns.str.strip()
+        
+        # Eliminar filas completamente vacías
+        df = df.dropna(how='all')
+        
+        # Convertir a lista de diccionarios
+        datos = []
+        errores = []
+        
+        for idx, row in df.iterrows():
+            try:
+                # Convertir la fila a diccionario
+                fila = row.to_dict()
+                
+                # Convertir valores NaN a strings vacíos y limpiar
+                fila_limpia = {}
+                for key, value in fila.items():
+                    if pd.isna(value):
+                        fila_limpia[key] = ''
+                    else:
+                        fila_limpia[key] = str(value).strip() if value else ''
+                
+                # Validar campos requeridos (buscar con diferentes variaciones)
+                ejercicio = fila_limpia.get('Ejercicio') or fila_limpia.get('ejercicio') or ''
+                mercado = fila_limpia.get('Mercado') or fila_limpia.get('mercado') or ''
+                
+                if not ejercicio or not mercado:
+                    errores.append(f'Fila {idx + 2}: Faltan campos requeridos (Ejercicio, Mercado)')
+                    continue
+                
+                datos.append(fila_limpia)
+                
+            except Exception as e:
+                errores.append(f'Fila {idx + 2}: {str(e)}')
+                continue
+        
+        return JsonResponse({
+            'success': True,
+            'datos': datos,
+            'errores': errores,
+            'total': len(datos)
+        })
+        
+    except Exception as e:
+        print(f"Error al previsualizar monto: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': f'Error al procesar: {str(e)}'}, status=500)
+
+
+@require_POST
+def cargar_factor_view(request):
+    """Vista para cargar calificaciones desde CSV con factores ya calculados"""
+    print("[CARGAR_FACTOR] Iniciando carga de factores...")
+    
+    if 'user_id' not in request.session:
+        print("[CARGAR_FACTOR] Error: No autenticado")
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    try:
+        current_user = usuarios.objects.get(id=request.session['user_id'])
+        print(f"[CARGAR_FACTOR] Usuario autenticado: {current_user.correo}")
+    except usuarios.DoesNotExist:
+        print("[CARGAR_FACTOR] Error: Usuario no válido")
+        return JsonResponse({'success': False, 'error': 'Usuario no válido'}, status=401)
+
+    try:
+        import pandas as pd
+        import json
+        from decimal import Decimal
+        
+        print("[CARGAR_FACTOR] Parseando JSON...")
+        data = json.loads(request.body)
+        datos_csv = data.get('datos', [])
+        
+        print(f"[CARGAR_FACTOR] Datos recibidos: {len(datos_csv)} filas")
+        
+        if not datos_csv:
+            print("[CARGAR_FACTOR] Error: No se recibieron datos")
+            return JsonResponse({'success': False, 'error': 'No se recibieron datos'}, status=400)
+        
+        # Convertir a DataFrame de pandas para procesamiento más eficiente
+        df = pd.DataFrame(datos_csv)
+        
+        # Limpiar nombres de columnas (eliminar espacios)
+        df.columns = df.columns.str.strip()
+        
+        # Eliminar filas completamente vacías
+        df = df.dropna(how='all')
+        
+        calificaciones_creadas = 0
+        errores = []
+        
+        # Iterar sobre el DataFrame
+        for idx, row in df.iterrows():
+            fila_num = idx + 2  # +2 porque idx empieza en 0 y la fila 1 es el encabezado
+            try:
+                # Convertir la fila a diccionario
+                fila = row.to_dict()
+                
+                # Convertir valores NaN a strings vacíos y limpiar
+                fila_limpia = {}
+                for key, value in fila.items():
+                    if pd.isna(value):
+                        fila_limpia[key] = ''
+                    else:
+                        fila_limpia[key] = str(value).strip() if value else ''
+                
+                # Debug: mostrar las claves disponibles en la primera fila
+                if fila_num == 2:
+                    print(f"[CARGAR_FACTOR] Claves disponibles en CSV: {list(fila_limpia.keys())}")
+                    print(f"[CARGAR_FACTOR] Primera fila completa: {fila_limpia}")
+                    print(f"[CARGAR_FACTOR] Ejercicio raw: '{fila_limpia.get('Ejercicio')}'")
+                    print(f"[CARGAR_FACTOR] Mercado raw: '{fila_limpia.get('Mercado')}'")
+                    print(f"[CARGAR_FACTOR] Instrumento raw: '{fila_limpia.get('Instrumento')}'")
+                
+                # Validar campos requeridos (buscar con diferentes variaciones)
+                # Primero intentar obtener Ejercicio
+                ejercicio = fila_limpia.get('Ejercicio') or fila_limpia.get('ejercicio') or ''
+                mercado_raw = fila_limpia.get('Mercado') or fila_limpia.get('mercado') or ''
+                instrumento = fila_limpia.get('Instrumento') or fila_limpia.get('instrumento') or ''
+                
+                # Normalizar mercado a los valores válidos (acciones, CFI, Fondos mutuos)
+                mercado_normalizado = mercado_raw
+                if mercado_raw:
+                    mercado_lower = mercado_raw.lower().strip()
+                    if mercado_lower == 'acciones' or mercado_lower == 'accion':
+                        mercado_normalizado = 'acciones'
+                    elif mercado_lower == 'cfi':
+                        mercado_normalizado = 'CFI'
+                    elif mercado_lower == 'fondos mutuos' or mercado_lower == 'fondosmutuos' or mercado_lower == 'fondo mutuo':
+                        mercado_normalizado = 'Fondos mutuos'
+                
+                mercado = mercado_normalizado
+                
+                # Detectar si Ejercicio e Instrumento están intercambiados
+                # Si Ejercicio contiene letras (como "ACC001") e Instrumento es numérico, intercambiar
+                ejercicio_es_numero = False
+                instrumento_es_numero = False
+                ejercicio_tiene_letras = any(c.isalpha() for c in str(ejercicio)) if ejercicio else False
+                
+                try:
+                    int(ejercicio)
+                    ejercicio_es_numero = True
+                except (ValueError, TypeError):
+                    pass
+                
+                try:
+                    int(instrumento)
+                    instrumento_es_numero = True
+                except (ValueError, TypeError):
+                    pass
+                
+                # Si Ejercicio no es numérico pero Instrumento sí, intercambiar
+                # O si Ejercicio tiene letras (parece código de instrumento) e Instrumento es numérico (parece año)
+                if (not ejercicio_es_numero and instrumento_es_numero) or (ejercicio_tiene_letras and instrumento_es_numero):
+                    print(f"[CARGAR_FACTOR] Advertencia: Ejercicio e Instrumento parecen estar intercambiados en fila {idx}. Ejercicio: '{ejercicio}', Instrumento: '{instrumento}'")
+                    ejercicio, instrumento = instrumento, ejercicio
+                    ejercicio_es_numero = True
+                
+                if not ejercicio or not mercado:
+                    # Mostrar qué claves tiene la fila para ayudar a debuggear
+                    claves_disponibles = ', '.join(fila.keys())
+                    errores.append(f'Fila {idx}: Faltan campos requeridos (Ejercicio, Mercado). Claves disponibles: {claves_disponibles}')
+                    continue
+                
+                # Validar y convertir Ejercicio a entero
+                try:
+                    ejercicio_int = int(ejercicio)
+                except (ValueError, TypeError):
+                    # Mostrar más información sobre el error
+                    claves_disponibles = ', '.join(fila.keys())
+                    errores.append(f'Fila {idx}: El campo Ejercicio debe ser un número entero. Valor recibido: "{ejercicio}". Instrumento recibido: "{instrumento}". Claves disponibles: {claves_disponibles}')
+                    continue
+                
+                # Crear nueva calificación
+                nueva_calificacion = Calificacion()
+                nueva_calificacion.Ejercicio = ejercicio_int
+                nueva_calificacion.Mercado = mercado
+                nueva_calificacion.Instrumento = instrumento
+                nueva_calificacion.Origen = 'csv'  # Normalizado a minúsculas para coincidir con el filtro
+                nueva_calificacion.Descripcion = fila_limpia.get('DESCRIPCION') or fila_limpia.get('Descripcion') or fila_limpia.get('descripcion') or ''
+                
+                # Fecha de pago usando pandas
+                fecha_pago = fila_limpia.get('FEC_PAGO') or fila_limpia.get('Fec_Pago') or fila_limpia.get('fec_pago') or ''
+                if fecha_pago:
+                    try:
+                        fecha_parsed = pd.to_datetime(fecha_pago, format='%Y-%m-%d', errors='coerce')
+                        if not pd.isna(fecha_parsed):
+                            nueva_calificacion.FechaPago = fecha_parsed.to_pydatetime()
+                    except Exception as e:
+                        print(f"[CARGAR_FACTOR] Error al parsear fecha: {e}")
+                        pass
+                
+                # Secuencia evento usando pandas
+                sec_eve = fila_limpia.get('SEC_EVE') or fila_limpia.get('Sec_Eve') or fila_limpia.get('sec_eve') or ''
+                if sec_eve:
+                    try:
+                        nueva_calificacion.SecuenciaEvento = pd.to_numeric(sec_eve, errors='raise').astype(int)
+                    except (ValueError, TypeError, Exception):
+                        print(f"[CARGAR_FACTOR] Advertencia: No se pudo convertir SecuenciaEvento '{sec_eve}' a entero en fila {fila_num}")
+                        pass
+                
+                # Asignar factores (F8 a F37) usando pandas
+                for i in range(8, 38):
+                    factor_key = f'F{i}'
+                    factor_value = fila_limpia.get(factor_key, '0.0')
+                    try:
+                        # Usar pandas para convertir a numérico
+                        factor_numeric = pd.to_numeric(factor_value, errors='coerce')
+                        if pd.isna(factor_numeric):
+                            factor_decimal = Decimal(0)
+                        else:
+                            factor_decimal = Decimal(str(factor_numeric))
+                            # Validar que el factor esté entre 0 y 1
+                            if factor_decimal < 0:
+                                factor_decimal = Decimal(0)
+                            elif factor_decimal > 1:
+                                factor_decimal = Decimal(1)
+                        setattr(nueva_calificacion, f'Factor{i:02d}', factor_decimal)
+                    except Exception as e:
+                        print(f"[CARGAR_FACTOR] Error al procesar factor {i}: {e}")
+                        setattr(nueva_calificacion, f'Factor{i:02d}', Decimal(0))
+                
+                nueva_calificacion.FechaAct = datetime.datetime.now()
+                nueva_calificacion.save()
+                calificaciones_creadas += 1
+                print(f"[CARGAR_FACTOR] Calificación {fila_num} guardada exitosamente")
+                
+            except Exception as e:
+                print(f"[CARGAR_FACTOR] Error en fila {fila_num}: {e}")
+                import traceback
+                print(traceback.format_exc())
+                errores.append(f'Fila {fila_num}: {str(e)}')
+                continue
+        
+        # Crear log de carga masiva
+        if calificaciones_creadas > 0:
+            _crear_log(current_user, 'Carga Masiva', documento_afectado=None)
+            print(f"[CARGAR_FACTOR] Log creado para {calificaciones_creadas} calificaciones")
+        
+        mensaje = f'Se crearon {calificaciones_creadas} calificación(es) exitosamente.'
+        if errores:
+            mensaje += f' Se encontraron {len(errores)} error(es).'
+        
+        print(f"[CARGAR_FACTOR] Proceso completado: {calificaciones_creadas} creadas, {len(errores)} errores")
+        
+        return JsonResponse({
+            'success': True,
+            'total': calificaciones_creadas,
+            'errores': errores,
+            'message': mensaje
+        })
+        
+    except Exception as e:
+        print(f"[CARGAR_FACTOR] Error al cargar factores: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': f'Error al procesar: {str(e)}'}, status=500)
+
+
+@require_POST
+def cargar_monto_view(request):
+    """Vista para cargar calificaciones desde CSV con montos (factores ya calculados)"""
+    print("[CARGAR_MONTO] Iniciando carga de montos...")
+    
+    if 'user_id' not in request.session:
+        print("[CARGAR_MONTO] Error: No autenticado")
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    try:
+        current_user = usuarios.objects.get(id=request.session['user_id'])
+        print(f"[CARGAR_MONTO] Usuario autenticado: {current_user.correo}")
+    except usuarios.DoesNotExist:
+        print("[CARGAR_MONTO] Error: Usuario no válido")
+        return JsonResponse({'success': False, 'error': 'Usuario no válido'}, status=401)
+
+    try:
+        import pandas as pd
+        import json
+        from decimal import Decimal
+        
+        print("[CARGAR_MONTO] Parseando JSON...")
+        data = json.loads(request.body)
+        datos_csv = data.get('datos', [])
+        
+        print(f"[CARGAR_MONTO] Datos recibidos: {len(datos_csv)} filas")
+        
+        if not datos_csv:
+            print("[CARGAR_MONTO] Error: No se recibieron datos")
+            return JsonResponse({'success': False, 'error': 'No se recibieron datos'}, status=400)
+        
+        # Convertir a DataFrame de pandas para procesamiento más eficiente
+        df = pd.DataFrame(datos_csv)
+        
+        # Limpiar nombres de columnas (eliminar espacios)
+        df.columns = df.columns.str.strip()
+        
+        # Eliminar filas completamente vacías
+        df = df.dropna(how='all')
+        
+        calificaciones_creadas = 0
+        errores = []
+        
+        # Iterar sobre el DataFrame
+        for idx, row in df.iterrows():
+            fila_num = idx + 2  # +2 porque idx empieza en 0 y la fila 1 es el encabezado
+            try:
+                # Convertir la fila a diccionario
+                fila = row.to_dict()
+                
+                # Convertir valores NaN a strings vacíos y limpiar
+                fila_limpia = {}
+                for key, value in fila.items():
+                    if pd.isna(value):
+                        fila_limpia[key] = ''
+                    else:
+                        fila_limpia[key] = str(value).strip() if value else ''
+                
+                # Debug: mostrar las claves disponibles en la primera fila
+                if fila_num == 2:
+                    print(f"[CARGAR_MONTO] Claves disponibles en CSV: {list(fila_limpia.keys())}")
+                    print(f"[CARGAR_MONTO] Primera fila completa: {fila_limpia}")
+                    print(f"[CARGAR_MONTO] Ejercicio raw: '{fila_limpia.get('Ejercicio')}'")
+                    print(f"[CARGAR_MONTO] Mercado raw: '{fila_limpia.get('Mercado')}'")
+                    print(f"[CARGAR_MONTO] Instrumento raw: '{fila_limpia.get('Instrumento')}'")
+                
+                # Validar campos requeridos (buscar con diferentes variaciones)
+                # Primero intentar obtener Ejercicio
+                ejercicio = fila_limpia.get('Ejercicio') or fila_limpia.get('ejercicio') or ''
+                mercado_raw = fila_limpia.get('Mercado') or fila_limpia.get('mercado') or ''
+                instrumento = fila_limpia.get('Instrumento') or fila_limpia.get('instrumento') or ''
+                
+                # Normalizar mercado a los valores válidos (acciones, CFI, Fondos mutuos)
+                mercado_normalizado = mercado_raw
+                if mercado_raw:
+                    mercado_lower = mercado_raw.lower().strip()
+                    if mercado_lower == 'acciones' or mercado_lower == 'accion':
+                        mercado_normalizado = 'acciones'
+                    elif mercado_lower == 'cfi':
+                        mercado_normalizado = 'CFI'
+                    elif mercado_lower == 'fondos mutuos' or mercado_lower == 'fondosmutuos' or mercado_lower == 'fondo mutuo':
+                        mercado_normalizado = 'Fondos mutuos'
+                
+                mercado = mercado_normalizado
+                
+                # Detectar si Ejercicio e Instrumento están intercambiados
+                # Si Ejercicio contiene letras (como "ACC001") e Instrumento es numérico, intercambiar
+                ejercicio_es_numero = False
+                instrumento_es_numero = False
+                ejercicio_tiene_letras = any(c.isalpha() for c in str(ejercicio)) if ejercicio else False
+                
+                try:
+                    int(ejercicio)
+                    ejercicio_es_numero = True
+                except (ValueError, TypeError):
+                    pass
+                
+                try:
+                    int(instrumento)
+                    instrumento_es_numero = True
+                except (ValueError, TypeError):
+                    pass
+                
+                # Si Ejercicio no es numérico pero Instrumento sí, intercambiar
+                # O si Ejercicio tiene letras (parece código de instrumento) e Instrumento es numérico (parece año)
+                if (not ejercicio_es_numero and instrumento_es_numero) or (ejercicio_tiene_letras and instrumento_es_numero):
+                    print(f"[CARGAR_MONTO] Advertencia: Ejercicio e Instrumento parecen estar intercambiados en fila {idx}. Ejercicio: '{ejercicio}', Instrumento: '{instrumento}'")
+                    ejercicio, instrumento = instrumento, ejercicio
+                    ejercicio_es_numero = True
+                
+                if not ejercicio or not mercado:
+                    # Mostrar qué claves tiene la fila para ayudar a debuggear
+                    claves_disponibles = ', '.join(fila.keys())
+                    errores.append(f'Fila {idx}: Faltan campos requeridos (Ejercicio, Mercado). Claves disponibles: {claves_disponibles}')
+                    continue
+                
+                # Validar y convertir Ejercicio a entero
+                try:
+                    ejercicio_int = int(ejercicio)
+                except (ValueError, TypeError):
+                    # Mostrar más información sobre el error
+                    claves_disponibles = ', '.join(fila.keys())
+                    errores.append(f'Fila {idx}: El campo Ejercicio debe ser un número entero. Valor recibido: "{ejercicio}". Instrumento recibido: "{instrumento}". Claves disponibles: {claves_disponibles}')
+                    continue
+                
+                # Crear nueva calificación
+                nueva_calificacion = Calificacion()
+                nueva_calificacion.Ejercicio = ejercicio_int
+                nueva_calificacion.Mercado = mercado
+                nueva_calificacion.Instrumento = instrumento
+                nueva_calificacion.Origen = 'csv'  # Normalizado a minúsculas para coincidir con el filtro
+                nueva_calificacion.Descripcion = fila_limpia.get('DESCRIPCION') or fila_limpia.get('Descripcion') or fila_limpia.get('descripcion') or ''
+                
+                # Fecha de pago usando pandas
+                fecha_pago = fila_limpia.get('FEC_PAGO') or fila_limpia.get('Fec_Pago') or fila_limpia.get('fec_pago') or ''
+                if fecha_pago:
+                    try:
+                        fecha_parsed = pd.to_datetime(fecha_pago, format='%Y-%m-%d', errors='coerce')
+                        if not pd.isna(fecha_parsed):
+                            nueva_calificacion.FechaPago = fecha_parsed.to_pydatetime()
+                    except Exception as e:
+                        print(f"[CARGAR_MONTO] Error al parsear fecha: {e}")
+                        pass
+                
+                # Secuencia evento usando pandas
+                sec_eve = fila_limpia.get('SEC_EVE') or fila_limpia.get('Sec_Eve') or fila_limpia.get('sec_eve') or ''
+                if sec_eve:
+                    try:
+                        nueva_calificacion.SecuenciaEvento = pd.to_numeric(sec_eve, errors='raise').astype(int)
+                    except (ValueError, TypeError, Exception):
+                        print(f"[CARGAR_MONTO] Advertencia: No se pudo convertir SecuenciaEvento '{sec_eve}' a entero en fila {fila_num}")
+                        pass
+                
+                # Verificar si ya tiene factores calculados (después de presionar "CALCULAR FACTORES")
+                tiene_factores = any(f'F{i}' in fila_limpia for i in range(8, 38))
+                
+                if tiene_factores:
+                    # Los factores ya están calculados, solo asignarlos usando pandas
+                    for i in range(8, 38):
+                        factor_key = f'F{i}'
+                        factor_value = fila_limpia.get(factor_key, '0.0')
+                        try:
+                            factor_numeric = pd.to_numeric(factor_value, errors='coerce')
+                            if pd.isna(factor_numeric):
+                                factor_decimal = Decimal(0)
+                            else:
+                                factor_decimal = Decimal(str(factor_numeric))
+                                if factor_decimal < 0:
+                                    factor_decimal = Decimal(0)
+                                elif factor_decimal > 1:
+                                    factor_decimal = Decimal(1)
+                            setattr(nueva_calificacion, f'Factor{i:02d}', factor_decimal)
+                        except Exception as e:
+                            print(f"[CARGAR_MONTO] Error al procesar factor {i}: {e}")
+                            setattr(nueva_calificacion, f'Factor{i:02d}', Decimal(0))
+                    
+                    # Si hay montos originales, guardarlos también usando pandas
+                    suma_base = Decimal(0)
+                    for i in range(8, 38):
+                        # Buscar la clave del monto (puede ser "F8 MONT" o "F8 M")
+                        monto_key = None
+                        for key in fila_limpia.keys():
+                            if key.strip() == f'F{i} MONT' or key.strip() == f'F{i} M':
+                                monto_key = key
+                                break
+                        
+                        monto_value = fila_limpia.get(monto_key, '0.0') if monto_key else '0.0'
+                        try:
+                            monto_numeric = pd.to_numeric(monto_value, errors='coerce')
+                            if pd.isna(monto_numeric):
+                                monto_decimal = Decimal(0)
+                            else:
+                                monto_decimal = Decimal(str(monto_numeric))
+                            setattr(nueva_calificacion, f'Monto{i:02d}', monto_decimal)
+                            if i <= 19:
+                                suma_base += monto_decimal
+                        except Exception as e:
+                            print(f"[CARGAR_MONTO] Error al procesar monto {i}: {e}")
+                            setattr(nueva_calificacion, f'Monto{i:02d}', Decimal(0))
+                    
+                    nueva_calificacion.SumaBase = suma_base
+                else:
+                    # Obtener montos y calcular suma base usando pandas
+                    montos = []
+                    suma_base = Decimal(0)
+                    
+                    for i in range(8, 38):
+                        # Buscar la clave del monto (puede ser "F8 MONT" o "F8 M")
+                        monto_key = None
+                        for key in fila_limpia.keys():
+                            if key.strip() == f'F{i} MONT' or key.strip() == f'F{i} M':
+                                monto_key = key
+                                break
+                        
+                        monto_value = fila_limpia.get(monto_key, '0.0') if monto_key else '0.0'
+                        try:
+                            monto_numeric = pd.to_numeric(monto_value, errors='coerce')
+                            if pd.isna(monto_numeric):
+                                monto_decimal = Decimal(0)
+                            else:
+                                monto_decimal = Decimal(str(monto_numeric))
+                            montos.append(monto_decimal)
+                            if i <= 19:  # Solo sumar del 8 al 19
+                                suma_base += monto_decimal
+                        except Exception as e:
+                            print(f"[CARGAR_MONTO] Error al procesar monto {i}: {e}")
+                            montos.append(Decimal(0))
+                    
+                    nueva_calificacion.SumaBase = suma_base
+                    
+                    # Guardar montos
+                    for i in range(8, 38):
+                        setattr(nueva_calificacion, f'Monto{i:02d}', montos[i - 8])
+                    
+                    # Calcular factores
+                    if suma_base > 0:
+                        EIGHT_PLACES = Decimal('0.00000001')
+                        for i in range(8, 38):
+                            factor = (montos[i - 8] / suma_base).quantize(EIGHT_PLACES)
+                            if factor > 1:
+                                factor = Decimal(1)
+                            setattr(nueva_calificacion, f'Factor{i:02d}', factor)
+                    else:
+                        for i in range(8, 38):
+                            setattr(nueva_calificacion, f'Factor{i:02d}', Decimal(0))
+                
+                nueva_calificacion.FechaAct = datetime.datetime.now()
+                nueva_calificacion.save()
+                calificaciones_creadas += 1
+                print(f"[CARGAR_MONTO] Calificación {fila_num} guardada exitosamente")
+                
+            except Exception as e:
+                print(f"[CARGAR_MONTO] Error en fila {fila_num}: {e}")
+                import traceback
+                print(traceback.format_exc())
+                errores.append(f'Fila {fila_num}: {str(e)}')
+                continue
+        
+        # Crear log de carga masiva
+        if calificaciones_creadas > 0:
+            _crear_log(current_user, 'Carga Masiva', documento_afectado=None)
+            print(f"[CARGAR_MONTO] Log creado para {calificaciones_creadas} calificaciones")
+        
+        mensaje = f'Se crearon {calificaciones_creadas} calificación(es) exitosamente.'
+        if errores:
+            mensaje += f' Se encontraron {len(errores)} error(es).'
+        
+        print(f"[CARGAR_MONTO] Proceso completado: {calificaciones_creadas} creadas, {len(errores)} errores")
+        
+        return JsonResponse({
+            'success': True,
+            'total': calificaciones_creadas,
+            'errores': errores,
+            'message': mensaje
+        })
+        
+    except Exception as e:
+        print(f"[CARGAR_MONTO] Error al cargar montos: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': f'Error al procesar: {str(e)}'}, status=500)
+
+
+@require_POST
+def calcular_factores_masivo_view(request):
+    """Vista para calcular factores desde montos en carga masiva"""
+    if 'user_id' not in request.session:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    try:
+        import json
+        from decimal import Decimal
+        
+        data = json.loads(request.body)
+        datos_csv = data.get('datos', [])
+        
+        if not datos_csv:
+            return JsonResponse({'success': False, 'error': 'No se recibieron datos'}, status=400)
+        
+        datos_calculados = []
+        
+        for fila in datos_csv:
+            fila_calculada = fila.copy()
+            
+            # Obtener montos y calcular suma base
+            montos = []
+            suma_base = Decimal(0)
+            
+            for i in range(8, 38):
+                monto_key = f'F{i} MONT' if f'F{i} MONT' in fila else f'F{i} M'
+                monto_value = fila.get(monto_key, '0.0')
+                try:
+                    monto_decimal = Decimal(str(monto_value))
+                    montos.append(monto_decimal)
+                    if i <= 19:  # Solo sumar del 8 al 19
+                        suma_base += monto_decimal
+                except:
+                    montos.append(Decimal(0))
+            
+            # Calcular factores
+            if suma_base > 0:
+                EIGHT_PLACES = Decimal('0.00000001')
+                for i in range(8, 38):
+                    factor = (montos[i - 8] / suma_base).quantize(EIGHT_PLACES)
+                    if factor > 1:
+                        factor = Decimal(1)
+                    fila_calculada[f'F{i}'] = str(factor)
+            else:
+                for i in range(8, 38):
+                    fila_calculada[f'F{i}'] = '0.0'
+            
+            datos_calculados.append(fila_calculada)
+        
+        return JsonResponse({
+            'success': True,
+            'datos_calculados': datos_calculados
+        })
+        
+    except Exception as e:
+        print(f"Error al calcular factores masivo: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': f'Error al calcular: {str(e)}'}, status=500)
+
+
+@require_GET
+def obtener_logs_calificacion_view(request, calificacion_id):
+    """Vista para obtener los logs de una calificación específica"""
+    if 'user_id' not in request.session:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
+    try:
+        current_user = usuarios.objects.get(id=request.session['user_id'])
+    except usuarios.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Usuario no válido'}, status=401)
+
+    try:
+        # Obtener la calificación
+        calificacion = Calificacion.objects.get(id=calificacion_id)
+        
+        # Obtener información básica de la calificación
+        calificacion_info = {
+            'ejercicio': calificacion.Ejercicio or '',
+            'instrumento': calificacion.Instrumento or '',
+            'mercado': calificacion.Mercado or ''
+        }
+        
+        # Obtener logs relacionados con esta calificación
+        logs_raw = Log.objects(iddocumento=calificacion).order_by('-fecharegistrada')
+        logs_procesados = []
+        
+        for l in logs_raw:
+            # Actor (usuario que ejecutó la acción)
+            actor_correo = getattr(l, "correoElectronico", "N/A")
+            actor_id = "N/A"
+            actor_nombre = "N/A"
+            
+            if hasattr(l, "Usuarioid") and l.Usuarioid:
+                actor_id_obj = _extraer_object_id(l.Usuarioid)
+                if actor_id_obj:
+                    actor_id = str(actor_id_obj)
+                    try:
+                        actor_usuario = usuarios.objects.get(id=actor_id_obj)
+                        actor_nombre = actor_usuario.nombre
+                    except usuarios.DoesNotExist:
+                        pass
+            
+            # Obtener cambios detallados si existen
+            cambios_detallados = None
+            if hasattr(l, "cambios_detallados") and l.cambios_detallados:
+                try:
+                    import json
+                    cambios_detallados = json.loads(l.cambios_detallados)
+                except:
+                    cambios_detallados = None
+            
+            logs_procesados.append({
+                "fecha": getattr(l, "fecharegistrada", None).isoformat() if getattr(l, "fecharegistrada", None) else None,
+                "actor_correo": actor_correo,
+                "actor_id": actor_id,
+                "actor_nombre": actor_nombre,
+                "accion": getattr(l, "accion", "N/A"),
+                "cambios_detallados": cambios_detallados
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'logs': logs_procesados,
+            'calificacion_info': calificacion_info
+        })
+        
+    except Calificacion.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Calificación no encontrada'}, status=404)
+    except Exception as e:
+        print(f"Error al obtener logs: {e}")
+        return JsonResponse({'success': False, 'error': f'Error al obtener logs: {str(e)}'}, status=500)

@@ -11,6 +11,21 @@
     
     <link rel="stylesheet" href="{% static 'prueba/css/modal.css' %}">
     <link rel="stylesheet" href="{% static 'prueba/css/modal_factores.css' %}">
+    <link rel="stylesheet" href="{% static 'prueba/css/logs.css' %}">
+    
+    <!-- Script inline para cargar tema oscuro ANTES de renderizar (previene flash) -->
+    <script>
+        (function() {
+            const temaOscuro = localStorage.getItem('temaOscuro') === 'true';
+            if (temaOscuro) {
+                document.documentElement.classList.add('dark-theme');
+                document.body.classList.add('dark-theme');
+            }
+        })();
+    </script>
+    
+    <!-- Script para cargar tema oscuro -->
+    <script src="{% static 'prueba/js/tema.js' %}"></script>
     
     <!-- Configuración de URLs para el JavaScript -->
     <script>
@@ -21,9 +36,23 @@
             calcularFactores: '{% url "calcular_factores" %}',
             buscarCalificaciones: '{% url "buscar_calificaciones" %}',
             obtenerCalificacionBase: '{% url "obtener_calificacion" "000000000000000000000000" %}',
-            eliminarCalificacionBase: '{% url "eliminar_calificacion" "000000000000000000000000" %}'
+            eliminarCalificacionBase: '{% url "eliminar_calificacion" "000000000000000000000000" %}',
+            copiarCalificacionBase: '{% url "copiar_calificacion" "000000000000000000000000" %}',
+            obtenerLogsCalificacionBase: '{% url "obtener_logs_calificacion" "000000000000000000000000" %}',
+            previewFactor: '{% url "preview_factor" %}',
+            previewMonto: '{% url "preview_monto" %}',
+            cargarFactor: '{% url "cargar_factor" %}',
+            cargarMonto: '{% url "cargar_monto" %}',
+            calcularFactoresMasivo: '{% url "calcular_factores_masivo" %}'
         };
         console.log('URLs configuradas:', window.DJANGO_URLS);
+        
+        // Cargar calificaciones iniciales si existen
+        {% if calificaciones_json %}
+        window.CALIFICACIONES_INICIALES = {{ calificaciones_json|safe }};
+        {% else %}
+        window.CALIFICACIONES_INICIALES = [];
+        {% endif %}
     </script>
 </head>
 <body>
@@ -34,9 +63,10 @@
             <div class="filter-group">
                 <label for="mercado">Mercado:</label>
                 <select id="mercado" name="mercado">
-                    <option value="chile">Chile</option>
-                    <option value="peru">Perú</option>
-                    <option value="colombia">Colombia</option>
+                    <option value="">Todos</option>
+                    <option value="acciones">Acciones</option>
+                    <option value="CFI">CFI</option>
+                    <option value="Fondos mutuos">Fondos mutuos</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -140,18 +170,22 @@
         
         <div class="footer-actions">
             <button type="button" id="btn-abrir-modal" class="btn">INGRESAR</button>
-            <button class="btn">CARGA X FACTOR</button>
-            <button class="btn">CARGA X MONTO</button>
+            <button type="button" id="btn-carga-factor" class="btn">CARGA X FACTOR</button>
+            <button type="button" id="btn-carga-monto" class="btn">CARGA X MONTO</button>
         </div>
 
         <div class="footer-actions">
-            <button class="btn">OPCIONES</button>
+            <button type="button" id="btn-abrir-opciones" class="btn">OPCIONES</button>
         </div>
     </footer>
 
     {% include 'prueba/modal_ingreso.html' %}
     {% include 'prueba/modal_factores.html' %}
     {% include 'prueba/modal_mensaje.html' %}
+    {% include 'prueba/modal_log_calificacion.html' %}
+    {% include 'prueba/modal_carga_factor.html' %}
+    {% include 'prueba/modal_carga_monto.html' %}
+    {% include 'prueba/modal_opciones.html' %}
 
     <script src="{% static 'prueba/js/home.js' %}"></script>
 </body>

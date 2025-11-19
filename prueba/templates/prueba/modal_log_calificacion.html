@@ -1,0 +1,38 @@
+<!-- Modal para mostrar logs de una calificación -->
+<div id="log-calificacion-modal-overlay" class="modal-overlay">
+    <div class="modal-content modal-extra-large">
+        <div class="modal-header">
+            <h2>Log de Cambios - Calificación</h2>
+            <span id="btn-cerrar-log-calificacion-x" class="modal-close">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <!-- Información de la calificación -->
+            <div id="log-calificacion-info" style="margin-bottom: 1.5rem; padding: 1rem; background-color: var(--bg-secondary); border-radius: 6px;">
+                <!-- Se llena dinámicamente con JavaScript -->
+            </div>
+            
+            <!-- Tabla de logs -->
+            <div style="max-height: 70vh; overflow-y: auto;">
+                <table class="log-table" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Fecha y Hora</th>
+                            <th>Usuario que Realizó la Acción</th>
+                            <th>Acción Realizada</th>
+                            <th>Cambios Detallados</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-calificacion-tbody">
+                        <!-- Se llena dinámicamente con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" id="btn-cerrar-log-calificacion" class="btn">Cerrar</button>
+        </div>
+    </div>
+</div>
+

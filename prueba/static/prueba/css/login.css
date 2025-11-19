@@ -118,3 +118,33 @@ form {
 .contact-link:hover {
     color: var(--color-primary);
 }
+
+/* ===== TEMA OSCURO PARA PÁGINA DE LOGIN ===== */
+body.dark-theme {
+    background-color: var(--bg-light);
+}
+
+body.dark-theme .login-container {
+    background-color: var(--bg-primary);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+body.dark-theme .form-input {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+body.dark-theme .form-input:focus {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+body.dark-theme .form-input::placeholder {
+    color: var(--text-secondary);
+}
+
+body.dark-theme .contact-link {
+    color: var(--text-secondary);
+}

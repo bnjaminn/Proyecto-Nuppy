@@ -24,6 +24,66 @@
     --color-success: #28A745;
     --color-danger: #DC3545;
     --color-warning: #FFC107;
+}
+
+/* ===== TEMA OSCURO ===== */
+body.dark-theme {
+    /* Textos */
+    --text-primary: #E0E0E0;
+    --text-secondary: #B0B0B0;
+    --text-on-primary: #FFFFFF;
+    
+    /* Fondos */
+    --bg-primary: #1E1E1E;
+    --bg-secondary: #2D2D2D;
+    --bg-light: #252525;
+    
+    /* Bordes y separadores */
+    --border: #404040;
+    --border-dark: #555555;
+    
+    /* Color primario más claro en tema oscuro */
+    --color-primary-light: #3A2A1A;
+}
+
+body.dark-theme .header {
+    background-color: var(--bg-primary);
+    border-bottom-color: var(--border);
+}
+
+body.dark-theme .main-content {
+    background-color: var(--bg-primary);
+    border-color: var(--border);
+}
+
+body.dark-theme .data-table tbody tr {
+    background-color: var(--bg-primary);
+}
+
+body.dark-theme .data-table tbody tr:nth-child(even) {
+    background-color: var(--bg-secondary);
+}
+
+body.dark-theme .data-table tbody tr:hover {
+    background-color: var(--color-primary-light);
+}
+
+body.dark-theme .footer {
+    background-color: var(--bg-secondary);
+    border-top-color: var(--border);
+}
+
+body.dark-theme .filter-group select,
+body.dark-theme .filter-group input {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+body.dark-theme .filter-group select:focus,
+body.dark-theme .filter-group input:focus {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
 }   
 
 body {
@@ -363,6 +423,14 @@ body {
 
 .btn-copiar-row:hover {
     background: #138496 !important;
+}
+
+.btn-log-row {
+    background: #6C757D !important;
+}
+
+.btn-log-row:hover {
+    background: #5A6268 !important;
 }
 
 .btn-row-icon .icon-svg {

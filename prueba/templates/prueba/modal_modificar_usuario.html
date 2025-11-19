@@ -23,7 +23,14 @@
                     </div>
                     <div class="form-field">
                         <label for="modificar-contrasena">Nueva Contraseña (dejar en blanco para no cambiar):</label>
-                        <input type="password" id="modificar-contrasena" name="contrasena"> 
+                        <input type="password" id="modificar-contrasena" name="contrasena" placeholder="Dejar en blanco para no cambiar">
+                        <small style="color: #666; display: block; margin-top: 5px; font-size: 0.85em;">
+                            Si desea cambiar la contraseña, debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y un símbolo especial.
+                        </small>
+                    </div>
+                    <div class="form-field">
+                        <label for="modificar-confirmar-contrasena">Confirmar Nueva Contraseña:</label>
+                        <input type="password" id="modificar-confirmar-contrasena" name="confirmar_contrasena" placeholder="Confirme la nueva contraseña">
                     </div>
                     <div class="form-field">
                         <label for="modificar-foto-perfil">Foto de Perfil (opcional):</label>

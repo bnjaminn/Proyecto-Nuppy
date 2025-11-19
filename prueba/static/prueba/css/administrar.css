@@ -352,3 +352,59 @@
     font-size: 1rem;
     font-weight: 500;
 }
+
+/* ===== TEMA OSCURO PARA PÁGINA DE ADMINISTRAR ===== */
+body.dark-theme .admin-container {
+    background-color: var(--bg-primary);
+    border-color: var(--border);
+}
+
+body.dark-theme .user-actions {
+    border-bottom-color: var(--border);
+}
+
+body.dark-theme .user-card {
+    background-color: var(--bg-primary);
+    border-color: var(--border);
+}
+
+body.dark-theme .user-card:hover {
+    border-color: var(--color-primary);
+}
+
+body.dark-theme .user-card.selected {
+    background-color: var(--color-primary-light);
+    border-color: var(--color-primary);
+}
+
+body.dark-theme .user-card-avatar-container {
+    background: linear-gradient(to bottom, var(--color-primary-light) 0%, var(--bg-primary) 100%);
+    border-bottom-color: var(--border);
+}
+
+body.dark-theme .user-card-name {
+    color: var(--text-primary);
+}
+
+body.dark-theme .user-card-email {
+    color: var(--text-secondary);
+}
+
+body.dark-theme .role-badge.role-user {
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    border-color: var(--border);
+}
+
+body.dark-theme .notificacion {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+body.dark-theme .carga-spinner {
+    background: var(--bg-primary);
+}
+
+body.dark-theme .carga-mensaje {
+    color: var(--text-primary);
+}

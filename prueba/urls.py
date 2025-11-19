@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import listar_usuarios, login_view, home_view, logout_view, ingresar_view, ingresar_calificacion, administrar_view, crear_usuario_view, eliminar_usuarios_view, obtener_usuario_view, modificar_usuario_view, ver_logs_view, guardar_factores_view, calcular_factores_view, buscar_calificaciones_view, obtener_calificacion_view, eliminar_calificacion_view
+from .views import listar_usuarios, login_view, home_view, logout_view, ingresar_view, ingresar_calificacion, administrar_view, crear_usuario_view, eliminar_usuarios_view, obtener_usuario_view, modificar_usuario_view, ver_logs_view, guardar_factores_view, calcular_factores_view, buscar_calificaciones_view, obtener_calificacion_view, eliminar_calificacion_view, obtener_logs_calificacion_view, copiar_calificacion_view, cargar_factor_view, cargar_monto_view, calcular_factores_masivo_view, preview_factor_view, preview_monto_view
 urlpatterns = [
     path("listar/", listar_usuarios, name = "listar_usuarios"),
     path('home/', home_view, name='home'),
@@ -12,6 +12,13 @@ urlpatterns = [
     path('buscar-calificaciones/', buscar_calificaciones_view, name='buscar_calificaciones'),
     path('obtener-calificacion/<str:calificacion_id>/', obtener_calificacion_view, name='obtener_calificacion'),
     path('eliminar-calificacion/<str:calificacion_id>/', eliminar_calificacion_view, name='eliminar_calificacion'),
+    path('copiar-calificacion/<str:calificacion_id>/', copiar_calificacion_view, name='copiar_calificacion'),
+    path('obtener-logs-calificacion/<str:calificacion_id>/', obtener_logs_calificacion_view, name='obtener_logs_calificacion'),
+    path('preview-factor/', preview_factor_view, name='preview_factor'),
+    path('preview-monto/', preview_monto_view, name='preview_monto'),
+    path('cargar-factor/', cargar_factor_view, name='cargar_factor'),
+    path('cargar-monto/', cargar_monto_view, name='cargar_monto'),
+    path('calcular-factores-masivo/', calcular_factores_masivo_view, name='calcular_factores_masivo'),
     path('administrar/', administrar_view, name='administrar'),
     path('crear_usuario/', crear_usuario_view, name='crear_usuario'),
     path('eliminar_usuarios/', eliminar_usuarios_view, name='eliminar_usuarios'),

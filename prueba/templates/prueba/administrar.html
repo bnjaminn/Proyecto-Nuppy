@@ -11,6 +11,19 @@
     <link rel="stylesheet" href="{% static 'prueba/css/administrar.css' %}">
     <link rel="stylesheet" href="{% static 'prueba/css/modal.css' %}">
     
+    <!-- Script inline para cargar tema oscuro ANTES de renderizar (previene flash) -->
+    <script>
+        (function() {
+            const temaOscuro = localStorage.getItem('temaOscuro') === 'true';
+            if (temaOscuro) {
+                document.documentElement.classList.add('dark-theme');
+                document.body.classList.add('dark-theme');
+            }
+        })();
+    </script>
+    
+    <!-- Script para cargar tema oscuro -->
+    <script src="{% static 'prueba/js/tema.js' %}"></script>
 </head>
 <body>
 

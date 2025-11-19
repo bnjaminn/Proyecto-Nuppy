@@ -136,3 +136,52 @@
     background-color: #f3e5f5;
     color: #7b1fa2;
 }
+
+/* ===== TEMA OSCURO PARA LOGS ===== */
+body.dark-theme .log-table-container {
+    background-color: var(--bg-primary);
+    border-color: var(--border);
+}
+
+body.dark-theme .log-table td {
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+body.dark-theme .log-table tbody tr:nth-child(even) {
+    background-color: var(--bg-secondary);
+}
+
+body.dark-theme .log-table tbody tr:hover {
+    background-color: var(--color-primary-light);
+}
+
+body.dark-theme .accion-crear {
+    background-color: #1e4620;
+    color: #81c784;
+}
+
+body.dark-theme .accion-modificar {
+    background-color: #5d4e1f;
+    color: #ffd54f;
+}
+
+body.dark-theme .accion-eliminar {
+    background-color: #4a1e1e;
+    color: #ef5350;
+}
+
+body.dark-theme .accion-carga {
+    background-color: #1a3a3f;
+    color: #4dd0e1;
+}
+
+body.dark-theme .tipo-usuario {
+    background-color: #1a237e;
+    color: #90caf9;
+}
+
+body.dark-theme .tipo-calificacion {
+    background-color: #4a148c;
+    color: #ce93d8;
+}

@@ -1,0 +1,79 @@
+<!-- Modal para Carga X Monto -->
+<div id="carga-monto-modal-overlay" class="modal-overlay">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>Cargar archivo carga x monto</h2>
+            <span id="btn-cerrar-carga-monto-x" class="modal-close">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <div style="margin-bottom: 1.5rem;">
+                <label for="archivo-monto-input" class="form-field" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Archivo</label>
+                <input type="file" id="archivo-monto-input" accept=".csv" style="display: none;">
+                <div class="archivo-input-container">
+                    <input type="text" id="archivo-monto-nombre" readonly class="archivo-nombre-input" placeholder="Ningún archivo seleccionado">
+                    <button type="button" id="btn-seleccionar-archivo-monto" class="btn">SELECCIONAR ARCHIVO</button>
+                </div>
+            </div>
+            
+            <div class="preview-table-container">
+                <table id="tabla-preview-monto" class="preview-table">
+                    <thead>
+                        <tr>
+                            <th>Ejercicio</th>
+                            <th>Mercado</th>
+                            <th>Instrumento</th>
+                            <th>FEC_PAGO</th>
+                            <th>SEC_EVE</th>
+                            <th>DESCRIPCION</th>
+                            <th>F8 MONT</th>
+                            <th>F9 MONT</th>
+                            <th>F10 M</th>
+                            <th>F11 M</th>
+                            <th>F12 M</th>
+                            <th>F13 M</th>
+                            <th>F14 M</th>
+                            <th>F15 M</th>
+                            <th>F16 M</th>
+                            <th>F17 M</th>
+                            <th>F18 M</th>
+                            <th>F19 M</th>
+                            <th>F20 M</th>
+                            <th>F21 M</th>
+                            <th>F22 M</th>
+                            <th>F23 M</th>
+                            <th>F24 M</th>
+                            <th>F25 M</th>
+                            <th>F26 M</th>
+                            <th>F27 M</th>
+                            <th>F28 M</th>
+                            <th>F29 M</th>
+                            <th>F30 M</th>
+                            <th>F31 M</th>
+                            <th>F32 M</th>
+                            <th>F33 M</th>
+                            <th>F34 M</th>
+                            <th>F35 M</th>
+                            <th>F36 M</th>
+                            <th>F37 M</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-preview-monto-body">
+                        <tr>
+                            <td colspan="38" class="preview-empty-message">No hay datos para mostrar. Seleccione un archivo CSV.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button type="button" id="btn-seleccionar-archivo-monto-footer" class="btn">SELECCIONAR ARCHIVO</button>
+            <button type="button" id="btn-calcular-factores-monto" class="btn" disabled>CALCULAR FACTORES</button>
+            <button type="button" id="btn-grabar-monto" class="btn" disabled>GRABAR</button>
+            <button type="button" id="btn-cancelar-monto" class="btn btn-secondary">CANCELAR</button>
+            <button type="button" id="btn-ver-formato-monto" class="btn">VER FORMATO</button>
+        </div>
+    </div>
+</div>
+

@@ -48,9 +48,60 @@ class UsuarioForm(forms.Form):
     #Aca Define los campos del modal Crear Usuario
     nombre = forms.CharField(max_length=200, required=True)
     correo = forms.EmailField(required=True)
-    contrasena = forms.CharField(widget=forms.PasswordInput, required=True)
+    contrasena = forms.CharField(
+        widget=forms.PasswordInput(attrs={'placeholder': 'Ingrese su contraseña'}),
+        required=True,
+        min_length=8,
+        help_text="La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y un símbolo especial."
+    )
+    confirmar_contrasena = forms.CharField(
+        widget=forms.PasswordInput(attrs={'placeholder': 'Confirme su contraseña'}),
+        required=True,
+        label="Confirmar Contraseña"
+    )
     # BooleanField maneja el 'true'/'false' del checkbox para decidir que sea admin o no
     rol = forms.BooleanField(required=False) 
+
+    def clean_contrasena(self):
+        """Valida que la contraseña cumpla con los requisitos de seguridad"""
+        contrasena = self.cleaned_data.get('contrasena')
+        
+        if not contrasena:
+            return contrasena
+        
+        # Verificar longitud mínima
+        if len(contrasena) < 8:
+            raise forms.ValidationError("La contraseña debe tener al menos 8 caracteres.")
+        
+        # Verificar que tenga al menos una mayúscula
+        if not any(c.isupper() for c in contrasena):
+            raise forms.ValidationError("La contraseña debe contener al menos una letra mayúscula.")
+        
+        # Verificar que tenga al menos una minúscula
+        if not any(c.islower() for c in contrasena):
+            raise forms.ValidationError("La contraseña debe contener al menos una letra minúscula.")
+        
+        # Verificar que tenga al menos un símbolo especial
+        import string
+        simbolos_especiales = string.punctuation  # !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+        if not any(c in simbolos_especiales for c in contrasena):
+            raise forms.ValidationError("La contraseña debe contener al menos un símbolo especial (!@#$%^&*()_+-=[]{}|;:,.<>?).")
+        
+        return contrasena
+    
+    def clean(self):
+        """Valida que ambas contraseñas coincidan"""
+        cleaned_data = super().clean()
+        contrasena = cleaned_data.get('contrasena')
+        confirmar_contrasena = cleaned_data.get('confirmar_contrasena')
+        
+        if contrasena and confirmar_contrasena:
+            if contrasena != confirmar_contrasena:
+                raise forms.ValidationError({
+                    'confirmar_contrasena': "Las contraseñas no coinciden. Por favor, verifique que ambas sean iguales."
+                })
+        
+        return cleaned_data
 
     #Aseguraramos que el correo no exista ya
     def clean_correo(self):
@@ -65,19 +116,70 @@ class UsuarioUpdateForm(forms.Form):
     user_id = forms.CharField(widget=forms.HiddenInput(), required=True) #en esta linea se ejectuta el hidden para ocultar el ID del usuario
     nombre = forms.CharField(max_length=200, required=True)
     correo = forms.EmailField(required=True)
-    contrasena = forms.CharField(widget=forms.PasswordInput, required=False) #Contraseña opcional con el false: si se envía, se actualiza
+    contrasena = forms.CharField(
+        widget=forms.PasswordInput(attrs={'placeholder': 'Dejar en blanco para no cambiar'}),
+        required=False,
+        help_text="Si desea cambiar la contraseña, debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y un símbolo especial."
+    )
+    confirmar_contrasena = forms.CharField(
+        widget=forms.PasswordInput(attrs={'placeholder': 'Confirme la nueva contraseña'}),
+        required=False,
+        label="Confirmar Nueva Contraseña"
+    )
     rol = forms.BooleanField(required=False)
+
+    def clean_contrasena(self):
+        """Valida que la contraseña cumpla con los requisitos de seguridad si se proporciona"""
+        contrasena = self.cleaned_data.get('contrasena')
+        
+        # Si no se proporciona contraseña, está bien (es opcional)
+        if not contrasena or contrasena.strip() == '':
+            return contrasena
+        
+        # Si se proporciona contraseña, debe cumplir los requisitos
+        # Verificar longitud mínima
+        if len(contrasena) < 8:
+            raise forms.ValidationError("La contraseña debe tener al menos 8 caracteres.")
+        
+        # Verificar que tenga al menos una mayúscula
+        if not any(c.isupper() for c in contrasena):
+            raise forms.ValidationError("La contraseña debe contener al menos una letra mayúscula.")
+        
+        # Verificar que tenga al menos una minúscula
+        if not any(c.islower() for c in contrasena):
+            raise forms.ValidationError("La contraseña debe contener al menos una letra minúscula.")
+        
+        # Verificar que tenga al menos un símbolo especial
+        import string
+        simbolos_especiales = string.punctuation  # !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+        if not any(c in simbolos_especiales for c in contrasena):
+            raise forms.ValidationError("La contraseña debe contener al menos un símbolo especial (!@#$%^&*()_+-=[]{}|;:,.<>?).")
+        
+        return contrasena
 
     # Validación extra: Asegurar que el NUEVO correo no esté ya en uso por OTRO usuario
     def clean(self):
         cleaned_data = super().clean()
         correo = cleaned_data.get('correo')
         user_id = cleaned_data.get('user_id')
+        contrasena = cleaned_data.get('contrasena')
+        confirmar_contrasena = cleaned_data.get('confirmar_contrasena')
 
         # Busca si existe OTRO usuario con este correo
         existing_user = usuarios.objects(correo=correo, id__ne=user_id).first() #Busca si existe OTRO usuario (id__ne = id not equal) con este correo
         if existing_user:
-            self.add_error('correo', "Este correo electrónico ya está registrado por otro usuario.")  
+            self.add_error('correo', "Este correo electrónico ya está registrado por otro usuario.")
+        
+        # Validar que si se proporciona contraseña, también se proporcione confirmación y que coincidan
+        if contrasena and contrasena.strip() != '':
+            if not confirmar_contrasena or confirmar_contrasena.strip() == '':
+                self.add_error('confirmar_contrasena', "Debe confirmar la nueva contraseña.")
+            elif contrasena != confirmar_contrasena:
+                self.add_error('confirmar_contrasena', "Las contraseñas no coinciden. Por favor, verifique que ambas sean iguales.")
+        elif confirmar_contrasena and confirmar_contrasena.strip() != '':
+            # Si se proporciona confirmación pero no contraseña, es un error
+            self.add_error('contrasena', "Debe ingresar la nueva contraseña si desea cambiarla.")
+        
         return cleaned_data
 
 #formulario para ingresar factores (segunda ventana modal)
