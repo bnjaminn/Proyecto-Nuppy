@@ -1,0 +1,33 @@
+<!-- Modal Genérico para Mensajes (Éxito, Error, Información, Confirmación) -->
+<div id="mensaje-modal-overlay" class="modal-overlay">
+    <div class="modal-content modal-small">
+        <div class="modal-header">
+            <h2 id="mensaje-modal-titulo">Mensaje</h2>
+            <span id="btn-cerrar-mensaje-x" class="modal-close">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <div class="confirmar-eliminar-content">
+                <div id="mensaje-modal-icono" class="confirmar-eliminar-icono">
+                    ℹ
+                </div>
+                <div class="confirmar-eliminar-texto">
+                    <p id="mensaje-modal-texto" class="confirmar-eliminar-mensaje">
+                        Mensaje
+                    </p>
+                    <p id="mensaje-modal-advertencia" class="confirmar-eliminar-advertencia" style="display: none;">
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <!-- Botones para modo simple (un solo botón) -->
+            <button type="button" id="btn-cerrar-mensaje" class="btn" style="display: none;">Aceptar</button>
+            <!-- Botones para modo confirmación (dos botones) -->
+            <button type="button" id="btn-cancelar-mensaje" class="btn btn-secondary" style="display: none;">Cancelar</button>
+            <button type="button" id="btn-confirmar-mensaje" class="btn" style="display: none;">Confirmar</button>
+        </div>
+    </div>
+</div>
+

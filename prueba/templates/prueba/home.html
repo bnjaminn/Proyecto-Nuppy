@@ -19,8 +19,11 @@
             ingresar: '{% url "ingresar" %}',
             guardarFactores: '{% url "guardar_factores" %}',
             calcularFactores: '{% url "calcular_factores" %}',
-            buscarCalificaciones: '{% url "buscar_calificaciones" %}'
+            buscarCalificaciones: '{% url "buscar_calificaciones" %}',
+            obtenerCalificacionBase: '{% url "obtener_calificacion" "000000000000000000000000" %}',
+            eliminarCalificacionBase: '{% url "eliminar_calificacion" "000000000000000000000000" %}'
         };
+        console.log('URLs configuradas:', window.DJANGO_URLS);
     </script>
 </head>
 <body>
@@ -83,6 +86,7 @@
         <table class="data-table">
             <thead>
                 <tr>
+                    <th>Acciones</th>
                     <th>Ejercicio</th>
                     <th>Instrumento</th>
                     <th>Fecha Pago</th>
@@ -90,41 +94,41 @@
                     <th>Secuencia Evento</th>
                     <th>Fecha Act</th>
                     
-                    <th>Factor-08<small>Crédito IDPC (desde 2017)</small></th>
-                    <th>Factor-09<small>Crédito IDPC (hasta 2016)</small></th>
-                    <th>Factor-10<small>Crédito IDPC Voluntario</small></th>
-                    <th>Factor-11<small>Sin derecho a crédito</small></th>
-                    <th>Factor-12<small>Rentas (RAP) y Diferencia</small></th>
-                    <th>Factor-13<small>Otras rentas percibidas</small></th>
-                    <th>Factor-14<small>Exceso Distribuciones</small></th>
-                    <th>Factor-15<small>Utilidades (ISFUT) 20.780</small></th>
-                    <th>Factor-16<small>Rentas (hasta 1983)</small></th>
-                    <th>Factor-17<small>Rentas Exentas (IGC)</small></th>
+                    <th>Factor-08<small>No Constitutiva de Renta No Acogido a Impto.</small></th>
+                    <th>Factor-09<small>Impto. 1ra Categ. Afecto Gl. Comp. Con Devolución</small></th>
+                    <th>Factor-10<small>Impuesto Tasa Adicional Exento Art. 21</small></th>
+                    <th>Factor-11<small>Incremento Impuesto 1ra Categoría</small></th>
+                    <th>Factor-12<small>Impto. 1ra Categ. Exento Gl. Comp. Con Devolución</small></th>
+                    <th>Factor-13<small>Impto. 1ra Categ. Afecto Gl. Comp. Sin Devolución</small></th>
+                    <th>Factor-14<small>Impto. 1ra Categ. Exento Gl. Comp. Sin Devolución</small></th>
+                    <th>Factor-15<small>Impto. Créditos pro Impuestos Externos</small></th>
+                    <th>Factor-16<small>No Constitutiva de Renta Acogido a Impto.</small></th>
+                    <th>Factor-17<small>No Constitutiva de Renta Devolución de Capital Art.17</small></th>
                     <th>Factor-18<small>Rentas Exentas (IGC/IA)</small></th>
                     <th>Factor-19<small>Montos no constit. renta</small></th>
-                    <th>Factor-20<small>Rentas Fuente Extranjera</small></th>
-                    <th>Factor-21<small>R. Afectas (Sin der.)</small></th>
-                    <th>Factor-22<small>R. Afectas (Con der.)</small></th>
-                    <th>Factor-23<small>R. Exentas (Sin der.)</small></th>
-                    <th>Factor-24<small>R. Exentas (Con der.)</small></th>
-                    <th>Factor-25<small>Crédito IPE</small></th>
-                    <th>Factor-26<small>R. Afectas (Sin der.)</small></th>
-                    <th>Factor-27<small>R. Afectas (Con der.)</small></th>
-                    <th>Factor-28<small>R. Exentas (Sin der.)</small></th>
-                    <th>Factor-29<small>R. Exentas (Con der.)</small></th>
-                    <th>Factor-30<small>Crédito IPE</small></th>
-                    <th>Factor-31<small>Crédito Tasa Adicional</small></th>
-                    <th>Factor-32<small>Tasa Efectiva FUT (TEF)</small></th>
-                    <th>Factor-33<small>Tasa Efectiva FUNT (TEX)</small></th>
-                    <th>Factor-34<small>Devolución Capital Art.17</small></th>
-                    <th>Factor-35<small>(Columna 35)</small></th>
-                    <th>Factor-36<small>(Columna 36)</small></th>
-                    <th>Factor-37<small>(Columna 37)</small></th>
+                    <th>Factor-20<small>Sin Derecho a Devolucion</small></th>
+                    <th>Factor-21<small>Con Derecho a Devolucion</small></th>
+                    <th>Factor-22<small>Sin Derecho a Devolucion</small></th>
+                    <th>Factor-23<small>Con Derecho a Devolucion</small></th>
+                    <th>Factor-24<small>Sin Derecho a Devolucion</small></th>
+                    <th>Factor-25<small>Con Derecho a Devolucion</small></th>
+                    <th>Factor-26<small>Sin Derecho a Devolucion</small></th>
+                    <th>Factor-27<small>Con Derecho a Devolucion</small></th>
+                    <th>Factor-28<small>Credito por IPE</small></th>
+                    <th>Factor-29<small>Sin Derecho a Devolucion</small></th>
+                    <th>Factor-30<small>Con Derecho a Devolucion</small></th>
+                    <th>Factor-31<small>Sin Derecho a Devolucion</small></th>
+                    <th>Factor-32<small>Con Derecho a Devolucion</small></th>
+                    <th>Factor-33<small>Credito por IPE</small></th>
+                    <th>Factor-34<small>Cred. Por Impto. Tasa Adicional, Ex Art. 21 LIR</small></th>
+                    <th>Factor-35<small>Tasa Efectiva Del Cred. Del FUT (TEF)</small></th>
+                    <th>Factor-36<small>Tasa Efectiva Del Cred. Del FUNT (TEX)</small></th>
+                    <th>Factor-37<small>Devolucion de Capital Art. 17 num 7 LIR</small></th>
                 </tr>
             </thead>
             <tbody id="tabla-calificaciones-body">
                 <tr>
-                    <td colspan="37" style="text-align: center; padding: 20px;">
+                    <td colspan="38" style="text-align: center; padding: 20px;">
                         <em>Seleccione los filtros y haga clic en "buscar" para ver las calificaciones</em>
                     </td>
                 </tr>
@@ -136,9 +140,6 @@
         
         <div class="footer-actions">
             <button type="button" id="btn-abrir-modal" class="btn">INGRESAR</button>
-            <button class="btn">MODIFICAR</button>
-            <button class="btn">ELIMINAR</button>
-            <button class="btn">COPIAR</button>
             <button class="btn">CARGA X FACTOR</button>
             <button class="btn">CARGA X MONTO</button>
         </div>
@@ -150,6 +151,7 @@
 
     {% include 'prueba/modal_ingreso.html' %}
     {% include 'prueba/modal_factores.html' %}
+    {% include 'prueba/modal_mensaje.html' %}
 
     <script src="{% static 'prueba/js/home.js' %}"></script>
 </body>

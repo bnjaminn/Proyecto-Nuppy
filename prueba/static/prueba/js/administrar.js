@@ -85,7 +85,12 @@ function limpiarMensajeError(msg) {
 
 // Espera a que TODO el HTML esté cargado y listo antes de ejecutar el código
 document.addEventListener('DOMContentLoaded', function() { 
-    console.log("DOM Cargado. Iniciando TODOS los scripts..."); 
+    console.log("DOM Cargado. Iniciando TODOS los scripts...");
+    
+    // Inicializar el modal de mensajes si las funciones están disponibles
+    if (typeof inicializarModalMensaje === 'function') {
+        inicializarModalMensaje();
+    } 
 
     //SECCION 1: Selección/Deseleccion de Usuarios
     const userCards = document.querySelectorAll('.user-card');
@@ -170,39 +175,26 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 ocultarCarga();
                 if (data.success) {
-                    mostrarNotificacion('Usuario creado exitosamente!', 'success');
+                    mostrarMensaje('Éxito', 'Usuario creado exitosamente!', 'success');
                     cerrarModalCrear();
-                    setTimeout(() => window.location.reload(), 1000);
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    mostrarNotificacion('Error al crear usuario: ' + (data.error || 'Intenta de nuevo.'), 'error');
+                    mostrarMensaje('Error', 'Error al crear usuario: ' + (data.error || 'Intenta de nuevo.'), 'error');
                 }
             })
             .catch(error => {
                 ocultarCarga();
                 console.error("Error detallado:", error.message);
-                mostrarNotificacion("Error al crear usuario: " + limpiarMensajeError(error.message), 'error');
+                mostrarMensaje('Error', 'Error al crear usuario: ' + limpiarMensajeError(error.message), 'error');
             });
         });
     }
     console.log("Lógica del modal Crear Usuario inicializada.");
 
     //SECCION 3: Eliminar Usuario con Modal de Confirmación
-    const modalConfirmarEliminar = document.getElementById('confirmar-eliminar-modal-overlay');
-    const btnCerrarConfirmarEliminar = document.getElementById('btn-cancelar-eliminar');
-    const btnCerrarConfirmarEliminarX = document.getElementById('btn-cerrar-confirmar-eliminar-x');
-    const btnConfirmarEliminar = document.getElementById('btn-confirmar-eliminar');
-    const mensajeConfirmarEliminar = document.getElementById('confirmar-eliminar-mensaje');
-    
-    // Modal de advertencia para autoeliminación
-    const modalAdvertenciaAutoeliminar = document.getElementById('advertencia-autoeliminar-modal-overlay');
-    const btnCerrarAdvertenciaAutoeliminar = document.getElementById('btn-cerrar-advertencia-autoeliminar');
-    const btnCerrarAdvertenciaAutoeliminarX = document.getElementById('btn-cerrar-advertencia-autoeliminar-x');
-    
     let userIdsToDeleteGlobal = []; // Variable para almacenar los IDs temporalmente
 
     function abrirModalConfirmarEliminar(userIds, nombres) {
-        if (!modalConfirmarEliminar) return;
-        
         userIdsToDeleteGlobal = userIds;
         
         // Personalizar mensaje según cantidad
@@ -212,45 +204,27 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             mensaje = `¿Estás seguro de que deseas eliminar <strong>${userIds.length} usuario(s)</strong>?`;
         }
-        mensajeConfirmarEliminar.innerHTML = mensaje;
         
-        modalConfirmarEliminar.style.display = 'flex';
-    }
-
-    function cerrarModalConfirmarEliminar() {
-        if (!modalConfirmarEliminar) return;
-        modalConfirmarEliminar.style.display = 'none';
-        userIdsToDeleteGlobal = [];
-    }
-
-    // Event listeners para cerrar modal
-    if (btnCerrarConfirmarEliminar) {
-        btnCerrarConfirmarEliminar.addEventListener('click', cerrarModalConfirmarEliminar);
-    }
-    if (btnCerrarConfirmarEliminarX) {
-        btnCerrarConfirmarEliminarX.addEventListener('click', cerrarModalConfirmarEliminar);
-    }
-
-    // Cerrar modal al hacer clic en el overlay
-    if (modalConfirmarEliminar) {
-        modalConfirmarEliminar.addEventListener('click', function(e) {
-            if (e.target === modalConfirmarEliminar) {
-                cerrarModalConfirmarEliminar();
-            }
-        });
+        mostrarConfirmacion(
+            'Confirmar Eliminación',
+            mensaje,
+            'Esta acción no se puede deshacer.',
+            ejecutarEliminacion,
+            'danger'
+        );
     }
 
     // Función para ejecutar la eliminación
     function ejecutarEliminacion() {
         if (userIdsToDeleteGlobal.length === 0) {
-            mostrarNotificacion('No hay usuarios seleccionados para eliminar.', 'warning');
+            mostrarMensaje('Advertencia', 'No hay usuarios seleccionados para eliminar.', 'warning');
             return;
         }
         
-        // Guardar los IDs antes de cerrar el modal (que limpia la variable)
+        // Guardar los IDs antes de limpiar la variable
         const userIdsToDelete = [...userIdsToDeleteGlobal];
+        userIdsToDeleteGlobal = [];
         
-        cerrarModalConfirmarEliminar();
         mostrarCarga('Eliminando usuario(s)...');
 
         const url = window.ELIMINAR_USUARIOS_URL || '/administrar/eliminar/';
@@ -258,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!csrfToken) {
             ocultarCarga();
-            mostrarNotificacion('Error de seguridad: No se encontró el token CSRF.', 'error');
+            mostrarMensaje('Error', 'Error de seguridad: No se encontró el token CSRF.', 'error');
             return;
         }
 
@@ -277,9 +251,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         data.error.includes('No puedes eliminarte a ti mismo') || 
                         data.error.includes('autoeliminarte')
                     )) {
-                        cerrarModalConfirmarEliminar();
                         ocultarCarga();
-                        abrirModalAdvertenciaAutoeliminar();
+                        mostrarMensaje(
+                            'Advertencia',
+                            '<strong>No puedes autoeliminarte</strong>',
+                            'warning',
+                            'No puedes eliminar tu propia cuenta de usuario. Si necesitas eliminar tu cuenta, contacta con otro administrador.'
+                        );
                         return null;
                     }
                     throw new Error(`Error ${response.status}: ${JSON.stringify(data)}`);
@@ -300,59 +278,33 @@ document.addEventListener('DOMContentLoaded', function() {
             
             ocultarCarga();
             if (data.success) {
-                mostrarNotificacion(
-                    `${data.deleted_count || userIdsToDelete.length} usuario(s) eliminado(s) exitosamente.`, 
+                mostrarMensaje(
+                    'Éxito',
+                    `${data.deleted_count || userIdsToDelete.length} usuario(s) eliminado(s) exitosamente.`,
                     'success'
                 );
-                setTimeout(() => window.location.reload(), 1000);
+                setTimeout(() => window.location.reload(), 1500);
             } else {
                 // También verificar si el error es por autoeliminación en la respuesta
                 if (data.error && data.error.includes('No puedes eliminarte a ti mismo')) {
-                    abrirModalAdvertenciaAutoeliminar();
+                    mostrarMensaje(
+                        'Advertencia',
+                        '<strong>No puedes autoeliminarte</strong>',
+                        'warning',
+                        'No puedes eliminar tu propia cuenta de usuario. Si necesitas eliminar tu cuenta, contacta con otro administrador.'
+                    );
                 } else {
-                    mostrarNotificacion('Error al eliminar: ' + (data.error || 'Intenta de nuevo.'), 'error');
+                    mostrarMensaje('Error', 'Error al eliminar: ' + (data.error || 'Intenta de nuevo.'), 'error');
                 }
             }
         })
         .catch(error => {
             ocultarCarga();
             console.error("Error al eliminar:", error.message);
-            mostrarNotificacion('Error al eliminar usuario: ' + limpiarMensajeError(error.message), 'error');
+            mostrarMensaje('Error', 'Error al eliminar usuario: ' + limpiarMensajeError(error.message), 'error');
         });
     }
 
-    // Event listener para confirmar eliminación
-    if (btnConfirmarEliminar) {
-        btnConfirmarEliminar.addEventListener('click', ejecutarEliminacion);
-    }
-
-    // Funciones para el modal de advertencia de autoeliminación
-    function abrirModalAdvertenciaAutoeliminar() {
-        if (!modalAdvertenciaAutoeliminar) return;
-        modalAdvertenciaAutoeliminar.style.display = 'flex';
-    }
-
-    function cerrarModalAdvertenciaAutoeliminar() {
-        if (!modalAdvertenciaAutoeliminar) return;
-        modalAdvertenciaAutoeliminar.style.display = 'none';
-    }
-
-    // Event listeners para cerrar modal de advertencia
-    if (btnCerrarAdvertenciaAutoeliminar) {
-        btnCerrarAdvertenciaAutoeliminar.addEventListener('click', cerrarModalAdvertenciaAutoeliminar);
-    }
-    if (btnCerrarAdvertenciaAutoeliminarX) {
-        btnCerrarAdvertenciaAutoeliminarX.addEventListener('click', cerrarModalAdvertenciaAutoeliminar);
-    }
-
-    // Cerrar modal de advertencia al hacer clic en el overlay
-    if (modalAdvertenciaAutoeliminar) {
-        modalAdvertenciaAutoeliminar.addEventListener('click', function(e) {
-            if (e.target === modalAdvertenciaAutoeliminar) {
-                cerrarModalAdvertenciaAutoeliminar();
-            }
-        });
-    }
 
     // Event listener para el botón eliminar
     if (btnEliminar) {
@@ -365,14 +317,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (userIdsToDelete.length === 0) {
-                mostrarNotificacion("Selecciona al menos un usuario para eliminar.", 'warning');
+                mostrarMensaje('Advertencia', 'Selecciona al menos un usuario para eliminar.', 'warning');
                 return; 
             }
             
             // Verificar si el usuario intenta eliminarse a sí mismo
             const currentUserId = window.CURRENT_USER_ID;
             if (currentUserId && userIdsToDelete.includes(currentUserId)) {
-                abrirModalAdvertenciaAutoeliminar();
+                mostrarMensaje(
+                    'Advertencia',
+                    '<strong>No puedes autoeliminarte</strong>',
+                    'warning',
+                    'No puedes eliminar tu propia cuenta de usuario. Si necesitas eliminar tu cuenta, contacta con otro administrador.'
+                );
                 return;
             }
             
@@ -390,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!modalModificarOverlay) return;
         const selectedCard = document.querySelector('.user-card.selected');
         if (!selectedCard) {
-            mostrarNotificacion("Selecciona un usuario para modificar.", 'warning');
+            mostrarMensaje('Advertencia', 'Selecciona un usuario para modificar.', 'warning');
             return;
         }
 
@@ -458,17 +415,17 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 ocultarCarga();
                 if (data.success) {
-                    mostrarNotificacion('Usuario modificado exitosamente.', 'success');
+                    mostrarMensaje('Éxito', 'Usuario modificado exitosamente.', 'success');
                     cerrarModalModificar();
-                    setTimeout(() => window.location.reload(), 1000);
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    mostrarNotificacion('No se pudo modificar: ' + (data.error || 'Error desconocido.'), 'error');
+                    mostrarMensaje('Error', 'No se pudo modificar: ' + (data.error || 'Error desconocido.'), 'error');
                 }
             })
             .catch(error => {
                 ocultarCarga();
                 console.error("Error al modificar:", error.message);
-                mostrarNotificacion('Error al modificar usuario: ' + limpiarMensajeError(error.message), 'error');
+                mostrarMensaje('Error', 'Error al modificar usuario: ' + limpiarMensajeError(error.message), 'error');
             });
         });
     }

@@ -119,6 +119,12 @@
     flex-shrink: 0;
     height: 42px; /* Altura fija para todos los inputs */
     box-sizing: border-box;
+    text-align: right; /* Alinea números a la derecha */
+}
+
+/* Estilos para inputs de montos (monto_8, monto_9, etc.) */
+.factores-col .form-field input[type="number"] {
+    text-align: right;
 }
 
 .factores-col .form-field input.factor-input:hover {
@@ -268,5 +274,37 @@
 
 #factores-modal-overlay .modal-content {
     animation: fadeInFactores 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Estilos para la sección de factores calculados */
+.factores-calculados-section {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background-color: #E8F5E9;
+    border-radius: 8px;
+    border: 2px solid #4CAF50;
+}
+
+.factores-calculados-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: #2E7D32;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-bottom: 2px solid #4CAF50;
+    padding-bottom: 0.5rem;
+}
+
+.factor-display {
+    background-color: #FFFFFF;
+    border: 1px solid #81C784;
+    color: #2E7D32;
+    font-weight: 500;
+    cursor: not-allowed;
+    text-align: right;
+}
+
+.factor-display:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
 }
 

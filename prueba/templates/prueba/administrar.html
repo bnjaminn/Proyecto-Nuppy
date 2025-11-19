@@ -38,8 +38,8 @@
             
             <div class="user-actions">
                 <button class="btn" id="btn-abrir-crear-usuario">Crear Usuario</button>
-                <button class="btn btn-secondary" id="btn-modificar-usuario" disabled>Modificar Usuario</button> 
-                <button class="btn btn-danger" id="btn-eliminar-usuario" disabled>Eliminar Usuario</button> 
+                <button class="btn btn-action-orange" id="btn-modificar-usuario" disabled>MODIFICAR</button> 
+                <button class="btn btn-action-orange" id="btn-eliminar-usuario" disabled>ELIMINAR</button> 
                 
                 {% if is_admin %}
                     <a href="{% url 'ver_logs' %}" class="btn btn-warning" style="margin-left: 10px;">Ver Logs</a>
@@ -85,8 +85,7 @@
     
     {% include 'prueba/modal_crear_usuario.html' %}
     {% include 'prueba/modal_modificar_usuario.html' %}
-    {% include 'prueba/modal_confirmar_eliminar.html' %}
-    {% include 'prueba/modal_advertencia_autoeliminar.html' %}
+    {% include 'prueba/modal_mensaje.html' %}
 
     <script>
         // Variable global para la URL de eliminar usuarios (necesaria para JavaScript externo)
@@ -95,7 +94,9 @@
         window.CURRENT_USER_ID = "{{ current_user_id }}";
     </script>
     
-    <script src="{% static 'prueba/js/administrar.js' %}"></script>
+    <!-- Cargar funciones del modal de mensajes desde home.js -->
+    <script src="{% static 'prueba/js/home.js' %}" defer></script>
+    <script src="{% static 'prueba/js/administrar.js' %}" defer></script>
 
 </body>
 </html>

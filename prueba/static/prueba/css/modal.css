@@ -438,3 +438,96 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 }
+
+/* ========== ESTILOS PARA SISTEMA DE MONTOS A FACTORES ========== */
+
+/* Secciones de montos */
+.montos-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.montos-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--color-primary);
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-bottom: 2px solid var(--color-primary);
+    padding-bottom: 0.5rem;
+}
+
+.montos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.monto-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.monto-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.suma-base-display {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: var(--color-primary-light);
+    border-radius: 6px;
+    text-align: center;
+    font-size: 1.1rem;
+    color: var(--color-primary-dark);
+}
+
+.suma-base-display strong {
+    color: var(--color-primary);
+}
+
+/* Sección de factores calculados */
+.factores-calculados-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background-color: #E8F5E9;
+    border-radius: 8px;
+    border: 2px solid #4CAF50;
+}
+
+.factores-calculados-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: #2E7D32;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-bottom: 2px solid #4CAF50;
+    padding-bottom: 0.5rem;
+}
+
+.factores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.factor-display {
+    background-color: #FFFFFF;
+    border: 1px solid #81C784;
+    color: #2E7D32;
+    font-weight: 500;
+    cursor: not-allowed;
+}
+
+.factor-display:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}

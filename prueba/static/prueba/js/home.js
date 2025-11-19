@@ -1,6 +1,6 @@
 // ============================================
 // JavaScript para el módulo de ingreso de calificaciones
-// Maneja ambos modales: ingreso y factores
+// Maneja ambos modales: ingreso y factores (con sistema de Montos a Factores)
 // ============================================
 
 // Función helper para obtener el CSRF token
@@ -22,11 +22,164 @@ function getCookie(name) {
 // Obtener CSRF token
 const csrftoken = getCookie('csrftoken');
 
-// URLs (se deben pasar desde el template usando data attributes o variables globales)
-// Por ahora usaremos URLs relativas que Django puede procesar
+// ========== FUNCIONES PARA MODAL DE MENSAJES ==========
+function mostrarMensaje(titulo, mensaje, tipo = 'info', advertencia = null) {
+    const modalMensaje = document.getElementById('mensaje-modal-overlay');
+    const tituloMensaje = document.getElementById('mensaje-modal-titulo');
+    const textoMensaje = document.getElementById('mensaje-modal-texto');
+    const iconoMensaje = document.getElementById('mensaje-modal-icono');
+    const advertenciaMensaje = document.getElementById('mensaje-modal-advertencia');
+    const btnCerrar = document.getElementById('btn-cerrar-mensaje');
+    const btnCancelar = document.getElementById('btn-cancelar-mensaje');
+    const btnConfirmar = document.getElementById('btn-confirmar-mensaje');
+    
+    if (!modalMensaje || !tituloMensaje || !textoMensaje || !iconoMensaje) return;
+    
+    // Configurar título y mensaje
+    tituloMensaje.textContent = titulo;
+    textoMensaje.innerHTML = mensaje; // Usar innerHTML para permitir HTML
+    
+    // Configurar advertencia si existe
+    if (advertenciaMensaje) {
+        if (advertencia) {
+            advertenciaMensaje.textContent = advertencia;
+            advertenciaMensaje.style.display = 'block';
+        } else {
+            advertenciaMensaje.style.display = 'none';
+        }
+    }
+    
+    // Configurar icono y color según el tipo
+    switch(tipo) {
+        case 'success':
+            iconoMensaje.textContent = '✓';
+            iconoMensaje.style.background = 'linear-gradient(135deg, #28A745 0%, #20C997 100%)';
+            break;
+        case 'error':
+            iconoMensaje.textContent = '✕';
+            iconoMensaje.style.background = 'linear-gradient(135deg, #DC3545 0%, #C82333 100%)';
+            break;
+        case 'warning':
+            iconoMensaje.textContent = '⚠';
+            iconoMensaje.style.background = 'linear-gradient(135deg, #FFC107 0%, #FF9800 100%)';
+            break;
+        default: // info
+            iconoMensaje.textContent = 'ℹ';
+            iconoMensaje.style.background = 'linear-gradient(135deg, #17A2B8 0%, #138496 100%)';
+    }
+    
+    // Modo simple: un solo botón
+    if (btnCerrar) btnCerrar.style.display = 'inline-block';
+    if (btnCancelar) btnCancelar.style.display = 'none';
+    if (btnConfirmar) btnConfirmar.style.display = 'none';
+    
+    // Limpiar event listeners anteriores del botón confirmar
+    if (btnConfirmar) {
+        const nuevoBtnConfirmar = btnConfirmar.cloneNode(true);
+        btnConfirmar.parentNode.replaceChild(nuevoBtnConfirmar, btnConfirmar);
+    }
+    
+    // Mostrar modal
+    modalMensaje.style.display = 'flex';
+}
+
+function mostrarConfirmacion(titulo, mensaje, advertencia, onConfirmar, tipoBotonConfirmar = 'danger') {
+    const modalMensaje = document.getElementById('mensaje-modal-overlay');
+    const tituloMensaje = document.getElementById('mensaje-modal-titulo');
+    const textoMensaje = document.getElementById('mensaje-modal-texto');
+    const iconoMensaje = document.getElementById('mensaje-modal-icono');
+    const advertenciaMensaje = document.getElementById('mensaje-modal-advertencia');
+    const btnCerrar = document.getElementById('btn-cerrar-mensaje');
+    const btnCancelar = document.getElementById('btn-cancelar-mensaje');
+    const btnConfirmar = document.getElementById('btn-confirmar-mensaje');
+    
+    if (!modalMensaje || !tituloMensaje || !textoMensaje || !iconoMensaje) return;
+    
+    // Configurar título y mensaje
+    tituloMensaje.textContent = titulo;
+    textoMensaje.innerHTML = mensaje;
+    
+    // Configurar advertencia
+    if (advertenciaMensaje) {
+        if (advertencia) {
+            advertenciaMensaje.textContent = advertencia;
+            advertenciaMensaje.style.display = 'block';
+        } else {
+            advertenciaMensaje.style.display = 'none';
+        }
+    }
+    
+    // Configurar icono de advertencia
+    iconoMensaje.textContent = '⚠';
+    iconoMensaje.style.background = 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)';
+    
+    // Modo confirmación: dos botones
+    if (btnCerrar) btnCerrar.style.display = 'none';
+    if (btnCancelar) btnCancelar.style.display = 'inline-block';
+    if (btnConfirmar) {
+        btnConfirmar.style.display = 'inline-block';
+        // Configurar estilo del botón según el tipo
+        if (tipoBotonConfirmar === 'danger') {
+            btnConfirmar.className = 'btn btn-danger-modal';
+        } else {
+            btnConfirmar.className = 'btn';
+        }
+        // Configurar texto del botón
+        btnConfirmar.textContent = tipoBotonConfirmar === 'danger' ? 'Eliminar' : 'Confirmar';
+        // Agregar event listener
+        btnConfirmar.onclick = function() {
+            cerrarModalMensaje();
+            if (onConfirmar) onConfirmar();
+        };
+    }
+    
+    // Mostrar modal
+    modalMensaje.style.display = 'flex';
+}
+
+function cerrarModalMensaje() {
+    const modalMensaje = document.getElementById('mensaje-modal-overlay');
+    if (modalMensaje) {
+        modalMensaje.style.display = 'none';
+    }
+}
+
+// Función para inicializar los event listeners del modal de mensajes
+function inicializarModalMensaje() {
+    const btnCerrarMensaje = document.getElementById('btn-cerrar-mensaje');
+    const btnCancelarMensaje = document.getElementById('btn-cancelar-mensaje');
+    const btnCerrarMensajeX = document.getElementById('btn-cerrar-mensaje-x');
+    const modalMensajeOverlay = document.getElementById('mensaje-modal-overlay');
+    
+    if (btnCerrarMensaje) {
+        btnCerrarMensaje.addEventListener('click', cerrarModalMensaje);
+    }
+    if (btnCancelarMensaje) {
+        btnCancelarMensaje.addEventListener('click', cerrarModalMensaje);
+    }
+    if (btnCerrarMensajeX) {
+        btnCerrarMensajeX.addEventListener('click', cerrarModalMensaje);
+    }
+    if (modalMensajeOverlay) {
+        modalMensajeOverlay.addEventListener('click', (e) => {
+            if (e.target === modalMensajeOverlay) {
+                cerrarModalMensaje();
+            }
+        });
+    }
+}
+
+// Hacer las funciones disponibles globalmente
+window.mostrarMensaje = mostrarMensaje;
+window.mostrarConfirmacion = mostrarConfirmacion;
+window.cerrarModalMensaje = cerrarModalMensaje;
+window.inicializarModalMensaje = inicializarModalMensaje;
 
 // Esperar a que el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
+    
+    // ========== MODAL DE MENSAJES ==========
+    inicializarModalMensaje();
     
     // ========== MODAL 1 (Ingreso de Calificaciones) ==========
     const modalOverlay1 = document.getElementById('ingreso-modal-overlay');
@@ -93,11 +246,11 @@ document.addEventListener('DOMContentLoaded', function() {
         btnSiguienteModal.addEventListener('click', function() {
             // Validar campos mínimos requeridos
             if (!modal1Instrumento || !modal1Instrumento.value.trim()) {
-                alert('El campo Instrumento es obligatorio');
+                mostrarMensaje('Campo Requerido', 'El campo Instrumento es obligatorio', 'warning');
                 return;
             }
             if (!modal1Secuencia || !modal1Secuencia.value || parseInt(modal1Secuencia.value) <= 10000) {
-                alert('La secuencia de evento debe ser mayor a 10,000');
+                mostrarMensaje('Validación', 'La secuencia de evento debe ser mayor a 10,000', 'warning');
                 return;
             }
 
@@ -132,12 +285,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     cerrarModal1();
                     abrirModal2(data);
                 } else {
-                    alert('Error: ' + (data.error || 'No se pudo crear la calificación'));
+                    mostrarMensaje('Error', data.error || 'No se pudo crear la calificación', 'error');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error al enviar los datos. Por favor, intente nuevamente.');
+                mostrarMensaje('Error', 'Error al enviar los datos. Por favor, intente nuevamente.', 'error');
             });
         });
     }
@@ -151,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ========== MODAL 2 (Factores) ==========
+    // ========== MODAL 2 (Factores - Montos) ==========
     const modalOverlay2 = document.getElementById('factores-modal-overlay');
     const btnCerrarModal2 = document.getElementById('btn-cerrar-modal-factores');
     const btnCerrarModal2X = document.getElementById('btn-cerrar-modal-factores-x');
@@ -190,6 +343,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const factoresDescripcion = document.getElementById('factores-descripcion');
         if (factoresDescripcion) factoresDescripcion.value = data.data.descripcion || '';
         
+        // Ocultar sección de factores calculados al abrir
+        const factoresSection = document.getElementById('factores-calculados-section');
+        if (factoresSection) factoresSection.style.display = 'none';
+        
+        // Limpiar todos los campos de montos
+        for (let i = 8; i <= 37; i++) {
+            const montoInput = document.getElementById(`monto_${i}`);
+            if (montoInput) montoInput.value = '0.00';
+        }
+        
         if (modalOverlay2) modalOverlay2.style.display = 'flex';
     }
 
@@ -212,23 +375,47 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Función para calcular Suma Base en tiempo real
+    function actualizarSumaBase() {
+        let suma = 0;
+        for (let i = 8; i <= 19; i++) {
+            const input = document.getElementById(`monto_${i}`);
+            if (input) {
+                const valor = parseFloat(input.value) || 0;
+                suma += valor;
+            }
+        }
+        const sumaBaseDisplay = document.getElementById('suma-base-display');
+        if (sumaBaseDisplay) {
+            sumaBaseDisplay.value = suma.toFixed(2);
+        }
+    }
+
+    // Agregar listeners a los campos de monto para calcular suma base en tiempo real
+    for (let i = 8; i <= 19; i++) {
+        const input = document.getElementById(`monto_${i}`);
+        if (input) {
+            input.addEventListener('input', actualizarSumaBase);
+        }
+    }
+
     // Botón Calcular
     const btnCalcularFactores = document.getElementById('btn-calcular-factores');
     if (btnCalcularFactores) {
         btnCalcularFactores.addEventListener('click', function() {
             const formFactores = document.getElementById('form-factores');
             if (!formFactores) {
-                alert('Error: No se encontró el formulario de factores');
+                mostrarMensaje('Error', 'No se encontró el formulario de factores', 'error');
                 return;
             }
 
             const calificacionId = document.getElementById('calificacion_id');
             if (!calificacionId || !calificacionId.value) {
-                alert('Error: No se encontró el ID de la calificación');
+                mostrarMensaje('Error', 'No se encontró el ID de la calificación', 'error');
                 return;
             }
 
-            // Enviar todos los valores del formulario para calcular
+            // Enviar todos los valores del formulario para calcular (MONTOS)
             const formData = new FormData(formFactores);
 
             fetch(calcularFactoresUrl, {
@@ -244,14 +431,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Mostrar información de debug en la consola
                     if (data.debug) {
                         console.log('=== Información de Cálculo ===');
-                        console.log('Suma 8-10:', data.debug.suma_8_a_10);
-                        console.log('Suma 8-19:', data.debug.suma_8_a_19);
-                        console.log('Rentas Exentas:', data.debug.rentas_exentas);
-                        console.log('Factor19A:', data.debug.factor19a);
+                        console.log('Suma Base:', data.debug.suma_base);
                         console.log('==============================');
                     }
                     
-                    // Actualizar los campos de factores con los valores calculados
+                    // Actualizar el campo de suma base
+                    const sumaBaseDisplay = document.getElementById('suma-base-display');
+                    if (sumaBaseDisplay && data.suma_base) {
+                        sumaBaseDisplay.value = parseFloat(data.suma_base).toFixed(2);
+                    }
+                    
+                    // Actualizar los campos de factores calculados con los valores calculados
                     if (data.factores) {
                         let actualizados = 0;
                         for (const [fieldName, value] of Object.entries(data.factores)) {
@@ -264,7 +454,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const formattedValue = numValue.toFixed(8).replace(/\.?0+$/, '');
                                     input.value = formattedValue === '' ? '0' : formattedValue;
                                     actualizados++;
-                                    console.log(`${fieldName}: ${input.value}`);
                                 } else {
                                     input.value = value || '0';
                                     actualizados++;
@@ -273,15 +462,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         console.log(`Total de factores actualizados: ${actualizados}`);
                     }
-                    alert('Factores calculados exitosamente. Los valores han sido actualizados en el formulario.\n\nRevisa la consola del navegador (F12) para ver los detalles del cálculo.');
+                    
+                    // Mostrar la sección de factores calculados
+                    const factoresSection = document.getElementById('factores-calculados-section');
+                    if (factoresSection) {
+                        factoresSection.style.display = 'block';
+                        factoresSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    
+                    mostrarMensaje('Éxito', 'Factores calculados exitosamente. Los valores han sido actualizados en el formulario.', 'success');
                 } else {
-                    alert('Error: ' + (data.error || 'No se pudieron calcular los factores'));
+                    mostrarMensaje('Error', data.error || 'No se pudieron calcular los factores', 'error');
                     console.error('Error en cálculo:', data);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error al calcular. Por favor, intente nuevamente.');
+                mostrarMensaje('Error', 'Error al calcular. Por favor, intente nuevamente.', 'error');
             });
         });
     }
@@ -291,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btnGrabarFactores.addEventListener('click', function() {
             const formFactores = document.getElementById('form-factores');
             if (!formFactores) {
-                alert('Error: No se encontró el formulario de factores');
+                mostrarMensaje('Error', 'No se encontró el formulario de factores', 'error');
                 return;
             }
             
@@ -307,17 +504,19 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Factores guardados exitosamente');
+                    mostrarMensaje('Éxito', 'Factores guardados exitosamente', 'success');
                     cerrarModal2();
-                    // Recargar la página para ver los cambios
-                    window.location.reload();
+                    // Recargar la página para ver los cambios después de cerrar el modal
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
                 } else {
-                    alert('Error: ' + (data.error || 'No se pudieron guardar los factores'));
+                    mostrarMensaje('Error', data.error || 'No se pudieron guardar los factores', 'error');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error al guardar. Por favor, intente nuevamente.');
+                mostrarMensaje('Error', 'Error al guardar. Por favor, intente nuevamente.', 'error');
             });
         });
     }
@@ -344,7 +543,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!calificaciones || calificaciones.length === 0) {
             tablaBody.innerHTML = `
                 <tr>
-                    <td colspan="37" style="text-align: center; padding: 20px;">
+                    <td colspan="38" style="text-align: center; padding: 20px;">
                         <em>No se encontraron calificaciones con los filtros seleccionados</em>
                     </td>
                 </tr>
@@ -354,7 +553,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
         let html = '';
         calificaciones.forEach(cal => {
+            // Asegurar que el ID esté disponible
+            const calId = cal.id || cal._id || '';
+            if (!calId) {
+                console.warn('Calificación sin ID:', cal);
+            }
+            
             html += '<tr>';
+            
+            // Columna de Acciones con botones con iconos SVG minimalistas (al principio)
+            html += `<td class="acciones-cell">
+                <button class="btn-row-icon btn-modificar-row" data-calificacion-id="${calId}" title="Modificar">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                </button>
+                <button class="btn-row-icon btn-eliminar-row" data-calificacion-id="${calId}" title="Eliminar">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                </button>
+                <button class="btn-row-icon btn-copiar-row" data-calificacion-id="${calId}" title="Copiar">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>
+            </td>`;
+            
             // Columnas básicas
             html += `<td>${cal.ejercicio || ''}</td>`;
             html += `<td>${cal.instrumento || ''}</td>`;
@@ -374,6 +604,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         tablaBody.innerHTML = html;
+        
+        // Agregar event listeners a los botones después de renderizar
+        agregarEventListenersBotones();
     }
 
     if (btnBuscar) {
@@ -394,7 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (tablaBody) {
                 tablaBody.innerHTML = `
                     <tr>
-                        <td colspan="37" style="text-align: center; padding: 20px;">
+                        <td colspan="38" style="text-align: center; padding: 20px;">
                             <em>Buscando calificaciones...</em>
                         </td>
                     </tr>
@@ -413,11 +646,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     renderizarCalificaciones(data.calificaciones);
                     console.log(`Se encontraron ${data.total} calificación(es)`);
                 } else {
-                    alert('Error: ' + (data.error || 'No se pudieron buscar las calificaciones'));
+                    mostrarMensaje('Error', data.error || 'No se pudieron buscar las calificaciones', 'error');
                     if (tablaBody) {
                         tablaBody.innerHTML = `
                             <tr>
-                                <td colspan="37" style="text-align: center; padding: 20px; color: red;">
+                                <td colspan="38" style="text-align: center; padding: 20px; color: red;">
                                     <em>Error al buscar calificaciones</em>
                                 </td>
                             </tr>
@@ -427,17 +660,262 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error al buscar. Por favor, intente nuevamente.');
+                mostrarMensaje('Error', 'Error al buscar. Por favor, intente nuevamente.', 'error');
                 if (tablaBody) {
                     tablaBody.innerHTML = `
                         <tr>
-                            <td colspan="37" style="text-align: center; padding: 20px; color: red;">
+                            <td colspan="38" style="text-align: center; padding: 20px; color: red;">
                                 <em>Error al buscar calificaciones</em>
                             </td>
                         </tr>
                     `;
                 }
             });
+        });
+    }
+
+    // ========== FUNCIÓN PARA AGREGAR EVENT LISTENERS A BOTONES DE ACCIONES ==========
+    function agregarEventListenersBotones() {
+        // Botones MODIFICAR
+        const botonesModificar = document.querySelectorAll('.btn-modificar-row');
+        console.log('Botones modificar encontrados:', botonesModificar.length);
+        botonesModificar.forEach((btn, index) => {
+            const calId = btn.getAttribute('data-calificacion-id');
+            console.log(`Botón modificar ${index}: ID =`, calId);
+            btn.addEventListener('click', function() {
+                const calificacionId = this.getAttribute('data-calificacion-id');
+                console.log('Botón modificar clickeado, ID obtenido:', calificacionId);
+                if (calificacionId && calificacionId.trim() !== '') {
+                    modificarCalificacion(calificacionId);
+                } else {
+                    console.error('ID de calificación vacío o no encontrado');
+                    mostrarMensaje('Error', 'No se encontró el ID de la calificación', 'error');
+                }
+            });
+        });
+
+        // Botones ELIMINAR
+        const botonesEliminar = document.querySelectorAll('.btn-eliminar-row');
+        console.log('Botones eliminar encontrados:', botonesEliminar.length);
+        botonesEliminar.forEach((btn, index) => {
+            const calId = btn.getAttribute('data-calificacion-id');
+            console.log(`Botón eliminar ${index}: ID =`, calId);
+            btn.addEventListener('click', function() {
+                const calificacionId = this.getAttribute('data-calificacion-id');
+                console.log('Botón eliminar clickeado, ID obtenido:', calificacionId);
+                if (calificacionId && calificacionId.trim() !== '') {
+                    eliminarCalificacion(calificacionId);
+                } else {
+                    console.error('ID de calificación vacío o no encontrado');
+                    mostrarMensaje('Error', 'No se encontró el ID de la calificación', 'error');
+                }
+            });
+        });
+
+        // Botones COPIAR
+        const botonesCopiar = document.querySelectorAll('.btn-copiar-row');
+        console.log('Botones copiar encontrados:', botonesCopiar.length);
+        botonesCopiar.forEach((btn, index) => {
+            const calId = btn.getAttribute('data-calificacion-id');
+            console.log(`Botón copiar ${index}: ID =`, calId);
+            btn.addEventListener('click', function() {
+                const calificacionId = this.getAttribute('data-calificacion-id');
+                console.log('Botón copiar clickeado, ID obtenido:', calificacionId);
+                if (calificacionId && calificacionId.trim() !== '') {
+                    copiarCalificacion(calificacionId);
+                } else {
+                    console.error('ID de calificación vacío o no encontrado');
+                    mostrarMensaje('Error', 'No se encontró el ID de la calificación', 'error');
+                }
+            });
+        });
+    }
+
+    // ========== FUNCIÓN PARA MODIFICAR CALIFICACIÓN ==========
+    function modificarCalificacion(calificacionId) {
+        // Validar que el ID no esté vacío
+        if (!calificacionId || calificacionId.trim() === '') {
+            mostrarMensaje('Error', 'No se encontró el ID de la calificación', 'error');
+            return;
+        }
+        
+        // Obtener datos de la calificación desde el backend
+        let obtenerCalificacionUrl;
+        if (window.DJANGO_URLS && window.DJANGO_URLS.obtenerCalificacionBase) {
+            // Reemplazar el ID placeholder con el ID real
+            obtenerCalificacionUrl = window.DJANGO_URLS.obtenerCalificacionBase.replace('000000000000000000000000', calificacionId);
+        } else {
+            obtenerCalificacionUrl = `/prueba/obtener-calificacion/${calificacionId}/`;
+        }
+        
+        // Asegurar que la URL no tenga doble barra
+        obtenerCalificacionUrl = obtenerCalificacionUrl.replace(/\/+/g, '/').replace(':/', '://');
+        console.log('Obteniendo calificación con URL:', obtenerCalificacionUrl, 'ID:', calificacionId);
+        fetch(obtenerCalificacionUrl, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': csrftoken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Cargar datos en el modal de ingreso
+                const cal = data.calificacion;
+                
+                // Llenar campos del modal 1
+                if (modal1Mercado) modal1Mercado.value = cal.mercado || '';
+                if (modal1Instrumento) modal1Instrumento.value = cal.instrumento || '';
+                if (modal1Descripcion) modal1Descripcion.value = cal.descripcion || '';
+                if (modal1FechaPago) {
+                    if (cal.fecha_pago) {
+                        const fecha = new Date(cal.fecha_pago);
+                        modal1FechaPago.value = fecha.toISOString().split('T')[0];
+                    }
+                }
+                if (modal1Secuencia) modal1Secuencia.value = cal.secuencia_evento || '';
+                if (modal1Dividendo) modal1Dividendo.value = cal.dividendo || '0.0';
+                if (modal1ISFUT) modal1ISFUT.checked = cal.isfut || false;
+                if (modal1Ejercicio) modal1Ejercicio.value = cal.ejercicio || '';
+                if (modal1Anho) modal1Anho.value = cal.anho || '';
+                if (modal1ValorHistorico) modal1ValorHistorico.value = cal.valor_historico || '0.0';
+                if (modal1FactorActualizacion) modal1FactorActualizacion.value = cal.factor_actualizacion || '0.0';
+                
+                // Guardar el ID de la calificación para actualizar
+                const formIngreso = document.getElementById('form-ingreso');
+                if (!document.getElementById('calificacion-id-hidden')) {
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.id = 'calificacion-id-hidden';
+                    hiddenInput.name = 'calificacion_id';
+                    if (formIngreso) formIngreso.appendChild(hiddenInput);
+                }
+                document.getElementById('calificacion-id-hidden').value = calificacionId;
+                
+                // Abrir modal 1
+                abrirModal1();
+            } else {
+                mostrarMensaje('Error', data.error || 'No se pudo cargar la calificación', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarMensaje('Error', 'Error al cargar la calificación. Por favor, intente nuevamente.', 'error');
+        });
+    }
+
+    // ========== FUNCIÓN PARA ELIMINAR CALIFICACIÓN ==========
+    function eliminarCalificacion(calificacionId) {
+        // Validar que el ID no esté vacío
+        if (!calificacionId || calificacionId.trim() === '') {
+            mostrarMensaje('Error', 'No se encontró el ID de la calificación', 'error');
+            return;
+        }
+        
+        mostrarConfirmacion(
+            'Confirmar Eliminación',
+            '¿Estás seguro de que deseas eliminar esta calificación?',
+            'Esta acción no se puede deshacer.',
+            function() {
+                let eliminarCalificacionUrl;
+                if (window.DJANGO_URLS && window.DJANGO_URLS.eliminarCalificacionBase) {
+                    // Reemplazar el ID placeholder con el ID real
+                    eliminarCalificacionUrl = window.DJANGO_URLS.eliminarCalificacionBase.replace('000000000000000000000000', calificacionId);
+                } else {
+                    eliminarCalificacionUrl = `/prueba/eliminar-calificacion/${calificacionId}/`;
+                }
+                
+                // Asegurar que la URL no tenga doble barra
+                eliminarCalificacionUrl = eliminarCalificacionUrl.replace(/\/+/g, '/').replace(':/', '://');
+                console.log('Eliminando calificación con URL:', eliminarCalificacionUrl, 'ID:', calificacionId);
+                fetch(eliminarCalificacionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        mostrarMensaje('Éxito', 'Calificación eliminada exitosamente.', 'success');
+                        // Recargar la tabla
+                        if (btnBuscar) btnBuscar.click();
+                    } else {
+                        mostrarMensaje('Error', data.error || 'No se pudo eliminar la calificación', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    mostrarMensaje('Error', 'Error al eliminar. Por favor, intente nuevamente.', 'error');
+                });
+            },
+            'danger'
+        );
+    }
+
+    // ========== FUNCIÓN PARA COPIAR CALIFICACIÓN ==========
+    function copiarCalificacion(calificacionId) {
+        // Validar que el ID no esté vacío
+        if (!calificacionId || calificacionId.trim() === '') {
+            mostrarMensaje('Error', 'No se encontró el ID de la calificación', 'error');
+            return;
+        }
+        
+        // Obtener datos de la calificación desde el backend
+        let obtenerCalificacionUrl;
+        if (window.DJANGO_URLS && window.DJANGO_URLS.obtenerCalificacionBase) {
+            // Reemplazar el ID placeholder con el ID real
+            obtenerCalificacionUrl = window.DJANGO_URLS.obtenerCalificacionBase.replace('000000000000000000000000', calificacionId);
+        } else {
+            obtenerCalificacionUrl = `/prueba/obtener-calificacion/${calificacionId}/`;
+        }
+        
+        // Asegurar que la URL no tenga doble barra
+        obtenerCalificacionUrl = obtenerCalificacionUrl.replace(/\/+/g, '/').replace(':/', '://');
+        console.log('Copiando calificación con URL:', obtenerCalificacionUrl, 'ID:', calificacionId);
+        fetch(obtenerCalificacionUrl, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': csrftoken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Cargar datos en el modal de ingreso (sin el ID para crear una nueva)
+                const cal = data.calificacion;
+                
+                // Llenar campos del modal 1
+                if (modal1Mercado) modal1Mercado.value = cal.mercado || '';
+                if (modal1Instrumento) modal1Instrumento.value = cal.instrumento || '';
+                if (modal1Descripcion) modal1Descripcion.value = cal.descripcion || '';
+                if (modal1FechaPago) {
+                    if (cal.fecha_pago) {
+                        const fecha = new Date(cal.fecha_pago);
+                        modal1FechaPago.value = fecha.toISOString().split('T')[0];
+                    }
+                }
+                if (modal1Secuencia) modal1Secuencia.value = cal.secuencia_evento || '';
+                if (modal1Dividendo) modal1Dividendo.value = cal.dividendo || '0.0';
+                if (modal1ISFUT) modal1ISFUT.checked = cal.isfut || false;
+                if (modal1Ejercicio) modal1Ejercicio.value = cal.ejercicio || '';
+                if (modal1Anho) modal1Anho.value = cal.anho || '';
+                if (modal1ValorHistorico) modal1ValorHistorico.value = cal.valor_historico || '0.0';
+                if (modal1FactorActualizacion) modal1FactorActualizacion.value = cal.factor_actualizacion || '0.0';
+                
+                // Eliminar el ID oculto si existe (para crear nueva)
+                const hiddenInput = document.getElementById('calificacion-id-hidden');
+                if (hiddenInput) hiddenInput.remove();
+                
+                // Abrir modal 1
+                abrirModal1();
+            } else {
+                mostrarMensaje('Error', data.error || 'No se pudo cargar la calificación', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarMensaje('Error', 'Error al cargar la calificación. Por favor, intente nuevamente.', 'error');
         });
     }
 
@@ -462,4 +940,3 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-

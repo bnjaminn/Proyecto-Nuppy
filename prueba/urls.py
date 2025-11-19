@@ -1,14 +1,17 @@
 from django.urls import path, include
-from .views import listar_usuarios, login_view, home_view, logout_view, ingresar_view, administrar_view, crear_usuario_view, eliminar_usuarios_view, obtener_usuario_view, modificar_usuario_view, ver_logs_view, guardar_factores_view, calcular_factores_view, buscar_calificaciones_view
+from .views import listar_usuarios, login_view, home_view, logout_view, ingresar_view, ingresar_calificacion, administrar_view, crear_usuario_view, eliminar_usuarios_view, obtener_usuario_view, modificar_usuario_view, ver_logs_view, guardar_factores_view, calcular_factores_view, buscar_calificaciones_view, obtener_calificacion_view, eliminar_calificacion_view
 urlpatterns = [
     path("listar/", listar_usuarios, name = "listar_usuarios"),
     path('home/', home_view, name='home'),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path('ingresar/', ingresar_view, name='ingresar'),
+    path('ingresar-calificacion/', ingresar_calificacion, name='ingresar_calificacion'),
     path('guardar-factores/', guardar_factores_view, name='guardar_factores'),
     path('calcular-factores/', calcular_factores_view, name='calcular_factores'),
     path('buscar-calificaciones/', buscar_calificaciones_view, name='buscar_calificaciones'),
+    path('obtener-calificacion/<str:calificacion_id>/', obtener_calificacion_view, name='obtener_calificacion'),
+    path('eliminar-calificacion/<str:calificacion_id>/', eliminar_calificacion_view, name='eliminar_calificacion'),
     path('administrar/', administrar_view, name='administrar'),
     path('crear_usuario/', crear_usuario_view, name='crear_usuario'),
     path('eliminar_usuarios/', eliminar_usuarios_view, name='eliminar_usuarios'),
