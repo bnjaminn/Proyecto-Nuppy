@@ -68,6 +68,7 @@ class Calificacion(Document):
     # =============================
     Mercado = StringField(max_length=100, required=False)  # Tipo de mercado (acciones, CFI, Fondos mutuos)
     Origen = StringField(max_length=100, required=False)   # Origen de los datos (Corredor, CSV)
+    hash_archivo_csv = StringField(max_length=64, required=False)  # Hash del archivo CSV del que proviene (si Origen='csv')
     Ejercicio = IntField(required=True)                    # Año o período fiscal (obligatorio)
     Instrumento = StringField(max_length=50, required=False)  # Código del instrumento financiero
     EventoCapital = StringField(max_length=100, required=False)  # Tipo de evento de capital
@@ -227,6 +228,12 @@ class Log(Document):
     # Formato: [{"campo": "nombre", "valor_anterior": "valor1", "valor_nuevo": "valor2"}, ...]
     cambios_detallados = StringField(required=False)  # JSON string con los cambios detallados (opcional)
     
+    # CAMPO DE HASH DE ARCHIVO CSV
+    # ============================
+    # Almacena el hash SHA-256 del archivo CSV para cargas masivas
+    # Permite identificar qué archivo CSV fue procesado en una carga masiva
+    hash_archivo_csv = StringField(max_length=64, required=False)  # Hash del archivo CSV (opcional, solo para cargas masivas)
+    
     # METADATA DEL DOCUMENTO
     # =======================
     meta = {
@@ -239,3 +246,34 @@ class Log(Document):
     # Útil para debugging y en el admin de Django
     def __str__(self):
         return f"[{self.id}] {self.correoElectronico} - {self.accion}"
+
+
+# MODELO: ARCHIVO CSV
+# ===================
+# Documento que registra los archivos CSV subidos para evitar duplicados
+# Almacena un hash único del contenido del archivo para identificar duplicados
+class ArchivoCSV(Document):
+    # CAMPOS DE IDENTIFICACIÓN
+    # ========================
+    hash_archivo = StringField(max_length=64, required=True, unique=True)  # Hash SHA-256 del contenido del archivo (único)
+    nombre_archivo = StringField(max_length=500, required=True)  # Nombre original del archivo
+    tipo = StringField(max_length=20, required=True, choices=['factor', 'monto'])  # Tipo de CSV: 'factor' o 'monto'
+    
+    # CAMPOS DE METADATOS
+    # ===================
+    fecha_subida = DateTimeField(default=datetime.datetime.now)  # Fecha y hora de carga (automática)
+    usuario = ReferenceField(usuarios, required=True)  # Usuario que subió el archivo
+    total_filas = IntField(required=True)  # Cantidad de filas procesadas del archivo
+    
+    # METADATA DEL DOCUMENTO
+    # =======================
+    meta = {
+        'collection': 'archivos_csv',  # Los documentos ArchivoCSV se guardan en la colección 'archivos_csv'
+        'indexes': ['hash_archivo']  # Índice en hash_archivo para búsquedas rápidas
+    }
+    
+    # MÉTODO __str__: Representación en string del objeto
+    # ====================================================
+    # Muestra el nombre del archivo, tipo y fecha de subida
+    def __str__(self):
+        return f"{self.nombre_archivo} ({self.tipo}) - {self.fecha_subida.strftime('%Y-%m-%d %H:%M:%S')}"

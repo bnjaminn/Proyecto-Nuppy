@@ -34,6 +34,81 @@
     
     <!-- Script para cargar tema oscuro -->
     <script src="{% static 'prueba/js/tema.js' %}"></script>
+    
+    <!-- Script para filtro de logs -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const filtroTipo = document.getElementById('filtro-tipo-log');
+            const filasLogs = document.querySelectorAll('.log-row');
+            const tbody = document.querySelector('#tabla-logs tbody');
+            
+            function aplicarFiltro() {
+                const valorFiltro = filtroTipo.value;
+                let filasVisibles = 0;
+                
+                filasLogs.forEach(function(fila) {
+                    const tipoAfectado = fila.getAttribute('data-tipo-afectado') || 'n/a';
+                    
+                    if (valorFiltro === 'todos') {
+                        // Mostrar todos los logs
+                        fila.style.display = '';
+                        filasVisibles++;
+                    } else if (valorFiltro === 'usuario') {
+                        // Mostrar solo logs de usuarios
+                        if (tipoAfectado === 'usuario') {
+                            fila.style.display = '';
+                            filasVisibles++;
+                        } else {
+                            fila.style.display = 'none';
+                        }
+                    } else if (valorFiltro === 'calificacion') {
+                        // Mostrar solo logs de calificaciones
+                        if (tipoAfectado === 'calificacion') {
+                            fila.style.display = '';
+                            filasVisibles++;
+                        } else {
+                            fila.style.display = 'none';
+                        }
+                    }
+                });
+                
+                // Manejar mensaje de "sin resultados"
+                let mensajeVacio = document.getElementById('mensaje-filtro-vacio');
+                
+                if (filasVisibles === 0 && filasLogs.length > 0) {
+                    // Crear o mostrar mensaje si no hay resultados
+                    if (!mensajeVacio) {
+                        mensajeVacio = document.createElement('tr');
+                        mensajeVacio.id = 'mensaje-filtro-vacio';
+                        const texto = valorFiltro === 'usuario' 
+                            ? 'No hay logs de administración de usuarios en el sistema.' 
+                            : 'No hay logs de calificaciones en el sistema.';
+                        mensajeVacio.innerHTML = `
+                            <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                                ${texto}
+                            </td>
+                        `;
+                        tbody.appendChild(mensajeVacio);
+                    } else {
+                        mensajeVacio.style.display = '';
+                        const texto = valorFiltro === 'usuario' 
+                            ? 'No hay logs de administración de usuarios en el sistema.' 
+                            : 'No hay logs de calificaciones en el sistema.';
+                        mensajeVacio.querySelector('td').textContent = texto;
+                    }
+                } else {
+                    // Ocultar mensaje si hay resultados
+                    if (mensajeVacio) {
+                        mensajeVacio.style.display = 'none';
+                    }
+                }
+            }
+            
+            if (filtroTipo) {
+                filtroTipo.addEventListener('change', aplicarFiltro);
+            }
+        });
+    </script>
 </head>
 <body>
     <header class="header">
@@ -54,8 +129,20 @@
     </header>
     <!-- CONTENIDO PRINCIPAL: TABLA DE LOGS -->
     <main class="admin-container">
+        <!-- FILTRO DE TIPO DE LOG -->
+        <div class="log-filter-container" style="margin-bottom: 1.5rem; padding: 1rem; background-color: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border);">
+            <label for="filtro-tipo-log" style="display: flex; align-items: center; gap: 1rem; font-weight: 600; color: var(--text-primary);">
+                <span>Filtrar por tipo:</span>
+                <select id="filtro-tipo-log" style="padding: 0.5rem 1rem; border-radius: 6px; border: 2px solid var(--border); background-color: var(--bg-primary); color: var(--text-primary); font-size: 0.95rem; cursor: pointer; min-width: 200px;">
+                    <option value="todos">Todos los logs</option>
+                    <option value="usuario">Administración de Usuarios</option>
+                    <option value="calificacion">Calificaciones</option>
+                </select>
+            </label>
+        </div>
+        
         <div class="log-table-container">
-            <table class="log-table">
+            <table class="log-table" id="tabla-logs">
                 <thead>
                     <tr>
                         <th>Fecha y Hora</th>
@@ -66,7 +153,7 @@
                 </thead>
                 <tbody>
                     {% for log in lista_logs %}
-                        <tr>
+                        <tr class="log-row" data-tipo-afectado="{{ log.tipo_afectado|lower }}">
                             <!-- Fecha y hora formateada -->
                             <td>{{ log.fecha|date:"d/m/Y H:i:s" }}</td>
                             <!-- Información del usuario que realizó la acción -->
@@ -97,7 +184,14 @@
                                     <span class="tipo-afectado tipo-{{ log.tipo_afectado|lower }}">
                                         {{ log.tipo_afectado }}
                                     </span><br>
-                                    <small style="color: #666; font-family: monospace;">{{ log.afectado_id }}</small>
+                                    {% if log.accion == "Carga Masiva" and log.afectado_id|length == 64 %}
+                                        <!-- Si es una carga masiva y el ID tiene 64 caracteres (hash SHA-256), mostrar truncado -->
+                                        <small style="color: #666; font-family: monospace;" title="Hash del archivo CSV: {{ log.afectado_id }}">
+                                            {{ log.afectado_id|truncatechars:16 }}...
+                                        </small>
+                                    {% else %}
+                                        <small style="color: #666; font-family: monospace;">{{ log.afectado_id }}</small>
+                                    {% endif %}
                                 {% else %}
                                     <span style="color: #999;">N/A</span>
                                 {% endif %}
@@ -106,7 +200,7 @@
                     {% empty %}
                         <!-- Mensaje cuando no hay logs en el sistema -->
                         <tr>
-                            <td colspan="4" style="text-align: center; padding: 40px; color: #999;">
+                            <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-secondary);">
                                 No hay registros de log en el sistema.
                             </td>
                         </tr>

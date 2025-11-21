@@ -212,3 +212,177 @@ body.dark-theme .tipo-calificacion {
     background-color: #4a148c;
     color: #ce93d8;
 }
+
+/* ============================================
+   ESTILOS PARA BOTONES EN HEADER DE LOGS
+   ============================================
+   Asegurar que los botones del header tengan texto visible
+*/
+.header .btn,
+.header .btn-secondary {
+    color: var(--text-on-primary) !important;
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.header .btn-secondary {
+    background-color: var(--color-primary-dark) !important;
+    border-color: var(--color-primary-dark) !important;
+}
+
+.header .btn:hover,
+.header .btn-secondary:hover {
+    background-color: var(--color-primary-hover) !important;
+    border-color: var(--color-primary-hover) !important;
+    color: var(--text-on-primary) !important;
+}
+
+/* Tema oscuro para botones del header */
+body.dark-theme .header .btn,
+body.dark-theme .header .btn-secondary,
+html.dark-theme .header .btn,
+html.dark-theme .header .btn-secondary {
+    color: var(--text-on-primary) !important;
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+}
+
+body.dark-theme .header .btn-secondary,
+html.dark-theme .header .btn-secondary {
+    background-color: var(--color-primary-dark) !important;
+    border-color: var(--color-primary-dark) !important;
+}
+
+/* ============================================
+   ESTILOS PARA FILTRO DE LOGS
+   ============================================
+*/
+.log-filter-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.log-filter-container select {
+    transition: all 0.3s ease;
+}
+
+.log-filter-container select:hover {
+    border-color: var(--color-primary);
+}
+
+.log-filter-container select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+}
+
+/* Tema oscuro para el filtro */
+body.dark-theme .log-filter-container,
+html.dark-theme .log-filter-container {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border) !important;
+}
+
+body.dark-theme .log-filter-container select,
+html.dark-theme .log-filter-container select {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border) !important;
+}
+
+body.dark-theme .log-filter-container select:focus,
+html.dark-theme .log-filter-container select:focus {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2) !important;
+}
+
+/* ===== TEMA OSCURO PARA MODAL DE LOGS DE CALIFICACIÓN ===== */
+body.dark-theme #log-calificacion-info,
+html.dark-theme #log-calificacion-info {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
+}
+
+body.dark-theme #log-calificacion-modal-overlay .modal-content,
+html.dark-theme #log-calificacion-modal-overlay .modal-content {
+    background-color: var(--bg-primary) !important;
+}
+
+body.dark-theme #log-calificacion-modal-overlay .modal-body,
+html.dark-theme #log-calificacion-modal-overlay .modal-body {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+body.dark-theme #log-calificacion-modal-overlay .modal-footer,
+html.dark-theme #log-calificacion-modal-overlay .modal-footer {
+    background: linear-gradient(to bottom, var(--bg-secondary) 0%, var(--bg-primary) 100%) !important;
+    border-top-color: var(--border) !important;
+}
+
+/* Estilos para la tabla dentro del modal de logs */
+body.dark-theme #log-calificacion-modal-overlay .log-table,
+html.dark-theme #log-calificacion-modal-overlay .log-table {
+    background-color: var(--bg-primary);
+}
+
+body.dark-theme #log-calificacion-modal-overlay .log-table th,
+html.dark-theme #log-calificacion-modal-overlay .log-table th {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    color: var(--text-on-primary);
+    border-color: var(--color-primary-dark);
+}
+
+body.dark-theme #log-calificacion-modal-overlay .log-table td,
+html.dark-theme #log-calificacion-modal-overlay .log-table td {
+    color: var(--text-primary) !important;
+    border-color: var(--border) !important;
+    background-color: var(--bg-primary) !important;
+}
+
+body.dark-theme #log-calificacion-modal-overlay .log-table tbody tr:nth-child(even) td,
+html.dark-theme #log-calificacion-modal-overlay .log-table tbody tr:nth-child(even) td {
+    background-color: var(--bg-secondary) !important;
+}
+
+body.dark-theme #log-calificacion-modal-overlay .log-table tbody tr:hover td,
+html.dark-theme #log-calificacion-modal-overlay .log-table tbody tr:hover td {
+    background-color: var(--color-primary-light) !important;
+}
+
+/* Estilos para el contenedor con scroll dentro del modal */
+body.dark-theme #log-calificacion-modal-overlay div[style*="max-height"],
+html.dark-theme #log-calificacion-modal-overlay div[style*="max-height"] {
+    background-color: var(--bg-primary) !important;
+}
+
+/* Estilos para los detalles de cambios dentro del modal */
+body.dark-theme #log-calificacion-modal-overlay .cambios-detalle,
+html.dark-theme #log-calificacion-modal-overlay .cambios-detalle {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border) !important;
+}
+
+body.dark-theme #log-calificacion-modal-overlay .cambios-detalle h4,
+html.dark-theme #log-calificacion-modal-overlay .cambios-detalle h4 {
+    color: var(--text-primary) !important;
+    border-bottom-color: var(--border) !important;
+}
+
+body.dark-theme #log-calificacion-modal-overlay .cambios-detalle .cambio-item,
+html.dark-theme #log-calificacion-modal-overlay .cambios-detalle .cambio-item {
+    color: var(--text-primary) !important;
+    border-color: var(--border) !important;
+}
+
+body.dark-theme #log-calificacion-modal-overlay .cambios-detalle .valor-anterior,
+html.dark-theme #log-calificacion-modal-overlay .cambios-detalle .valor-anterior,
+body.dark-theme #log-calificacion-modal-overlay .cambios-detalle .valor-nuevo,
+html.dark-theme #log-calificacion-modal-overlay .cambios-detalle .valor-nuevo {
+    color: var(--text-primary) !important;
+}

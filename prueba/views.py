@@ -217,7 +217,7 @@ def _check_password(password, hashed_password):
 # ============================
 # Guarda un registro de log con información sobre la acción realizada.
 # Se usa para auditoría de todas las operaciones del sistema.
-def _crear_log(usuario_obj, accion_str, documento_afectado=None, usuario_afectado=None, cambios_detallados=None):
+def _crear_log(usuario_obj, accion_str, documento_afectado=None, usuario_afectado=None, cambios_detallados=None, hash_archivo_csv=None):
     """
     Guarda un registro de log con información sobre la acción realizada.
     
@@ -228,6 +228,7 @@ def _crear_log(usuario_obj, accion_str, documento_afectado=None, usuario_afectad
         usuario_afectado: Usuario afectado por la acción (opcional)
         cambios_detallados: Lista de diccionarios con los cambios realizados (opcional)
                             Formato: [{"campo": "nombre", "valor_anterior": "val1", "valor_nuevo": "val2"}]
+        hash_archivo_csv: Hash SHA-256 del archivo CSV para cargas masivas (opcional)
     """
     try:
         cambios_json = None
@@ -241,7 +242,8 @@ def _crear_log(usuario_obj, accion_str, documento_afectado=None, usuario_afectad
             accion=accion_str,
             iddocumento=documento_afectado,
             usuario_afectado=usuario_afectado,
-            cambios_detallados=cambios_json
+            cambios_detallados=cambios_json,
+            hash_archivo_csv=hash_archivo_csv
         )
         nuevo_log.save()
         print(f"Log guardado correctamente: {accion_str} por {usuario_obj.correo}")
@@ -726,6 +728,12 @@ def ingresar_view(request):
                                     'valor_nuevo': valor_nuevo_str # Valor nuevo para comparación y visualización
                                 })
                     
+                    # Si EventoCapital está vacío y SecuenciaEvento tiene valor, asignar EventoCapital = SecuenciaEvento
+                    if (not calificacion.EventoCapital or calificacion.EventoCapital == '') and calificacion.SecuenciaEvento:
+                        calificacion.EventoCapital = str(calificacion.SecuenciaEvento)
+                        if not campos_actualizados:
+                            campos_actualizados = True
+                    
                     # Actualizar fecha de modificación solo si realmente se modificó algo
                     if campos_actualizados:
                         calificacion.FechaAct = datetime.datetime.now() # Actualiza la fecha de modificación
@@ -740,7 +748,7 @@ def ingresar_view(request):
                             'mercado': calificacion.Mercado or '', #mercado de la calificación
                             'origen': calificacion.Origen or '', #origen de la calificación
                             'instrumento': calificacion.Instrumento or '', #instrumento de la calificación
-                            'evento_capital': calificacion.EventoCapital or '', #evento capital de la calificación
+                            'evento_capital': calificacion.EventoCapital or str(calificacion.SecuenciaEvento) if calificacion.SecuenciaEvento else '', #evento capital de la calificación (usa secuencia si está vacío)
                             'fecha_pago': calificacion.FechaPago.strftime('%Y-%m-%d') if calificacion.FechaPago else '', #fecha de pago de la calificación
                             'secuencia': calificacion.SecuenciaEvento or '', #secuencia de evento de la calificación
                             'anho': calificacion.Anho or calificacion.Ejercicio or '', #año de la calificación
@@ -753,6 +761,9 @@ def ingresar_view(request):
             else:
                 # Crear nueva calificación
                 nueva_calificacion = Calificacion(**cleaned_data) # Crea una nueva calificación con los datos del formulario
+                # Asignar EventoCapital con el valor de SecuenciaEvento si EventoCapital no está definido
+                if not nueva_calificacion.EventoCapital and nueva_calificacion.SecuenciaEvento:
+                    nueva_calificacion.EventoCapital = str(nueva_calificacion.SecuenciaEvento)
                 nueva_calificacion.save() # Guarda la nueva calificación
                 _crear_log(current_user, 'Crear Calificacion', documento_afectado=nueva_calificacion) # Crea un log de creación de la calificación
                 # Retornar JSON con el ID de la calificación para abrir el segundo modal (si la calificación se creó exitosamente, se retorna el ID de la calificación para abrir el segundo modal)
@@ -763,7 +774,7 @@ def ingresar_view(request):
                         'mercado': nueva_calificacion.Mercado or '', #mercado de la calificación
                         'origen': nueva_calificacion.Origen or '', #origen de la calificación
                         'instrumento': nueva_calificacion.Instrumento or '', #instrumento de la calificación
-                        'evento_capital': nueva_calificacion.EventoCapital or '', #evento capital de la calificación
+                        'evento_capital': nueva_calificacion.EventoCapital or str(nueva_calificacion.SecuenciaEvento) if nueva_calificacion.SecuenciaEvento else '', #evento capital de la calificación (usa secuencia si está vacío)
                         'fecha_pago': nueva_calificacion.FechaPago.strftime('%Y-%m-%d') if nueva_calificacion.FechaPago else '', #fecha de pago de la calificación
                         'secuencia': nueva_calificacion.SecuenciaEvento or '', #secuencia de evento de la calificación
                         'anho': nueva_calificacion.Anho or nueva_calificacion.Ejercicio or '', #año de la calificación
@@ -1512,6 +1523,9 @@ def ver_logs_view(request):
                 if afectado_id_obj: # Si el ID del documento afectado existe, se obtiene el ID del documento afectado
                     afectado_id = afectado_id_obj # Asigna el ID del documento afectado al afectado
                     tipo_afectado = "Calificacion" # Asigna el tipo de afectado a la calificación
+            elif hasattr(l, "hash_archivo_csv") and l.hash_archivo_csv and getattr(l, "accion", "") == "Carga Masiva": # Si es una carga masiva, usar el hash del archivo como ID
+                afectado_id = l.hash_archivo_csv # Usar el hash del archivo CSV como ID
+                tipo_afectado = "Calificacion" # Las cargas masivas afectan calificaciones
             # Agregar el log procesado a la lista de logs procesados
             logs_procesados.append({
                 "fecha": getattr(l, "fecharegistrada", None), # Asigna la fecha del log al log
@@ -1623,7 +1637,31 @@ def eliminar_calificacion_view(request, calificacion_id):
 
     try:
         calificacion = Calificacion.objects.get(id=calificacion_id) # Obtiene la calificación de la base de datos
+        
+        # Si la calificación proviene de un CSV, verificar si quedan más calificaciones de ese archivo
+        hash_archivo_csv = None
+        if calificacion.Origen == 'csv' and hasattr(calificacion, 'hash_archivo_csv') and calificacion.hash_archivo_csv:
+            hash_archivo_csv = calificacion.hash_archivo_csv
+        
         calificacion.delete() # Elimina la calificación de la base de datos
+        
+        # Si la calificación venía de un CSV, verificar si quedan más calificaciones de ese archivo
+        if hash_archivo_csv:
+            from .models import ArchivoCSV
+            # Verificar si quedan calificaciones con ese hash
+            calificaciones_restantes = Calificacion.objects(
+                Origen='csv',
+                hash_archivo_csv=hash_archivo_csv
+            ).count()
+            
+            # Si no quedan calificaciones de ese archivo, eliminar el registro de ArchivoCSV
+            # para permitir subirlo nuevamente
+            if calificaciones_restantes == 0:
+                archivo_csv = ArchivoCSV.objects(hash_archivo=hash_archivo_csv).first()
+                if archivo_csv:
+                    archivo_csv.delete()
+                    print(f"[ELIMINAR] Se eliminó el registro de ArchivoCSV (hash: {hash_archivo_csv}) porque no quedan calificaciones")
+        
         _crear_log(current_user, 'Eliminar Calificacion', documento_afectado=calificacion) # Crea el log de eliminación de calificación             
         return JsonResponse({'success': True, 'message': 'Calificación eliminada exitosamente'}) # Se retorna un JSON con el mensaje de eliminación de calificación
     except Calificacion.DoesNotExist: # Si la calificación no existe, retorna un error
@@ -1741,12 +1779,13 @@ def preview_factor_view(request):
     
     Lee un archivo CSV que contiene factores ya calculados.
     Valida el formato y retorna los datos para mostrarlos en una tabla de previsualización.
+    Calcula un hash único del contenido para evitar duplicados.
     
     Argumentos:
         request: Objeto HttpRequest de Django (solo POST permitido)
         
     Returns (lo que devuelve la funcion):
-        JsonResponse: JSON con datos del CSV para previsualizar
+        JsonResponse: JSON con datos del CSV para previsualizar, incluyendo hash del archivo
     """
     if 'user_id' not in request.session: # Si el usuario no está autenticado, retorna un error
         return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
@@ -1759,11 +1798,44 @@ def preview_factor_view(request):
     try: 
         import pandas as pd # Importamos el modulo pandas para manejar datos en tablas
         from decimal import Decimal # Importamos el modulo decimal para manejar números decimales
+        import hashlib # Importamos hashlib para calcular hash del archivo
         
         if 'archivo' not in request.FILES: # Si no se recibió ningún archivo, retorna un error
             return JsonResponse({'success': False, 'error': 'No se recibió ningún archivo'}, status=400) # Se retorna un JSON con el error de no recibido de archivo
         
         archivo = request.FILES['archivo'] # Obtiene el archivo de la solicitud
+        
+        # Calcular hash del contenido del archivo para identificar duplicados
+        archivo.seek(0)  # Asegurar que estamos al inicio del archivo
+        contenido = archivo.read()
+        hash_archivo = hashlib.sha256(contenido).hexdigest()  # Calcular hash SHA-256
+        archivo.seek(0)  # Volver al inicio para leer el CSV
+        
+        # Verificar si este archivo ya fue subido anteriormente
+        from .models import ArchivoCSV
+        archivo_existente = ArchivoCSV.objects(hash_archivo=hash_archivo).first()
+        if archivo_existente:
+            # Verificar si todavía existen calificaciones con este hash de archivo CSV
+            # Buscar calificaciones que tengan el hash_archivo_csv específico
+            calificaciones_existentes = Calificacion.objects(
+                Origen='csv',
+                hash_archivo_csv=hash_archivo
+            ).count()
+            
+            print(f"[PREVIEW_FACTOR] Archivo duplicado encontrado. Calificaciones existentes con hash {hash_archivo}: {calificaciones_existentes}")
+            
+            # Si no hay calificaciones con ese hash, eliminar el registro de ArchivoCSV para permitir subirlo nuevamente
+            if calificaciones_existentes == 0:
+                archivo_existente.delete()
+                print(f"[PREVIEW_FACTOR] Se eliminó el registro de ArchivoCSV porque no quedan calificaciones. Permitiendo subida.")
+            else:
+                # Si hay calificaciones, mostrar error de duplicado
+                return JsonResponse({
+                    'success': False, 
+                    'error': f'Este archivo ya fue subido anteriormente el {archivo_existente.fecha_subida.strftime("%Y-%m-%d %H:%M:%S")} por {archivo_existente.usuario.correo} y todavía existen {calificaciones_existentes} calificación(es) creadas desde ese archivo.',
+                    'duplicado': True,
+                    'hash_archivo': hash_archivo
+                }, status=400)
         
         # Leer CSV con pandas
         try:
@@ -1817,7 +1889,9 @@ def preview_factor_view(request):
             'success': True,
             'datos': datos, # Se asigna la lista de datos al JSON
             'errores': errores, # Se asigna la lista de errores al JSON
-            'total': len(datos) # Se asigna el total de datos al JSON
+            'total': len(datos), # Se asigna el total de datos al JSON
+            'hash_archivo': hash_archivo, # Hash único del archivo para evitar duplicados
+            'nombre_archivo': archivo.name  # Nombre original del archivo
         }) # Se retorna un JSON con los datos de la previsualización
         
     except Exception as e:
@@ -1847,11 +1921,43 @@ def preview_monto_view(request):
     try:
         import pandas as pd # Importamos el modulo pandas para manejar datos en tablas  
         from decimal import Decimal # Importamos el modulo decimal para manejar números decimales
+        import hashlib # Importamos hashlib para calcular hash del archivo
         
         if 'archivo' not in request.FILES: # Si no se recibió ningún archivo, retorna un error
             return JsonResponse({'success': False, 'error': 'No se recibió ningún archivo'}, status=400)
         
         archivo = request.FILES['archivo'] # Obtiene el archivo de la solicitud
+        
+        # Calcular hash del contenido del archivo para identificar duplicados
+        archivo.seek(0)  # Asegurar que estamos al inicio del archivo
+        contenido = archivo.read()
+        hash_archivo = hashlib.sha256(contenido).hexdigest()  # Calcular hash SHA-256
+        archivo.seek(0)  # Volver al inicio para leer el CSV
+        
+        # Verificar si este archivo ya fue subido anteriormente
+        from .models import ArchivoCSV
+        archivo_existente = ArchivoCSV.objects(hash_archivo=hash_archivo).first()
+        if archivo_existente:
+            # Verificar si todavía existen calificaciones con este hash de archivo CSV
+            calificaciones_existentes = Calificacion.objects(
+                Origen='csv',
+                hash_archivo_csv=hash_archivo
+            ).count()
+            
+            print(f"[PREVIEW_MONTO] Archivo duplicado encontrado. Calificaciones existentes con hash {hash_archivo}: {calificaciones_existentes}")
+            
+            # Si no hay calificaciones con ese hash, eliminar el registro de ArchivoCSV para permitir subirlo nuevamente
+            if calificaciones_existentes == 0:
+                archivo_existente.delete()
+                print(f"[PREVIEW_MONTO] Se eliminó el registro de ArchivoCSV porque no quedan calificaciones. Permitiendo subida.")
+            else:
+                # Si hay calificaciones, mostrar error de duplicado
+                return JsonResponse({
+                    'success': False, 
+                    'error': f'Este archivo ya fue subido anteriormente el {archivo_existente.fecha_subida.strftime("%Y-%m-%d %H:%M:%S")} por {archivo_existente.usuario.correo} y todavía existen {calificaciones_existentes} calificación(es) creadas desde ese archivo.',
+                    'duplicado': True,
+                    'hash_archivo': hash_archivo
+                }, status=400)
         
         # Leer CSV con pandas
         try:
@@ -1905,7 +2011,9 @@ def preview_monto_view(request):
             'success': True,
             'datos': datos, # Se asigna la lista de datos al JSON
             'errores': errores, # Se asigna la lista de errores al JSON
-            'total': len(datos) # Se asigna el total de datos al JSON
+            'total': len(datos), # Se asigna el total de datos al JSON
+            'hash_archivo': hash_archivo, # Hash único del archivo para evitar duplicados
+            'nombre_archivo': archivo.name  # Nombre original del archivo
         }) # Se retorna un JSON con los datos de la previsualización
         
     except Exception as e:
@@ -1959,12 +2067,40 @@ def cargar_factor_view(request):
         print("[CARGAR_FACTOR] Parseando JSON...") # Imprime el mensaje de parseo de JSON
         data = json.loads(request.body) # Se carga el JSON de la solicitud
         datos_csv = data.get('datos', []) # Se obtiene los datos del JSON
+        hash_archivo = data.get('hash_archivo', '') # Se obtiene el hash del archivo
+        nombre_archivo = data.get('nombre_archivo', 'archivo.csv') # Se obtiene el nombre del archivo
         
         print(f"[CARGAR_FACTOR] Datos recibidos: {len(datos_csv)} filas") # Imprime el mensaje de datos recibidos
+        print(f"[CARGAR_FACTOR] Hash del archivo: {hash_archivo}") # Imprime el hash del archivo
         
         if not datos_csv:
             print("[CARGAR_FACTOR] Error: No se recibieron datos") # Imprime el error de no recibido de datos
             return JsonResponse({'success': False, 'error': 'No se recibieron datos'}, status=400) # Se retorna un JSON con el error de no recibido de datos
+        
+        # Verificar si este archivo ya fue procesado (doble verificación)
+        if hash_archivo:
+            from .models import ArchivoCSV
+            archivo_existente = ArchivoCSV.objects(hash_archivo=hash_archivo).first()
+            if archivo_existente:
+                # Verificar si todavía existen calificaciones con este hash de archivo CSV
+                calificaciones_existentes = Calificacion.objects(
+                    Origen='csv',
+                    hash_archivo_csv=hash_archivo
+                ).count()
+                
+                print(f"[CARGAR_FACTOR] Archivo duplicado encontrado. Calificaciones existentes con hash {hash_archivo}: {calificaciones_existentes}")
+                
+                # Si no hay calificaciones con ese hash, eliminar el registro de ArchivoCSV para permitir subirlo nuevamente
+                if calificaciones_existentes == 0:
+                    archivo_existente.delete()
+                    print(f"[CARGAR_FACTOR] Se eliminó el registro de ArchivoCSV porque no quedan calificaciones. Permitiendo subida.")
+                else:
+                    print(f"[CARGAR_FACTOR] Error: Archivo duplicado detectado. Hash: {hash_archivo}")
+                    return JsonResponse({
+                        'success': False, 
+                        'error': f'Este archivo ya fue procesado anteriormente el {archivo_existente.fecha_subida.strftime("%Y-%m-%d %H:%M:%S")} por {archivo_existente.usuario.correo} y todavía existen {calificaciones_existentes} calificación(es) creadas desde ese archivo.',
+                        'duplicado': True
+                    }, status=400)
         
         # Convertir a DataFrame de pandas para procesamiento más eficiente
         df = pd.DataFrame(datos_csv) # Se convierte el JSON a un dataframe de pandas
@@ -2066,6 +2202,7 @@ def cargar_factor_view(request):
                 nueva_calificacion.Mercado = mercado # Se asigna el valor del mercado a la nueva calificación
                 nueva_calificacion.Instrumento = instrumento # Se asigna el valor del instrumento a la nueva calificación
                 nueva_calificacion.Origen = 'csv'  # Normalizado a minúsculas para coincidir con el filtro
+                nueva_calificacion.hash_archivo_csv = hash_archivo  # Guardar el hash del archivo CSV para relacionar la calificación con el archivo
                 nueva_calificacion.Descripcion = fila_limpia.get('DESCRIPCION') or fila_limpia.get('Descripcion') or fila_limpia.get('descripcion') or '' # Se asigna el valor de la descripción a la nueva calificación
                 
                 # Fecha de pago usando pandas (se convierte la fecha de pago a un objeto datetime)
@@ -2123,8 +2260,24 @@ def cargar_factor_view(request):
         
         # Crear log de carga masiva
         if calificaciones_creadas > 0:
-            _crear_log(current_user, 'Carga Masiva', documento_afectado=None) # Se crea el log de carga masiva
-            print(f"[CARGAR_FACTOR] Log creado para {calificaciones_creadas} calificaciones")
+            _crear_log(current_user, 'Carga Masiva', documento_afectado=None, hash_archivo_csv=hash_archivo) # Se crea el log de carga masiva con el hash del archivo
+            print(f"[CARGAR_FACTOR] Log creado para {calificaciones_creadas} calificaciones (hash: {hash_archivo})")
+            
+            # Registrar el archivo CSV procesado para evitar duplicados
+            if hash_archivo:
+                from .models import ArchivoCSV
+                try:
+                    archivo_csv = ArchivoCSV(
+                        hash_archivo=hash_archivo,
+                        nombre_archivo=nombre_archivo,
+                        tipo='factor',
+                        usuario=current_user,
+                        total_filas=calificaciones_creadas
+                    )
+                    archivo_csv.save()
+                    print(f"[CARGAR_FACTOR] Archivo CSV registrado: {nombre_archivo} (hash: {hash_archivo})")
+                except Exception as e:
+                    print(f"[CARGAR_FACTOR] Error al registrar archivo CSV: {e}")
         
         mensaje = f'Se crearon {calificaciones_creadas} calificación(es) exitosamente.' # Se crea el mensaje de creación de calificaciones exitosas         
         if errores:
@@ -2193,12 +2346,40 @@ def cargar_monto_view(request):
         print("[CARGAR_MONTO] Parseando JSON...") # Imprime el mensaje de parseo de JSON
         data = json.loads(request.body) # Se carga el JSON de la solicitud
         datos_csv = data.get('datos', []) # Se obtiene los datos del JSON
+        hash_archivo = data.get('hash_archivo', '') # Se obtiene el hash del archivo
+        nombre_archivo = data.get('nombre_archivo', 'archivo.csv') # Se obtiene el nombre del archivo
         
         print(f"[CARGAR_MONTO] Datos recibidos: {len(datos_csv)} filas") # Imprime el mensaje de datos recibidos
+        print(f"[CARGAR_MONTO] Hash del archivo: {hash_archivo}") # Imprime el hash del archivo
         
         if not datos_csv: # Si no se recibieron datos, retorna un error
             print("[CARGAR_MONTO] Error: No se recibieron datos") # Imprime el error de no recibido de datos
             return JsonResponse({'success': False, 'error': 'No se recibieron datos'}, status=400) # Se retorna un JSON con el error de no recibido de datos
+        
+        # Verificar si este archivo ya fue procesado (doble verificación)
+        if hash_archivo:
+            from .models import ArchivoCSV
+            archivo_existente = ArchivoCSV.objects(hash_archivo=hash_archivo).first()
+            if archivo_existente:
+                # Verificar si todavía existen calificaciones con este hash de archivo CSV
+                calificaciones_existentes = Calificacion.objects(
+                    Origen='csv',
+                    hash_archivo_csv=hash_archivo
+                ).count()
+                
+                print(f"[CARGAR_MONTO] Archivo duplicado encontrado. Calificaciones existentes con hash {hash_archivo}: {calificaciones_existentes}")
+                
+                # Si no hay calificaciones con ese hash, eliminar el registro de ArchivoCSV para permitir subirlo nuevamente
+                if calificaciones_existentes == 0:
+                    archivo_existente.delete()
+                    print(f"[CARGAR_MONTO] Se eliminó el registro de ArchivoCSV porque no quedan calificaciones. Permitiendo subida.")
+                else:
+                    print(f"[CARGAR_MONTO] Error: Archivo duplicado detectado. Hash: {hash_archivo}")
+                    return JsonResponse({
+                        'success': False, 
+                        'error': f'Este archivo ya fue procesado anteriormente el {archivo_existente.fecha_subida.strftime("%Y-%m-%d %H:%M:%S")} por {archivo_existente.usuario.correo} y todavía existen {calificaciones_existentes} calificación(es) creadas desde ese archivo.',
+                        'duplicado': True
+                    }, status=400)
         
         # Convertir a DataFrame de pandas para procesamiento más eficiente
         df = pd.DataFrame(datos_csv) # Se convierte el JSON a un dataframe de pandas
@@ -2300,6 +2481,7 @@ def cargar_monto_view(request):
                 nueva_calificacion.Mercado = mercado
                 nueva_calificacion.Instrumento = instrumento
                 nueva_calificacion.Origen = 'csv'  # Normalizado a minúsculas para coincidir con el filtro
+                nueva_calificacion.hash_archivo_csv = hash_archivo  # Guardar el hash del archivo CSV para relacionar la calificación con el archivo
                 nueva_calificacion.Descripcion = fila_limpia.get('DESCRIPCION') or fila_limpia.get('Descripcion') or fila_limpia.get('descripcion') or ''
                 
                 # Fecha de pago usando pandas
@@ -2429,8 +2611,24 @@ def cargar_monto_view(request):
         
         # Crear log de carga masiva (se crea el log de carga masiva)
         if calificaciones_creadas > 0:
-            _crear_log(current_user, 'Carga Masiva', documento_afectado=None)
-            print(f"[CARGAR_MONTO] Log creado para {calificaciones_creadas} calificaciones")
+            _crear_log(current_user, 'Carga Masiva', documento_afectado=None, hash_archivo_csv=hash_archivo)
+            print(f"[CARGAR_MONTO] Log creado para {calificaciones_creadas} calificaciones (hash: {hash_archivo})")
+            
+            # Registrar el archivo CSV procesado para evitar duplicados
+            if hash_archivo:
+                from .models import ArchivoCSV
+                try:
+                    archivo_csv = ArchivoCSV(
+                        hash_archivo=hash_archivo,
+                        nombre_archivo=nombre_archivo,
+                        tipo='monto',
+                        usuario=current_user,
+                        total_filas=calificaciones_creadas
+                    )
+                    archivo_csv.save()
+                    print(f"[CARGAR_MONTO] Archivo CSV registrado: {nombre_archivo} (hash: {hash_archivo})")
+                except Exception as e:
+                    print(f"[CARGAR_MONTO] Error al registrar archivo CSV: {e}")
         
         mensaje = f'Se crearon {calificaciones_creadas} calificación(es) exitosamente.'
         if errores:

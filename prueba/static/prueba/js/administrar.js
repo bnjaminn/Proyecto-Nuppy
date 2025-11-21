@@ -401,9 +401,42 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnCerrarCrearX = document.getElementById('btn-cerrar-crear-usuario-x');
     const formCrearUsuario = document.getElementById('form-crear-usuario');
 
+    // Función auxiliar para actualizar el estado visual de un requisito
+    function actualizarRequisito(id, cumplido) {
+        const requisito = document.getElementById(id);
+        if (!requisito) return;
+        
+        const icon = requisito.querySelector('.requisito-icon');
+        const texto = requisito.querySelector('.requisito-texto');
+        
+        if (icon && texto) {
+            if (cumplido) {
+                icon.textContent = '✓';
+                icon.style.color = '#28a745';
+                texto.style.color = '#28a745';
+                requisito.style.opacity = '1';
+            } else {
+                icon.textContent = '✗';
+                icon.style.color = '#dc3545';
+                texto.style.color = '#666';
+                requisito.style.opacity = '0.6';
+            }
+        }
+    }
+    
+    // Función para resetear todos los requisitos a estado inicial
+    function resetearRequisitos() {
+        const requisitos = ['req-longitud', 'req-mayuscula', 'req-minuscula', 'req-simbolo'];
+        requisitos.forEach(id => {
+            actualizarRequisito(id, false);
+        });
+    }
+
     function abrirModalCrear() {
         if (!modalCrearOverlay) return;
         if (formCrearUsuario) formCrearUsuario.reset();
+        // Resetear indicadores de requisitos
+        resetearRequisitos();
         modalCrearOverlay.style.display = 'flex';
     }
 
@@ -416,6 +449,26 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnCerrarCrear) btnCerrarCrear.addEventListener('click', cerrarModalCrear);
     if (btnCerrarCrearX) btnCerrarCrearX.addEventListener('click', cerrarModalCrear);
     // Event listener para cerrar modal al hacer clic fuera eliminado por solicitud del usuario
+    
+    // ========== VALIDACIÓN EN TIEMPO REAL DE CONTRASEÑA ==========
+    const inputContrasena = document.getElementById('crear-contrasena');
+    if (inputContrasena) {
+        inputContrasena.addEventListener('input', function() {
+            const contrasena = this.value;
+            
+            // Verificar cada requisito
+            const tieneLongitud = contrasena.length >= 8;
+            const tieneMayuscula = /[A-Z]/.test(contrasena);
+            const tieneMinuscula = /[a-z]/.test(contrasena);
+            const tieneSimbolo = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(contrasena);
+            
+            // Actualizar indicadores visuales
+            actualizarRequisito('req-longitud', tieneLongitud);
+            actualizarRequisito('req-mayuscula', tieneMayuscula);
+            actualizarRequisito('req-minuscula', tieneMinuscula);
+            actualizarRequisito('req-simbolo', tieneSimbolo);
+        });
+    }
     
     if (formCrearUsuario) {
         formCrearUsuario.addEventListener('submit', function(event) {

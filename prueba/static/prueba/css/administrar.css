@@ -462,3 +462,48 @@ body.dark-theme .carga-spinner {
 body.dark-theme .carga-mensaje {
     color: var(--text-primary);
 }
+
+/* ============================================
+   ESTILOS PARA REQUISITOS DE CONTRASEÑA
+   ============================================
+   Indicadores visuales que muestran el estado de cada requisito de contraseña
+*/
+.requisito-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    transition: all 0.3s ease;
+    font-size: 0.85em;
+}
+
+.requisito-icon {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    font-weight: bold;
+    font-size: 0.9em;
+    text-align: center;
+    line-height: 18px;
+    transition: all 0.3s ease;
+}
+
+.requisito-texto {
+    transition: color 0.3s ease;
+}
+
+/* Tema oscuro para requisitos */
+body.dark-theme .requisito-item,
+html.dark-theme .requisito-item {
+    color: var(--text-primary);
+}
+
+body.dark-theme .requisito-texto,
+html.dark-theme .requisito-texto {
+    color: var(--text-secondary);
+}
+
+body.dark-theme .requisito-item[style*="opacity: 0.6"] .requisito-texto,
+html.dark-theme .requisito-item[style*="opacity: 0.6"] .requisito-texto {
+    color: #888;
+}

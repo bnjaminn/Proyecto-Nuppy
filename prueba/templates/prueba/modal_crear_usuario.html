@@ -38,9 +38,25 @@
                     <div class="form-field">
                         <label for="crear-contrasena">Contraseña:</label>
                         <input type="password" id="crear-contrasena" name="contrasena" required>
-                        <small style="color: #666; display: block; margin-top: 5px; font-size: 0.85em;">
-                            La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y un símbolo especial.
-                        </small>
+                        <!-- Lista de requisitos con indicadores visuales -->
+                        <div id="requisitos-contrasena" style="margin-top: 8px; font-size: 0.85em;">
+                            <div class="requisito-item" id="req-longitud">
+                                <span class="requisito-icon">✗</span>
+                                <span class="requisito-texto">Al menos 8 caracteres</span>
+                            </div>
+                            <div class="requisito-item" id="req-mayuscula">
+                                <span class="requisito-icon">✗</span>
+                                <span class="requisito-texto">Al menos una mayúscula</span>
+                            </div>
+                            <div class="requisito-item" id="req-minuscula">
+                                <span class="requisito-icon">✗</span>
+                                <span class="requisito-texto">Al menos una minúscula</span>
+                            </div>
+                            <div class="requisito-item" id="req-simbolo">
+                                <span class="requisito-icon">✗</span>
+                                <span class="requisito-texto">Al menos un símbolo especial</span>
+                            </div>
+                        </div>
                     </div>
                     <!-- Confirmación de contraseña (debe coincidir con la anterior) -->
                     <div class="form-field">
