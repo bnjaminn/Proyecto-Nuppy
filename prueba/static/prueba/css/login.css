@@ -1,6 +1,22 @@
+/*
+    LOGIN.CSS - Estilos de la Página de Inicio de Sesión
+    ======================================================
+    Contiene todos los estilos CSS específicos para la página de login (login.html).
+    Incluye:
+    - Variables CSS para colores
+    - Estilos del contenedor de login
+    - Estilos del formulario (campos de entrada y botones)
+    - Estilos para tema oscuro/claro
+    - Responsive design
+*/
 
+/* ============================================
+   VARIABLES CSS - COLORES Y TEMA
+   ============================================
+   Define las variables de color que se usan en la página de login.
+*/
 :root {
-    /* Color Principal */
+    /* Color Principal - Naranja corporativo NUAM */
     --color-primary: #FF6B00;
     --color-primary-dark: #E55A00;
     --color-primary-light: #FFF4E6;
@@ -26,25 +42,35 @@
     --color-warning: #FFC107;
 }
 
+/* ============================================
+   ESTILOS DEL BODY
+   ============================================
+   Centra el contenedor de login en toda la pantalla
+*/
 body {
     font-family: Arial, sans-serif;
     background-color: var(--bg-light);
     display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    justify-content: center;  /* Centra horizontalmente */
+    align-items: center;      /* Centra verticalmente */
+    height: 100vh;            /* Altura completa de la ventana */
     margin: 0;
     color: var(--text-primary);
 }
 
+/* ============================================
+   CONTENEDOR DEL FORMULARIO DE LOGIN
+   ============================================
+   Caja principal que contiene el logo y el formulario de login
+*/
 .login-container {
     background-color: var(--bg-primary);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 2rem;
-    width: 350px;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 350px;             /* Ancho fijo del contenedor */
+    text-align: center;       /* Centra el contenido */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);  /* Sombra suave */
 }
 
 .logo-container {
@@ -64,40 +90,57 @@ body {
     object-fit: contain;
 }
 
+/* ============================================
+   ESTILOS DEL FORMULARIO
+   ============================================
+   Formulario de login con campos de correo y contraseña
+*/
 form {
     display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    flex-direction: column;  /* Apila los campos verticalmente */
+    gap: 1rem;               /* Espacio entre campos */
 }
 
+/* ============================================
+   CAMPOS DE ENTRADA (INPUTS)
+   ============================================
+   Estilos para los campos de correo y contraseña
+*/
 .form-input {
     width: 100%;
     padding: 0.75rem;
     border: 1px solid var(--border);
     border-radius: 4px;
-    box-sizing: border-box; 
-    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;  /* Incluye padding y border en el ancho total */
+    transition: border-color 0.2s, box-shadow 0.2s;  /* Animación suave */
 }
 
+/* Estado de foco: resalta el campo cuando el usuario hace clic */
 .form-input:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2);
-    outline: none;
+    border-color: var(--color-primary);              /* Borde naranja */
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2);    /* Sombra naranja suave */
+    outline: none;                                    /* Quita el outline por defecto */
 }
 
+/* ============================================
+   BOTÓN DE INICIAR SESIÓN
+   ============================================
+   Botón principal del formulario de login
+*/
 .login-button {
-    background-color: var(--color-primary);
+    background-color: var(--color-primary);        /* Fondo naranja */
     border: 1px solid var(--color-primary);
-    color: var(--text-on-primary);
+    color: var(--text-on-primary);                 /* Texto blanco */
     padding: 0.75rem;
     border-radius: 4px;
-    cursor: pointer;
+    cursor: pointer;                                /* Cursor tipo mano */
     font-weight: bold;
-    transition: background-color 0.2s, border-color 0.2s;
+    transition: background-color 0.2s, border-color 0.2s;  /* Animación al hover */
 }
 
+/* Estado hover: cambia el color al pasar el mouse */
 .login-button:hover {
-    background-color: var(--color-primary-hover);
+    background-color: var(--color-primary-hover);  /* Naranja más claro */
     border-color: var(--color-primary-hover);
 }
 
@@ -119,7 +162,12 @@ form {
     color: var(--color-primary);
 }
 
-/* ===== TEMA OSCURO PARA PÁGINA DE LOGIN ===== */
+/* ============================================
+   TEMA OSCURO PARA PÁGINA DE LOGIN
+   ============================================
+   Estilos específicos cuando el usuario activa el tema oscuro.
+   Se aplican cuando el body tiene la clase 'dark-theme'.
+*/
 body.dark-theme {
     background-color: var(--bg-light);
 }

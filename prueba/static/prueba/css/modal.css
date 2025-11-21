@@ -1,6 +1,22 @@
+/*
+    MODAL.CSS - Estilos para Modales
+    ==================================
+    Contiene todos los estilos CSS para los modales de la aplicación.
+    Incluye:
+    - Overlay (fondo oscuro semitransparente)
+    - Contenedor del modal (caja principal)
+    - Header, body y footer del modal
+    - Animaciones de entrada/salida
+    - Estilos para formularios dentro de modales
+    - Responsive design para modales
+*/
 
+/* ============================================
+   VARIABLES CSS - COLORES
+   ============================================
+*/
 :root {
-    /* Color Principal */
+    /* Color Principal - Naranja corporativo */
     --color-primary: #FF6B00;
     --color-primary-dark: #E55A00;
     --color-primary-light: #FFF4E6;
@@ -26,19 +42,25 @@
     --color-warning: #FFC107;
 }
 
+/* ============================================
+   OVERLAY DEL MODAL
+   ============================================
+   Fondo oscuro semitransparente que cubre toda la pantalla.
+   Tiene un efecto de blur (desenfoque) para enfocar la atención en el modal.
+*/
 .modal-overlay {
-    display: none; 
-    position: fixed;
+    display: none;  /* Oculto por defecto, se muestra con JavaScript */
+    position: fixed;  /* Fijo respecto a la ventana */
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(3px);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    animation: fadeInOverlay 0.2s ease-out;
+    width: 100%;  /* Cubre todo el ancho */
+    height: 100%;  /* Cubre todo el alto */
+    background-color: rgba(0, 0, 0, 0.65);  /* Fondo negro semitransparente (65% opacidad) */
+    backdrop-filter: blur(3px);  /* Efecto de desenfoque del fondo */
+    justify-content: center;  /* Centra horizontalmente */
+    align-items: center;  /* Centra verticalmente */
+    z-index: 1000;  /* Por encima de otros elementos */
+    animation: fadeInOverlay 0.2s ease-out;  /* Animación de entrada */
 }
 
 /* Z-index más alto para modales de carga */

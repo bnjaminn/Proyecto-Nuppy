@@ -1,4 +1,15 @@
 {% load static %}
+<!-- 
+    ===========================================
+    Esta es la página principal de la aplicación después del login.
+    Permite:
+    - Buscar y filtrar calificaciones financieras
+    - Ver calificaciones en una tabla con factores (F8-F37)
+    - Modificar, eliminar, copiar calificaciones
+    - Ingresar nuevas calificaciones (modal)
+    - Cargar archivos CSV con factores o montos
+    - Ver logs de cambios por calificación
+-->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -16,10 +27,19 @@
     <!-- Script inline para cargar tema oscuro ANTES de renderizar (previene flash) -->
     <script>
         (function() {
+            // Verificar si el localStorage tiene la preferencia de tema oscuro guardada
             const temaOscuro = localStorage.getItem('temaOscuro') === 'true';
+            // Si el tema oscuro está activado, agregar las clases CSS correspondientes
             if (temaOscuro) {
+                // Agregar clase dark-theme al elemento HTML (document.documentElement)
+                // Esto se puede hacer en el head porque documentElement siempre existe
                 document.documentElement.classList.add('dark-theme');
-                document.body.classList.add('dark-theme');
+                // Agregar clase dark-theme al body SOLO si ya existe
+                // Verificar que document.body no sea null antes de acceder a classList
+                // Si el body aún no existe, tema.js se encargará de agregarlo cuando el DOM esté listo
+                if (document.body) {
+                    document.body.classList.add('dark-theme');
+                }
             }
         })();
     </script>
@@ -27,9 +47,13 @@
     <!-- Script para cargar tema oscuro -->
     <script src="{% static 'prueba/js/tema.js' %}"></script>
     
-    <!-- Configuración de URLs para el JavaScript -->
+    <!-- CONFIGURACIÓN DE URLs PARA JAVASCRIPT
+         =====================================
+         Pasa las URLs de Django al JavaScript para realizar peticiones AJAX.
+         Se reemplazan los IDs placeholder ('000000000000000000000000') con IDs reales en el código JS.
+    -->
     <script>
-        // Pasar URLs de Django al JavaScript
+        // Pasar URLs de Django al JavaScript para peticiones AJAX
         window.DJANGO_URLS = {
             ingresar: '{% url "ingresar" %}',
             guardarFactores: '{% url "guardar_factores" %}',
@@ -57,9 +81,17 @@
 </head>
 <body>
 
+    <!-- CABECERA DEL DASHBOARD
+         ======================
+         Contiene los filtros de búsqueda y la información del usuario
+    -->
     <header class="header">
-        
+        <!-- SECCIÓN IZQUIERDA: FILTROS DE BÚSQUEDA
+             =======================================
+             Permite filtrar calificaciones por mercado, origen y período
+        -->
         <div class="header-left">
+            <!-- Filtro de Mercado: Acciones, CFI, Fondos mutuos -->
             <div class="filter-group">
                 <label for="mercado">Mercado:</label>
                 <select id="mercado" name="mercado">
@@ -69,6 +101,7 @@
                     <option value="Fondos mutuos">Fondos mutuos</option>
                 </select>
             </div>
+            <!-- Filtro de Origen: Corredor (manual) o CSV (carga masiva) -->
             <div class="filter-group">
                 <label for="origen">Origen:</label>
                 <select id="origen" name="origen">
@@ -76,6 +109,7 @@
                     <option value="csv">CSV</option>
                 </select>
             </div>
+            <!-- Filtro de Período: Año fiscal (ejercicio) -->
             <div class="filter-group">
                 <label for="periodo">Periodo Comercial:</label>
                 <input type="text" id="periodo" name="periodo" value="2025">
@@ -112,11 +146,18 @@
         </div>
     </header>
 
+    <!-- CONTENIDO PRINCIPAL: TABLA DE CALIFICACIONES
+         ==============================================
+         Muestra las calificaciones encontradas con los filtros aplicados.
+         Incluye acciones (modificar, eliminar, copiar, ver logs) y todos los factores financieros.
+    -->
     <main class="main-content">
         <table class="data-table">
             <thead>
                 <tr>
+                    <!-- Columna de acciones: Modificar, Eliminar, Copiar, Ver Logs -->
                     <th>Acciones</th>
+                    <!-- Columnas de información básica de la calificación -->
                     <th>Ejercicio</th>
                     <th>Instrumento</th>
                     <th>Fecha Pago</th>
@@ -124,6 +165,12 @@
                     <th>Secuencia Evento</th>
                     <th>Fecha Act</th>
                     
+                    <!-- FACTORES FINANCIEROS (F8 A F37)
+                         =================================
+                         Representan diferentes categorías tributarias y financieras.
+                         Cada factor es un valor decimal entre 0 y 1 que se calcula dividiendo 
+                         el monto correspondiente por la Suma Base (suma de montos del 8 al 19).
+                    -->
                     <th>Factor-08<small>No Constitutiva de Renta No Acogido a Impto.</small></th>
                     <th>Factor-09<small>Impto. 1ra Categ. Afecto Gl. Comp. Con Devolución</small></th>
                     <th>Factor-10<small>Impuesto Tasa Adicional Exento Art. 21</small></th>

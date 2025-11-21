@@ -1,9 +1,26 @@
+"""
+============================================================
+Este archivo define los formularios usados en la aplicación para validar
+y procesar datos ingresados por usuarios.
+
+Formularios definidos:
+- LoginForm: Formulario de inicio de sesión
+- CalificacionModalForm: Formulario para crear/editar calificaciones
+- UsuarioForm: Formulario para crear nuevos usuarios
+- UsuarioUpdateForm: Formulario para modificar usuarios existentes
+- FactoresForm: Formulario para ingresar factores financieros
+- MontosForm: Formulario para ingresar montos (factores se calculan automáticamente)
+"""
+
 from django import forms
-from .models import usuarios #importamos usuario para la validacion completa 
+from .models import usuarios  # Importamos el modelo usuarios para validación (verificar correo único)
 
 
-#formulario para el login
-class LoginForm(forms.Form): #especificamos que es de tipo forms esto se hace con todos los forms
+# FORMULARIO: LOGIN
+# ==================
+# Formulario para el inicio de sesión
+# Valida correo electrónico y contraseña
+class LoginForm(forms.Form):
     correo = forms.EmailField(
         label="", 
         widget=forms.EmailInput(
@@ -23,9 +40,14 @@ class LoginForm(forms.Form): #especificamos que es de tipo forms esto se hace co
         )
     )
 
-#formulario para el ingresar calificacion (SUJETO A CAMBIOS)
+# FORMULARIO: CALIFICACION MODAL
+# ===============================
+# Formulario para crear o editar calificaciones (primera ventana modal)
+# Incluye campos básicos de información de la calificación
 class CalificacionModalForm(forms.Form):
-    #Aca definimos los campos para el primer formulario de ingresar osea la primera ventana
+    # CAMPOS BÁSICOS DE LA CALIFICACIÓN
+    # ==================================
+    # Aquí definimos los campos para el primer formulario de ingresar (primera ventana modal)
     Mercado = forms.CharField(required=False)
     Origen = forms.CharField(required=False)  # Campo para el origen (Corredor, CSV)
     Ejercicio = forms.IntegerField()
@@ -43,9 +65,14 @@ class CalificacionModalForm(forms.Form):
     
     Descripcion = forms.CharField(required=False)
 
-#formulario para crear usuario
+# FORMULARIO: CREAR USUARIO
+# ==========================
+# Formulario para crear un nuevo usuario
+# Incluye validaciones de contraseña y verificación de correo único
 class UsuarioForm(forms.Form):
-    #Aca Define los campos del modal Crear Usuario
+    # CAMPOS DEL FORMULARIO
+    # =====================
+    # Aquí se definen los campos del modal Crear Usuario
     nombre = forms.CharField(max_length=200, required=True)
     correo = forms.EmailField(required=True)
     contrasena = forms.CharField(
@@ -62,6 +89,13 @@ class UsuarioForm(forms.Form):
     # BooleanField maneja el 'true'/'false' del checkbox para decidir que sea admin o no
     rol = forms.BooleanField(required=False) 
 
+    # MÉTODO: VALIDACIÓN DE CONTRASEÑA
+    # =================================
+    # Valida que la contraseña cumpla con los requisitos de seguridad:
+    # - Mínimo 8 caracteres
+    # - Al menos una mayúscula
+    # - Al menos una minúscula
+    # - Al menos un símbolo especial
     def clean_contrasena(self):
         """Valida que la contraseña cumpla con los requisitos de seguridad"""
         contrasena = self.cleaned_data.get('contrasena')
@@ -89,6 +123,9 @@ class UsuarioForm(forms.Form):
         
         return contrasena
     
+    # MÉTODO: VALIDACIÓN DE COINCIDENCIA DE CONTRASEÑAS
+    # ==================================================
+    # Valida que ambas contraseñas (contraseña y confirmar contraseña) coincidan
     def clean(self):
         """Valida que ambas contraseñas coincidan"""
         cleaned_data = super().clean()
@@ -103,17 +140,26 @@ class UsuarioForm(forms.Form):
         
         return cleaned_data
 
-    #Aseguraramos que el correo no exista ya
+    # MÉTODO: VALIDACIÓN DE CORREO ÚNICO
+    # ===================================
+    # Asegura que el correo no exista ya en la base de datos
+    # Busca en MongoDB si ya existe un usuario con ese correo
     def clean_correo(self):
         correo = self.cleaned_data.get('correo')
-        if usuarios.objects(correo=correo).first(): # Busca si ya existe en MongoDB
+        if usuarios.objects(correo=correo).first():  # Busca si ya existe en MongoDB
             raise forms.ValidationError("Este correo electrónico ya está registrado.")
         return correo
     
-#formulario para actualizar usuario
+# FORMULARIO: ACTUALIZAR USUARIO
+# ===============================
+# Formulario para modificar un usuario existente
+# Similar a UsuarioForm pero con contraseña opcional y validación de correo diferente
 class UsuarioUpdateForm(forms.Form):
-    #Aca definimos los datos que hay que pasar para actualizar al usuario
-    user_id = forms.CharField(widget=forms.HiddenInput(), required=True) #en esta linea se ejectuta el hidden para ocultar el ID del usuario
+    # CAMPOS DEL FORMULARIO
+    # =====================
+    # Aquí definimos los datos que hay que pasar para actualizar al usuario
+    user_id = forms.CharField(widget=forms.HiddenInput(), required=True)  # Campo oculto que contiene el ID del usuario a modificar
+                                                                          # HiddenInput oculta el campo en el HTML para que el usuario no lo vea
     nombre = forms.CharField(max_length=200, required=True)
     correo = forms.EmailField(required=True)
     contrasena = forms.CharField(
@@ -157,7 +203,10 @@ class UsuarioUpdateForm(forms.Form):
         
         return contrasena
 
-    # Validación extra: Asegurar que el NUEVO correo no esté ya en uso por OTRO usuario
+    # MÉTODO: VALIDACIÓN COMPLETA DEL FORMULARIO
+    # ===========================================
+    # Validación extra: Asegura que el NUEVO correo no esté ya en uso por OTRO usuario
+    # También valida que si se proporciona contraseña, también se proporcione confirmación
     def clean(self):
         cleaned_data = super().clean()
         correo = cleaned_data.get('correo')
@@ -166,7 +215,8 @@ class UsuarioUpdateForm(forms.Form):
         confirmar_contrasena = cleaned_data.get('confirmar_contrasena')
 
         # Busca si existe OTRO usuario con este correo
-        existing_user = usuarios.objects(correo=correo, id__ne=user_id).first() #Busca si existe OTRO usuario (id__ne = id not equal) con este correo
+        # Busca si existe OTRO usuario (id__ne = id not equal) con este correo
+        existing_user = usuarios.objects(correo=correo, id__ne=user_id).first()
         if existing_user:
             self.add_error('correo', "Este correo electrónico ya está registrado por otro usuario.")
         
@@ -182,13 +232,20 @@ class UsuarioUpdateForm(forms.Form):
         
         return cleaned_data
 
-#formulario para ingresar factores (segunda ventana modal)
+# FORMULARIO: FACTORES
+# ====================
+# Formulario para ingresar factores financieros (segunda ventana modal)
+# Se usa después de crear la calificación básica para ingresar los factores calculados
 class FactoresForm(forms.Form):
-    # Campo oculto para el ID de la calificación
-    calificacion_id = forms.CharField(widget=forms.HiddenInput(), required=True)
+    # CAMPO OCULTO
+    # ============
+    calificacion_id = forms.CharField(widget=forms.HiddenInput(), required=True)  # ID de la calificación a la que pertenecen estos factores
     
+    # FACTORES FINANCIEROS
+    # ====================
     # Factores del 8 al 37 (30 campos total)
-    # Todos son DecimalField con 8 decimales, opcionales, inicializados en 0
+    # Todos son DecimalField con 8 decimales, opcionales, inicializados en 0 (max_digits=17 para precisión)
+    # Los factores representan la proporción de cada monto respecto a la suma base
     Factor08 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
     Factor09 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
     Factor10 = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
@@ -224,17 +281,25 @@ class FactoresForm(forms.Form):
     RentasExentas = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
     Factor19A = forms.DecimalField(initial=0.0, required=False, decimal_places=8, max_digits=17)
 
+# FORMULARIO: MONTOS
+# ==================
 # Formulario para ingresar MONTOS (no factores)
 # El usuario ingresa montos en dinero, y el sistema calcula los factores automáticamente
+# Flujo: Usuario ingresa montos → Sistema calcula factores → Usuario revisa y guarda
 class MontosForm(forms.Form):
-    # Campos generales
+    # CAMPOS GENERALES
+    # ================
     Ejercicio = forms.IntegerField(required=True)
     Instrumento = forms.CharField(max_length=50, required=False)
     Mercado = forms.CharField(required=False)
     Origen = forms.CharField(required=False)
     
+    # MONTOS FINANCIEROS
+    # ===================
     # Montos del 8 al 37 (el usuario ingresa dinero, no factores)
     # Estos son los MONTOS que se usarán para calcular los factores
+    # Cálculo: Factor = Monto / SumaBase (donde SumaBase = suma de montos 8-19)
+    # Precisión de 2 decimales (centavos) para montos monetarios
     monto_8 = forms.DecimalField(initial=0.0, required=False, decimal_places=2, max_digits=20, label="Monto 8")
     monto_9 = forms.DecimalField(initial=0.0, required=False, decimal_places=2, max_digits=20, label="Monto 9")
     monto_10 = forms.DecimalField(initial=0.0, required=False, decimal_places=2, max_digits=20, label="Monto 10")

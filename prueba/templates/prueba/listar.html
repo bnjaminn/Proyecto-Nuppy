@@ -1,4 +1,12 @@
 {% load static %}
+<!-- 
+    ====================================================
+    Página básica para listar usuarios desde MongoDB.
+    Muestra una tabla simple con ID, Nombre y Correo de cada usuario.
+    
+    Nota: Esta página es básica y probablemente se usa para pruebas o desarrollo.
+    La funcionalidad principal de administración de usuarios está en administrar.html.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +15,7 @@
 </head>
 <body>
     <h1>Lista de Usuarios (desde MongoDB)</h1>
+    <!-- Tabla simple que lista todos los usuarios -->
     <table>
         <tr>
             <th>ID</th>
@@ -14,6 +23,7 @@
             <th>Correo</th>
         </tr> 
         
+        <!-- Itera sobre todos los usuarios y muestra sus datos -->
         {% for usuario in usuarios %}
         <tr>
             <td>{{ usuario.id }}</td> 

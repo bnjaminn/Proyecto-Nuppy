@@ -1,22 +1,40 @@
+<!-- 
+    ==========================================================
+    Permite a los administradores crear nuevos usuarios en el sistema.
+    Incluye validación de contraseñas y opción para subir foto de perfil.
+    
+    Campos:
+    - Nombre (obligatorio)
+    - Correo electrónico (obligatorio, único)
+    - Contraseña (obligatorio, mínimo 8 caracteres, mayúsculas, minúsculas, símbolo)
+    - Confirmar contraseña (obligatorio, debe coincidir)
+    - Foto de perfil (opcional, máximo 5MB)
+    - Rol (checkbox: Administrador o Usuario normal)
+-->
 <div id="crear-usuario-modal-overlay" class="modal-overlay">
     <div class="modal-content modal-small"> 
+        <!-- CABECERA DEL MODAL -->
         <div class="modal-header">
             <h2>Crear Nuevo Usuario</h2>
             <span id="btn-cerrar-crear-usuario-x" class="modal-close">&times;</span>
         </div>
         
+        <!-- CUERPO DEL MODAL: FORMULARIO -->
         <div class="modal-body">
             <form id="form-crear-usuario" method="post" action="{% url 'crear_usuario' %}" enctype="multipart/form-data">
                 {% csrf_token %} 
                 <div class="modal-form-grid-vertical"> 
+                    <!-- Nombre completo del usuario -->
                     <div class="form-field">
                         <label for="crear-nombre">Nombre:</label>
                         <input type="text" id="crear-nombre" name="nombre" required>
                     </div>
+                    <!-- Correo electrónico (debe ser único en la base de datos) -->
                     <div class="form-field">
                         <label for="crear-correo">Correo Electrónico:</label>
                         <input type="email" id="crear-correo" name="correo" required>
                     </div>
+                    <!-- Contraseña con requisitos de seguridad -->
                     <div class="form-field">
                         <label for="crear-contrasena">Contraseña:</label>
                         <input type="password" id="crear-contrasena" name="contrasena" required>
@@ -24,15 +42,18 @@
                             La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y un símbolo especial.
                         </small>
                     </div>
+                    <!-- Confirmación de contraseña (debe coincidir con la anterior) -->
                     <div class="form-field">
                         <label for="crear-confirmar-contrasena">Confirmar Contraseña:</label>
                         <input type="password" id="crear-confirmar-contrasena" name="confirmar_contrasena" required>
                     </div>
+                    <!-- Foto de perfil: opcional, se redimensiona automáticamente a 500x500px -->
                     <div class="form-field">
                         <label for="crear-foto-perfil">Foto de Perfil (opcional):</label>
                         <input type="file" id="crear-foto-perfil" name="foto_perfil" accept="image/*">
                         <small style="color: #666;">Formatos: JPG, PNG, GIF. Máx. 5MB</small>
                     </div>
+                    <!-- Checkbox para asignar rol de administrador -->
                     <div class="form-field form-field-checkbox"> 
                         <input type="checkbox" id="crear-rol" name="rol">
                         <label for="crear-rol">¿Es Administrador?</label> 
@@ -40,8 +61,10 @@
                 </div>
             </form>
         </div>
+        <!-- PIE DEL MODAL: BOTONES -->
         <div class="modal-footer">
             <button type="button" id="btn-cerrar-crear-usuario" class="btn btn-secondary">Cancelar</button>
+            <!-- Botón que envía el formulario vía AJAX (manejado por administrar.js) -->
             <button type="submit" form="form-crear-usuario" class="btn">Crear Usuario</button>
         </div>
     </div>

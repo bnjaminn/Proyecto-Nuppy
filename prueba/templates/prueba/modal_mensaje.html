@@ -1,30 +1,52 @@
+<!-- 
+    ===================================================
+    Modal reutilizable para mostrar diferentes tipos de mensajes al usuario.
+    
+    Tipos de mensajes:
+    - success (éxito): Operación completada exitosamente
+    - error (error): Algo salió mal
+    - warning (advertencia): Advertencia o información importante
+    - info (información): Información general
+    
+    Modos de uso:
+    1. Modo simple: Un solo botón "Aceptar" (para mensajes informativos)
+    2. Modo confirmación: Dos botones "Cancelar" y "Confirmar" (para confirmar acciones)
+    
+    Se controla completamente desde JavaScript (home.js: mostrarMensaje, mostrarConfirmacion)
+-->
 <!-- Modal Genérico para Mensajes (Éxito, Error, Información, Confirmación) -->
 <div id="mensaje-modal-overlay" class="modal-overlay">
     <div class="modal-content modal-small">
+        <!-- CABECERA DEL MODAL -->
         <div class="modal-header">
             <h2 id="mensaje-modal-titulo">Mensaje</h2>
             <span id="btn-cerrar-mensaje-x" class="modal-close">&times;</span>
         </div>
         
+        <!-- CUERPO DEL MODAL: CONTENIDO DEL MENSAJE -->
         <div class="modal-body">
             <div class="confirmar-eliminar-content">
+                <!-- Icono: cambia según el tipo de mensaje (✓, ✕, ⚠, ℹ) -->
                 <div id="mensaje-modal-icono" class="confirmar-eliminar-icono">
                     ℹ
                 </div>
                 <div class="confirmar-eliminar-texto">
+                    <!-- Texto principal del mensaje (se llena dinámicamente) -->
                     <p id="mensaje-modal-texto" class="confirmar-eliminar-mensaje">
                         Mensaje
                     </p>
+                    <!-- Advertencia adicional (opcional, se muestra solo si se proporciona) -->
                     <p id="mensaje-modal-advertencia" class="confirmar-eliminar-advertencia" style="display: none;">
                     </p>
                 </div>
             </div>
         </div>
 
+        <!-- PIE DEL MODAL: BOTONES -->
         <div class="modal-footer">
-            <!-- Botones para modo simple (un solo botón) -->
+            <!-- MODO SIMPLE: Un solo botón "Aceptar" (para mensajes informativos) -->
             <button type="button" id="btn-cerrar-mensaje" class="btn" style="display: none;">Aceptar</button>
-            <!-- Botones para modo confirmación (dos botones) -->
+            <!-- MODO CONFIRMACIÓN: Dos botones para confirmar acciones importantes -->
             <button type="button" id="btn-cancelar-mensaje" class="btn btn-secondary" style="display: none;">Cancelar</button>
             <button type="button" id="btn-confirmar-mensaje" class="btn" style="display: none;">Confirmar</button>
         </div>

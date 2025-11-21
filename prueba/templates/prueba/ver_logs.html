@@ -1,4 +1,17 @@
 {% load static %}
+<!-- 
+    ========================================================
+    Muestra todos los registros de auditoría del sistema (solo administradores).
+    
+    Incluye:
+    - Fecha y hora de cada acción
+    - Usuario que realizó la acción (nombre, correo, ID)
+    - Tipo de acción (Crear, Modificar, Eliminar, Carga Masiva)
+    - Elemento afectado (Usuario o Calificación) con su ID
+    
+    Los logs se muestran ordenados por fecha descendente (más recientes primero).
+    Cada acción tiene un badge de color según su tipo.
+-->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -39,6 +52,7 @@
             </div>
         </div>
     </header>
+    <!-- CONTENIDO PRINCIPAL: TABLA DE LOGS -->
     <main class="admin-container">
         <div class="log-table-container">
             <table class="log-table">
@@ -53,7 +67,9 @@
                 <tbody>
                     {% for log in lista_logs %}
                         <tr>
+                            <!-- Fecha y hora formateada -->
                             <td>{{ log.fecha|date:"d/m/Y H:i:s" }}</td>
+                            <!-- Información del usuario que realizó la acción -->
                             <td>
                                 {% if log.actor_nombre != "N/A" %}
                                     <strong>{{ log.actor_nombre }}</strong><br>
@@ -61,6 +77,7 @@
                                 {{ log.actor_correo }}<br>
                                 <small style="color: #666;">ID: {{ log.actor_id }}</small>
                             </td>
+                            <!-- Badge de acción con color según el tipo -->
                             <td>
                                 {% if 'Crear' in log.accion %}
                                     <span class="accion-badge accion-crear">{{ log.accion }}</span>
@@ -74,6 +91,7 @@
                                     <span class="accion-badge">{{ log.accion }}</span>
                                 {% endif %}
                             </td>
+                            <!-- Tipo y ID del elemento afectado (Usuario o Calificación) -->
                             <td>
                                 {% if log.afectado_id and log.afectado_id != "N/A" %}
                                     <span class="tipo-afectado tipo-{{ log.tipo_afectado|lower }}">
@@ -86,6 +104,7 @@
                             </td>
                         </tr>
                     {% empty %}
+                        <!-- Mensaje cuando no hay logs en el sistema -->
                         <tr>
                             <td colspan="4" style="text-align: center; padding: 40px; color: #999;">
                                 No hay registros de log en el sistema.

@@ -1,89 +1,298 @@
 // ============================================
-// JavaScript para el módulo de ingreso de calificaciones
-// Maneja ambos modales: ingreso y factores (con sistema de Montos a Factores)
+// HOME.JS - JavaScript Principal del Dashboard
+// ============================================
+// Este archivo contiene toda la lógica JavaScript para el dashboard principal.
+// Maneja:
+// - Modales de ingreso y edición de calificaciones
+// - Cálculo de factores desde montos
+// - Búsqueda y filtrado de calificaciones
+// - Carga masiva de archivos CSV (factores y montos)
+// - Modificación, eliminación y copia de calificaciones
+// - Visualización de logs de cambios
+// - Gestión de tema oscuro
 // ============================================
 
-// Función helper para obtener el CSRF token
+// ============================================
+// FUNCIÓN AUXILIAR: getCookie(name)
+// ============================================
+// Propósito: Obtiene el valor de una cookie específica por su nombre.
+// 
+// Parámetros:
+//   - name (string): Nombre de la cookie que se desea obtener
+// 
+// Retorna:
+//   - string | null: El valor de la cookie si existe, o null si no se encuentra
+// 
+// Uso principal:
+//   Se usa principalmente para obtener el token CSRF de Django, que es requerido
+//   para todas las peticiones POST/PUT/DELETE para prevenir ataques CSRF.
+// 
+// Ejemplo de uso:
+//   const csrfToken = getCookie('csrftoken');
+// ============================================
 function getCookie(name) {
     let cookieValue = null;
+    
+    // Verificar que existen cookies en el documento
     if (document.cookie && document.cookie !== '') {
+        // Dividir todas las cookies por el separador ';'
+        // Las cookies vienen en formato: "cookie1=valor1; cookie2=valor2; cookie3=valor3"
         const cookies = document.cookie.split(';');
+        
+        // Buscar la cookie que coincida con el nombre proporcionado
         for (let i = 0; i < cookies.length; i++) {
+            // Limpiar espacios en blanco alrededor de la cookie
             const cookie = cookies[i].trim();
+            
+            // Verificar si esta cookie comienza con el nombre buscado seguido de '='
+            // Ejemplo: si buscamos 'csrftoken', verificamos si la cookie es 'csrftoken=valor...'
             if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                // Extraer el valor después del '=' y decodificarlo (por si tiene caracteres especiales)
                 cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+                break; // Encontrada, salir del bucle
             }
         }
     }
     return cookieValue;
 }
 
-// Obtener CSRF token
+// ============================================
+// TOKEN CSRF
+// ============================================
+// Obtener el token CSRF necesario para todas las peticiones AJAX POST/PUT/DELETE.
+// Django requiere este token en todas las peticiones que modifican datos para prevenir
+// ataques de Cross-Site Request Forgery (CSRF).
+// 
+// Este token se envía en el header 'X-CSRFToken' de cada petición fetch.
+// ============================================
 const csrftoken = getCookie('csrftoken');
 
-// ========== FUNCIONES PARA MODAL DE MENSAJES ==========
+// ============================================
+// FUNCIONES PARA MODAL DE MENSAJES
+// ============================================
+// Estas funciones permiten mostrar mensajes informativos al usuario en un modal reutilizable.
+// Se pueden mostrar mensajes simples (con un solo botón) o confirmaciones (con dos botones).
+
+// ============================================
+// FUNCIÓN: mostrarMensaje(titulo, mensaje, tipo, advertencia)
+// ============================================
+// Propósito: Muestra un mensaje simple en un modal con un solo botón "Aceptar".
+// 
+// Parámetros:
+//   - titulo (string): Título del modal (ej: "Éxito", "Error", "Información")
+//   - mensaje (string): Mensaje principal a mostrar (puede contener HTML)
+//   - tipo (string, opcional): Tipo de mensaje ('success', 'error', 'warning', 'info')
+//     - 'success': Mensaje de éxito (verde, icono ✓)
+//     - 'error': Mensaje de error (rojo, icono ✕)
+//     - 'warning': Mensaje de advertencia (amarillo, icono ⚠)
+//     - 'info': Mensaje informativo (azul, icono ℹ) - por defecto
+//   - advertencia (string, opcional): Mensaje de advertencia adicional a mostrar debajo del mensaje principal
+// 
+// Retorna: void (no retorna nada, solo muestra el modal)
+// 
+// Ejemplo de uso:
+//   mostrarMensaje('Éxito', 'Usuario creado correctamente', 'success');
+//   mostrarMensaje('Error', 'No se pudo guardar', 'error', 'Verifique su conexión');
+// ============================================
 function mostrarMensaje(titulo, mensaje, tipo = 'info', advertencia = null) {
+    // ========== OBTENER REFERENCIAS A TODOS LOS ELEMENTOS DEL MODAL ==========
+    // Buscar el elemento del overlay del modal usando su ID 'mensaje-modal-overlay'
+    // getElementById busca un elemento en el documento con el ID especificado
     const modalMensaje = document.getElementById('mensaje-modal-overlay');
+    // Buscar el elemento del título del modal usando su ID 'mensaje-modal-titulo'
+    // Este elemento mostrará el título del mensaje
     const tituloMensaje = document.getElementById('mensaje-modal-titulo');
+    // Buscar el elemento del texto del mensaje usando su ID 'mensaje-modal-texto'
+    // Este elemento mostrará el contenido principal del mensaje
     const textoMensaje = document.getElementById('mensaje-modal-texto');
+    // Buscar el elemento del icono del modal usando su ID 'mensaje-modal-icono'
+    // Este elemento mostrará el icono visual según el tipo de mensaje
     const iconoMensaje = document.getElementById('mensaje-modal-icono');
+    // Buscar el elemento de advertencia del modal usando su ID 'mensaje-modal-advertencia'
+    // Este elemento es opcional y puede mostrar un mensaje de advertencia adicional
+    // Puede ser null si el elemento no existe en el DOM
     const advertenciaMensaje = document.getElementById('mensaje-modal-advertencia');
+    // Buscar el botón de cerrar usando su ID 'btn-cerrar-mensaje'
+    // Este botón se usa en modo simple para cerrar el modal
+    // Puede ser null si el elemento no existe en el DOM
     const btnCerrar = document.getElementById('btn-cerrar-mensaje');
+    // Buscar el botón de cancelar usando su ID 'btn-cancelar-mensaje'
+    // Este botón se usa en modo confirmación para cancelar la acción
+    // Puede ser null si el elemento no existe en el DOM
     const btnCancelar = document.getElementById('btn-cancelar-mensaje');
+    // Buscar el botón de confirmar usando su ID 'btn-confirmar-mensaje'
+    // Este botón se usa en modo confirmación para confirmar la acción
+    // Puede ser null si el elemento no existe en el DOM
     const btnConfirmar = document.getElementById('btn-confirmar-mensaje');
     
+    // ========== VALIDAR QUE LOS ELEMENTOS ESENCIALES EXISTAN ==========
+    // Verificar que los elementos críticos del modal existan antes de continuar
+    // Usar operador lógico OR (||) para verificar si alguno es null, undefined o falsy
+    // Si alguno de los elementos esenciales no existe, salir de la función con return
+    // Esto previene errores de JavaScript si los elementos no están en el DOM
     if (!modalMensaje || !tituloMensaje || !textoMensaje || !iconoMensaje) return;
     
-    // Configurar título y mensaje
-    tituloMensaje.textContent = titulo;
-    textoMensaje.innerHTML = mensaje; // Usar innerHTML para permitir HTML
+    // ========== CONFIGURAR CONTENIDO DEL MODAL ==========
     
-    // Configurar advertencia si existe
+    // Asignar el valor del parámetro 'titulo' al contenido de texto del elemento título
+    // Usar textContent en lugar de innerHTML para evitar interpretación de HTML
+    // textContent escapa automáticamente cualquier HTML que pudiera contener el título
+    tituloMensaje.textContent = titulo;
+    
+    // Asignar el valor del parámetro 'mensaje' al contenido HTML del elemento mensaje
+    // Usar innerHTML en lugar de textContent para permitir HTML básico como <br>, <strong>, etc.
+    // Esto permite formateo básico del mensaje si es necesario
+    // NOTA: innerHTML puede ser vulnerable a XSS si el contenido no es confiable
+    textoMensaje.innerHTML = mensaje;
+    
+    // ========== CONFIGURAR MENSAJE DE ADVERTENCIA ADICIONAL (OPCIONAL) ==========
+    // Verificar si el elemento de advertencia existe antes de intentar usarlo
+    // Esto previene errores si el elemento no está presente en el DOM
     if (advertenciaMensaje) {
+        // Verificar si se proporcionó un mensaje de advertencia (no es null ni undefined)
+        // El parámetro 'advertencia' puede ser null, undefined o un string
         if (advertencia) {
+            // Si se proporciona una advertencia, asignar su valor al contenido de texto del elemento
+            // Usar textContent para evitar interpretación de HTML (por seguridad)
             advertenciaMensaje.textContent = advertencia;
+            // Mostrar el elemento de advertencia cambiando su propiedad display a 'block'
+            // 'block' hace que el elemento sea visible y ocupe todo el ancho disponible
             advertenciaMensaje.style.display = 'block';
         } else {
+            // Si no hay advertencia (es null o undefined), ocultar el elemento
+            // Cambiar la propiedad display a 'none' para ocultar el elemento
+            // 'none' hace que el elemento no sea visible y no ocupe espacio en el DOM
             advertenciaMensaje.style.display = 'none';
         }
     }
     
-    // Configurar icono y color según el tipo
+    // ========== CONFIGURAR ICONO Y COLOR SEGÚN EL TIPO ==========
+    // Usar una estructura switch para determinar qué icono y color usar según el tipo
+    // El switch evalúa el valor del parámetro 'tipo' y ejecuta el caso correspondiente
+    // Cada tipo de mensaje tiene un icono y color de fondo diferentes para mejor UX
     switch(tipo) {
         case 'success':
+            // Si el tipo es 'success' (éxito), ejecutar este bloque de código
+            // Asignar el carácter de check (✓) como contenido de texto del icono
+            // Este símbolo representa éxito/éxito completado
             iconoMensaje.textContent = '✓';
+            // Asignar un gradiente verde como fondo del icono usando la propiedad style.background
+            // linear-gradient crea un gradiente lineal con los colores especificados
+            // 135deg es el ángulo del gradiente (diagonal de arriba-izquierda a abajo-derecha)
+            // #28A745 y #20C997 son los colores verde claro y verde oscuro del gradiente
             iconoMensaje.style.background = 'linear-gradient(135deg, #28A745 0%, #20C997 100%)';
+            // Salir del switch con break para evitar ejecutar los demás casos
             break;
         case 'error':
+            // Si el tipo es 'error', ejecutar este bloque de código
+            // Asignar el carácter X (✕) como contenido de texto del icono
+            // Este símbolo representa error/fallo
             iconoMensaje.textContent = '✕';
+            // Asignar un gradiente rojo como fondo del icono
+            // #DC3545 y #C82333 son los colores rojo claro y rojo oscuro del gradiente
             iconoMensaje.style.background = 'linear-gradient(135deg, #DC3545 0%, #C82333 100%)';
+            // Salir del switch con break para evitar ejecutar los demás casos
             break;
         case 'warning':
+            // Si el tipo es 'warning' (advertencia), ejecutar este bloque de código
+            // Asignar el carácter de alerta (⚠) como contenido de texto del icono
+            // Este símbolo representa advertencia/precaución
             iconoMensaje.textContent = '⚠';
+            // Asignar un gradiente amarillo/naranja como fondo del icono
+            // #FFC107 y #FF9800 son los colores amarillo y naranja del gradiente
             iconoMensaje.style.background = 'linear-gradient(135deg, #FFC107 0%, #FF9800 100%)';
+            // Salir del switch con break para evitar ejecutar los demás casos
             break;
         default: // info
+            // Si el tipo es 'info' o cualquier otro valor (caso por defecto), ejecutar este bloque
+            // El caso default se ejecuta si ningún otro caso coincide con el valor de 'tipo'
+            // Asignar el carácter de información (ℹ) como contenido de texto del icono
+            // Este símbolo representa información general
             iconoMensaje.textContent = 'ℹ';
+            // Asignar un gradiente azul como fondo del icono
+            // #17A2B8 y #138496 son los colores azul claro y azul oscuro del gradiente
             iconoMensaje.style.background = 'linear-gradient(135deg, #17A2B8 0%, #138496 100%)';
     }
     
-    // Modo simple: un solo botón
-    if (btnCerrar) btnCerrar.style.display = 'inline-block';
-    if (btnCancelar) btnCancelar.style.display = 'none';
-    if (btnConfirmar) btnConfirmar.style.display = 'none';
+    // ========== CONFIGURAR BOTONES (MODO SIMPLE: UN SOLO BOTÓN) ==========
+    // En modo simple, solo se muestra el botón "Aceptar"
+    // Los botones de cancelar y confirmar se ocultan (son para modo confirmación)
     
-    // Limpiar event listeners anteriores del botón confirmar
+    // Verificar si el botón cerrar existe antes de modificarlo
+    // Esto previene errores si el elemento no está presente en el DOM
+    if (btnCerrar) {
+        // Mostrar el botón cerrar cambiando su propiedad display a 'inline-block'
+        // 'inline-block' hace que el botón sea visible y mantenga su forma de elemento inline
+        // Esto permite que el botón se muestre en línea con otros elementos
+        btnCerrar.style.display = 'inline-block';
+    }
+    // Verificar si el botón cancelar existe antes de modificarlo
+    if (btnCancelar) {
+        // Ocultar el botón cancelar cambiando su propiedad display a 'none'
+        // 'none' hace que el botón no sea visible y no ocupe espacio en el DOM
+        btnCancelar.style.display = 'none';
+    }
+    // Verificar si el botón confirmar existe antes de modificarlo
     if (btnConfirmar) {
+        // Ocultar el botón confirmar cambiando su propiedad display a 'none'
+        // 'none' hace que el botón no sea visible y no ocupe espacio en el DOM
+        btnConfirmar.style.display = 'none';
+    }
+    
+    // ========== LIMPIAR EVENT LISTENERS ==========
+    // Clonar el botón confirmar para eliminar event listeners anteriores
+    // Esto previene que se acumulen múltiples listeners si se abre el modal varias veces
+    // Verificar si el botón confirmar existe antes de intentar clonarlo
+    if (btnConfirmar) {
+        // Clonar el botón confirmar incluyendo todos sus atributos y estructura
+        // cloneNode(true) crea una copia profunda del elemento (incluye todos los hijos)
+        // El parámetro 'true' indica clonación profunda, 'false' sería clonación superficial
+        // Esto crea un nuevo elemento sin los event listeners asociados al original
         const nuevoBtnConfirmar = btnConfirmar.cloneNode(true);
+        // Reemplazar el botón original con el clon en el DOM
+        // parentNode devuelve el nodo padre del elemento
+        // replaceChild requiere tres parámetros: nuevoNodo, viejoNodo
+        // Esto elimina los event listeners anteriores que puedan estar acumulados
         btnConfirmar.parentNode.replaceChild(nuevoBtnConfirmar, btnConfirmar);
     }
     
-    // Mostrar modal
+    // ========== MOSTRAR EL MODAL ==========
+    // Cambiar el display del modal a 'flex' para mostrarlo
+    // El valor 'flex' activa el modelo de caja flexbox y hace visible el modal con su overlay
+    // 'flex' permite centrar el contenido del modal fácilmente usando flexbox
     modalMensaje.style.display = 'flex';
 }
 
+// ============================================
+// FUNCIÓN: mostrarConfirmacion(titulo, mensaje, advertencia, onConfirmar, tipoBotonConfirmar, textoBotonConfirmar)
+// ============================================
+// Propósito: Muestra un modal de confirmación con dos botones: "Cancelar" y "Confirmar".
+// Se usa para confirmar acciones importantes antes de ejecutarlas (ej: eliminar, copiar).
+// 
+// Parámetros:
+//   - titulo (string): Título del modal de confirmación
+//   - mensaje (string): Mensaje principal a mostrar (puede contener HTML)
+//   - advertencia (string | null): Mensaje de advertencia adicional (ej: "Esta acción no se puede deshacer")
+//   - onConfirmar (function): Función callback que se ejecuta cuando el usuario presiona "Confirmar"
+//   - tipoBotonConfirmar (string, opcional): Tipo de botón confirmar ('danger' o 'primary')
+//     - 'danger': Botón rojo (para acciones destructivas como eliminar)
+//     - 'primary': Botón normal (para otras confirmaciones)
+//   - textoBotonConfirmar (string | null, opcional): Texto personalizado para el botón confirmar
+//     Si es null, usa 'Eliminar' para tipo 'danger' o 'Confirmar' para otros tipos
+// 
+// Retorna: void (no retorna nada, solo muestra el modal)
+// 
+// Ejemplo de uso:
+//   mostrarConfirmacion(
+//       'Confirmar Eliminación',
+//       '¿Estás seguro de que deseas eliminar esta calificación?',
+//       'Esta acción no se puede deshacer.',
+//       function() { eliminarCalificacion(id); },
+//       'danger'
+//   );
+// ============================================
 function mostrarConfirmacion(titulo, mensaje, advertencia, onConfirmar, tipoBotonConfirmar = 'danger', textoBotonConfirmar = null) {
+    // Obtener referencias a todos los elementos del modal
     const modalMensaje = document.getElementById('mensaje-modal-overlay');
     const tituloMensaje = document.getElementById('mensaje-modal-titulo');
     const textoMensaje = document.getElementById('mensaje-modal-texto');
@@ -93,13 +302,16 @@ function mostrarConfirmacion(titulo, mensaje, advertencia, onConfirmar, tipoBoto
     const btnCancelar = document.getElementById('btn-cancelar-mensaje');
     const btnConfirmar = document.getElementById('btn-confirmar-mensaje');
     
+    // Validar que los elementos esenciales existan antes de continuar
     if (!modalMensaje || !tituloMensaje || !textoMensaje || !iconoMensaje) return;
     
-    // Configurar título y mensaje
+    // ========== CONFIGURAR CONTENIDO DEL MODAL ==========
+    
+    // Establecer el título y mensaje principal
     tituloMensaje.textContent = titulo;
     textoMensaje.innerHTML = mensaje;
     
-    // Configurar advertencia
+    // Configurar mensaje de advertencia (si se proporciona)
     if (advertenciaMensaje) {
         if (advertencia) {
             advertenciaMensaje.textContent = advertencia;
@@ -109,62 +321,158 @@ function mostrarConfirmacion(titulo, mensaje, advertencia, onConfirmar, tipoBoto
         }
     }
     
-    // Configurar icono de advertencia
+    // ========== CONFIGURAR ICONO (SIEMPRE ADVERTENCIA) ==========
+    // Los modales de confirmación siempre usan el icono de advertencia
     iconoMensaje.textContent = '⚠';
     iconoMensaje.style.background = 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)';
     
-    // Modo confirmación: dos botones
+    // ========== CONFIGURAR BOTONES (MODO CONFIRMACIÓN: DOS BOTONES) ==========
+    // En modo confirmación, se muestran dos botones: Cancelar y Confirmar
+    // El botón de cerrar simple se oculta
+    
+    // Ocultar botón de cerrar simple
     if (btnCerrar) btnCerrar.style.display = 'none';
+    
+    // Mostrar botón de cancelar
     if (btnCancelar) btnCancelar.style.display = 'inline-block';
+    
+    // Configurar botón de confirmar
     if (btnConfirmar) {
+        // Mostrar el botón
         btnConfirmar.style.display = 'inline-block';
+        
         // Configurar estilo del botón según el tipo
+        // - 'danger': Botón rojo (para acciones destructivas)
+        // - Otros: Botón normal
         if (tipoBotonConfirmar === 'danger') {
             btnConfirmar.className = 'btn btn-danger-modal';
         } else {
             btnConfirmar.className = 'btn';
         }
+        
         // Configurar texto del botón
+        // Si se proporciona texto personalizado, usarlo
+        // Si no, usar texto por defecto según el tipo
         if (textoBotonConfirmar) {
             btnConfirmar.textContent = textoBotonConfirmar;
         } else {
+            // Texto por defecto: 'Eliminar' para danger, 'Confirmar' para otros
             btnConfirmar.textContent = tipoBotonConfirmar === 'danger' ? 'Eliminar' : 'Confirmar';
         }
-        // Agregar event listener
+        
+        // Agregar event listener al botón confirmar
+        // Cuando se hace clic, cierra el modal y ejecuta la función callback
         btnConfirmar.onclick = function() {
-            cerrarModalMensaje();
-            if (onConfirmar) onConfirmar();
+            cerrarModalMensaje(); // Cerrar el modal primero
+            if (onConfirmar) onConfirmar(); // Ejecutar la función de confirmación
         };
     }
     
-    // Mostrar modal
+    // ========== MOSTRAR EL MODAL ==========
     modalMensaje.style.display = 'flex';
 }
 
+// ============================================
+// FUNCIÓN: cerrarModalMensaje()
+// ============================================
+// Propósito: Cierra el modal de mensajes ocultándolo.
+// 
+// Flujo:
+//   1. Obtiene la referencia al modal
+//   2. Cambia su display a 'none' para ocultarlo
+// 
+// Retorna: void
+// 
+// Ejemplo de uso:
+//   cerrarModalMensaje();
+// ============================================
 function cerrarModalMensaje() {
+    // Buscar el elemento del overlay del modal usando su ID 'mensaje-modal-overlay'
+    // getElementById busca un elemento en el documento con el ID especificado
+    // Este método devuelve el elemento si existe, o null si no existe
     const modalMensaje = document.getElementById('mensaje-modal-overlay');
+    // Verificar si el elemento del modal existe antes de intentar modificarlo
+    // Esto previene errores de JavaScript si el elemento no está en el DOM
     if (modalMensaje) {
+        // Ocultar el modal cambiando su propiedad display a 'none'
+        // 'none' hace que el elemento no sea visible y no ocupe espacio en el DOM
+        // Esto efectivamente cierra el modal y permite que el usuario vea el contenido detrás
         modalMensaje.style.display = 'none';
     }
 }
 
-// Función para inicializar los event listeners del modal de mensajes
+// ============================================
+// FUNCIÓN: inicializarModalMensaje()
+// ============================================
+// Propósito: Configura los event listeners para todos los botones que cierran el modal de mensajes.
+// 
+// Flujo de ejecución:
+//   1. Obtiene referencias a todos los botones de cerrar
+//   2. Agrega event listeners a cada botón para que llame a cerrarModalMensaje() al hacer clic
+// 
+// Botones configurados:
+//   - btn-cerrar-mensaje: Botón "Aceptar" del modo simple
+//   - btn-cancelar-mensaje: Botón "Cancelar" del modo confirmación
+//   - btn-cerrar-mensaje-x: Botón X en la esquina superior derecha del modal
+// 
+// Nota: El event listener para cerrar al hacer clic fuera del modal fue eliminado
+//       por solicitud del usuario para evitar cierres accidentales.
+// 
+// Retorna: void
+// 
+// Llamada: Se ejecuta automáticamente cuando se carga el DOM (DOMContentLoaded)
+// ============================================
 function inicializarModalMensaje() {
+    // ========== OBTENER REFERENCIAS A TODOS LOS BOTONES DE CERRAR ==========
+    // Buscar el botón de cerrar usando su ID 'btn-cerrar-mensaje'
+    // Este botón es el botón "Aceptar" que se usa en modo simple
+    // getElementById devuelve el elemento si existe, o null si no existe
     const btnCerrarMensaje = document.getElementById('btn-cerrar-mensaje');
+    // Buscar el botón de cancelar usando su ID 'btn-cancelar-mensaje'
+    // Este botón es el botón "Cancelar" que se usa en modo confirmación
+    // Puede ser null si el elemento no existe en el DOM
     const btnCancelarMensaje = document.getElementById('btn-cancelar-mensaje');
+    // Buscar el botón X usando su ID 'btn-cerrar-mensaje-x'
+    // Este botón está en la esquina superior derecha del modal
+    // Puede ser null si el elemento no existe en el DOM
     const btnCerrarMensajeX = document.getElementById('btn-cerrar-mensaje-x');
+    // Buscar el overlay del modal usando su ID 'mensaje-modal-overlay'
+    // Este elemento es el contenedor principal del modal
+    // Puede ser null si el elemento no existe en el DOM
     const modalMensajeOverlay = document.getElementById('mensaje-modal-overlay');
     
+    // ========== CONFIGURAR EVENT LISTENERS PARA TODOS LOS BOTONES DE CERRAR ==========
+    
+    // Configurar event listener para el botón "Aceptar" (modo simple)
+    // Verificar si el botón existe antes de agregar el listener
     if (btnCerrarMensaje) {
+        // Agregar un event listener al botón para el evento 'click'
+        // addEventListener toma dos parámetros: tipo de evento y función callback
+        // Cuando el usuario hace clic en el botón, se ejecuta la función cerrarModalMensaje
+        // Esto permite cerrar el modal al presionar el botón "Aceptar"
         btnCerrarMensaje.addEventListener('click', cerrarModalMensaje);
     }
+    
+    // Configurar event listener para el botón "Cancelar" (modo confirmación)
+    // Verificar si el botón existe antes de agregar el listener
     if (btnCancelarMensaje) {
+        // Agregar un event listener al botón para el evento 'click'
+        // Cuando el usuario hace clic en "Cancelar", se cierra el modal sin ejecutar acción
+        // Esto permite cancelar la acción en modo confirmación
         btnCancelarMensaje.addEventListener('click', cerrarModalMensaje);
     }
+    
+    // Configurar event listener para el botón X (esquina superior derecha)
+    // Verificar si el botón existe antes de agregar el listener
     if (btnCerrarMensajeX) {
+        // Agregar un event listener al botón X para el evento 'click'
+        // Cuando el usuario hace clic en la X, se cierra el modal
+        // Esto proporciona una forma intuitiva de cerrar el modal
         btnCerrarMensajeX.addEventListener('click', cerrarModalMensaje);
     }
-    // Event listener para cerrar modal al hacer clic fuera eliminado por solicitud del usuario
+    
+    // Nota: Event listener para cerrar modal al hacer clic fuera eliminado por solicitud del usuario
+    //       para evitar cierres accidentales del modal.
 }
 
 // Hacer las funciones disponibles globalmente

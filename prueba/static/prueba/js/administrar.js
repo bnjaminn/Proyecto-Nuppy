@@ -1,98 +1,373 @@
-// Sistema de Notificaciones Elegante
+// ============================================
+// ADMINISTRAR.JS - JavaScript para Administración de Usuarios
+// ============================================
+// Este archivo contiene la lógica JavaScript para la página de administración de usuarios.
+// Maneja:
+// - Selección/deselección de usuarios
+// - Crear nuevos usuarios
+// - Modificar usuarios existentes
+// - Eliminar usuarios (con confirmación)
+// - Validación de formularios en el cliente
+// ============================================
+
+// ============================================
+// SISTEMA DE NOTIFICACIONES
+// ============================================
+// Muestra notificaciones elegantes en la esquina superior de la pantalla.
+// Las notificaciones aparecen y desaparecen automáticamente después de 4 segundos.
+// 
+// Tipos de notificación:
+//   - success: Éxito (verde, icono ✓)
+//   - error: Error (rojo, icono ✕)
+//   - warning: Advertencia (amarillo, icono ⚠)
+//   - info: Información (azul, icono ℹ)
+
+// ============================================
+// FUNCIÓN: mostrarNotificacion(mensaje, tipo)
+// ============================================
+// Propósito: Crea y muestra una notificación temporal en la esquina de la pantalla.
+// 
+// Parámetros:
+//   - mensaje (string): Texto a mostrar en la notificación
+//   - tipo (string, opcional): Tipo de notificación ('success', 'error', 'warning', 'info')
+//     Por defecto: 'success'
+// 
+// Retorna: void
+// 
+// Flujo de ejecución:
+//   1. Crea el contenedor de notificaciones si no existe
+//   2. Crea un elemento div para la notificación
+//   3. Añade el icono correspondiente según el tipo
+//   4. Agrega la notificación al contenedor
+//   5. Anima la entrada de la notificación
+//   6. Programa la eliminación automática después de 4 segundos
+// 
+// Ejemplo de uso:
+//   mostrarNotificacion('Usuario creado exitosamente', 'success');
+//   mostrarNotificacion('Error al guardar', 'error');
+// ============================================
 function mostrarNotificacion(mensaje, tipo = 'success') {
-    // Crear contenedor de notificaciones si no existe
+    // ========== CREAR CONTENEDOR SI NO EXISTE ==========
+    // El contenedor de notificaciones es un div único que contiene todas las notificaciones
     let notificacionesContainer = document.getElementById('notificaciones-container');
     if (!notificacionesContainer) {
+        // Si no existe, crearlo y agregarlo al body
         notificacionesContainer = document.createElement('div');
         notificacionesContainer.id = 'notificaciones-container';
         document.body.appendChild(notificacionesContainer);
     }
 
-    // Crear notificación
+    // ========== CREAR ELEMENTO DE NOTIFICACIÓN ==========
+    // Crear un nuevo div para esta notificación específica
     const notificacion = document.createElement('div');
+    
+    // Asignar clases CSS según el tipo de notificación
+    // Las clases CSS proporcionan los estilos visuales (color, borde, etc.)
     notificacion.className = `notificacion notificacion-${tipo}`;
+    
+    // Establecer el texto del mensaje
     notificacion.textContent = mensaje;
     
-    // Añadir icono según tipo
+    // ========== AÑADIR ICONO SEGÚN EL TIPO ==========
+    // Cada tipo de notificación tiene un icono diferente para mejor identificación visual
     const icono = document.createElement('span');
     icono.className = 'notificacion-icono';
+    
+    // Asignar el icono correspondiente según el tipo
     if (tipo === 'success') {
-        icono.textContent = '✓';
+        icono.textContent = '✓'; // Check verde para éxito
     } else if (tipo === 'error') {
-        icono.textContent = '✕';
+        icono.textContent = '✕'; // X roja para error
     } else if (tipo === 'warning') {
-        icono.textContent = '⚠';
+        icono.textContent = '⚠'; // Alerta amarilla para advertencia
     } else {
-        icono.textContent = 'ℹ';
+        icono.textContent = 'ℹ'; // Información azul para info
     }
+    
+    // Insertar el icono al inicio de la notificación (antes del texto)
     notificacion.insertBefore(icono, notificacion.firstChild);
 
+    // ========== AGREGAR NOTIFICACIÓN AL CONTENEDOR ==========
+    // Agregar la notificación al contenedor para que sea visible
     notificacionesContainer.appendChild(notificacion);
 
-    // Animar entrada
+    // ========== ANIMAR ENTRADA ==========
+    // Agregar la clase 'show' después de un pequeño delay para activar la animación CSS
+    // El delay de 10ms asegura que el elemento esté en el DOM antes de animar
     setTimeout(() => notificacion.classList.add('show'), 10);
 
-    // Auto-eliminar después de 4 segundos
+    // ========== ELIMINACIÓN AUTOMÁTICA ==========
+    // Programar la eliminación automática de la notificación después de 4 segundos
+    // Primero remueve la clase 'show' para animar la salida (300ms de animación CSS)
+    // Luego elimina el elemento del DOM completamente
     setTimeout(() => {
+        // Remover clase 'show' para activar animación de salida
         notificacion.classList.remove('show');
+        // Esperar a que termine la animación (300ms) y luego eliminar el elemento
         setTimeout(() => notificacion.remove(), 300);
     }, 4000);
 }
 
-// Sistema de Indicadores de Carga
+// ============================================
+// SISTEMA DE INDICADORES DE CARGA
+// ============================================
+// Muestra un overlay con spinner de carga para indicar al usuario que una operación está en progreso.
+// Útil durante peticiones AJAX, creación/modificación de usuarios, etc.
+
+// ============================================
+// FUNCIÓN: mostrarCarga(mensaje)
+// ============================================
+// Propósito: Muestra un overlay de carga con un spinner y mensaje personalizado.
+// 
+// Parámetros:
+//   - mensaje (string, opcional): Mensaje a mostrar junto al spinner
+//     Por defecto: 'Procesando...'
+// 
+// Retorna: void
+// 
+// Flujo de ejecución:
+//   1. Verifica si el overlay de carga ya existe
+//   2. Si no existe, lo crea con el HTML del spinner y mensaje
+//   3. Si existe, solo actualiza el mensaje
+//   4. Muestra el overlay cambiando su display a 'flex'
+// 
+// Ejemplo de uso:
+//   mostrarCarga('Creando usuario...');
+//   mostrarCarga('Eliminando usuario...');
+// ============================================
 function mostrarCarga(mensaje = 'Procesando...') {
+    // Buscar el overlay de carga si ya existe usando su ID 'carga-overlay'
+    // getElementById busca un elemento en el documento con el ID especificado
+    // Si no existe, devuelve null
+    // Usar 'let' en lugar de 'const' porque puede necesitar reasignarse si no existe
     let overlayCarga = document.getElementById('carga-overlay');
+    
+    // Verificar si el overlay de carga no existe (es null o undefined)
+    // Si no existe, necesitamos crearlo
     if (!overlayCarga) {
+        // ========== CREAR EL OVERLAY DE CARGA ==========
+        // Crear un nuevo elemento div para el overlay de carga
+        // createElement crea un nuevo elemento HTML del tipo especificado
+        // Este elemento aún no está en el DOM, solo existe en memoria
         overlayCarga = document.createElement('div');
+        // Asignar el ID 'carga-overlay' al nuevo elemento
+        // El ID permite identificarlo fácilmente después
+        // También permite aplicar estilos CSS específicos a este elemento
         overlayCarga.id = 'carga-overlay';
+        
+        // Asignar el HTML interno del overlay
+        // innerHTML permite establecer el contenido HTML del elemento
+        // Usar template literals (backticks) para incluir el parámetro 'mensaje'
+        // Estructura HTML del overlay:
+        // - Un div contenedor con clase 'carga-spinner' que contiene todo
+        // - Un div con clase 'spinner' que muestra la animación CSS de rotación
+        // - Un párrafo con clase 'carga-mensaje' que muestra el mensaje personalizado
+        // El mensaje se interpola usando ${mensaje} dentro del template literal
         overlayCarga.innerHTML = `
             <div class="carga-spinner">
                 <div class="spinner"></div>
                 <p class="carga-mensaje">${mensaje}</p>
             </div>
         `;
+        
+        // Agregar el overlay al final del body del documento
+        // appendChild agrega un elemento hijo al final de la lista de hijos del elemento padre
+        // document.body es una referencia al elemento <body> del documento
+        // Esto hace que el overlay sea visible en la página
         document.body.appendChild(overlayCarga);
     } else {
-        overlayCarga.querySelector('.carga-mensaje').textContent = mensaje;
+        // ========== ACTUALIZAR EL MENSAJE SI EL OVERLAY YA EXISTE ==========
+        // Si el overlay ya existe, no necesitamos recrearlo
+        // Solo necesitamos actualizar el mensaje para evitar crear múltiples overlays
+        
+        // Buscar el elemento del mensaje dentro del overlay usando querySelector
+        // querySelector busca el primer elemento que coincida con el selector CSS '.carga-mensaje'
+        // '.carga-mensaje' es un selector de clase que busca elementos con esa clase
+        const mensajeElement = overlayCarga.querySelector('.carga-mensaje');
+        // Verificar si el elemento del mensaje existe antes de intentar modificarlo
+        // Esto previene errores si la estructura HTML cambió
+        if (mensajeElement) {
+            // Actualizar el contenido de texto del mensaje con el nuevo valor
+            // textContent establece el texto plano del elemento (sin HTML)
+            // Usar textContent en lugar de innerHTML para evitar inyección de HTML
+            mensajeElement.textContent = mensaje;
+        }
     }
+    
+    // Mostrar el overlay cambiando su propiedad display a 'flex'
+    // 'flex' activa el modelo de caja flexbox que permite centrar el contenido fácilmente
+    // El overlay cubre toda la pantalla y previene interacciones del usuario con otros elementos
+    // Esto indica visualmente que una operación está en progreso
     overlayCarga.style.display = 'flex';
 }
 
+// ============================================
+// FUNCIÓN: ocultarCarga()
+// ============================================
+// Propósito: Oculta el overlay de carga.
+// 
+// Retorna: void
+// 
+// Flujo de ejecución:
+//   1. Obtiene el overlay de carga
+//   2. Si existe, cambia su display a 'none' para ocultarlo
+// 
+// Ejemplo de uso:
+//   ocultarCarga();
+// 
+// Nota: Se debe llamar después de completar una operación asíncrona para
+//       permitir que el usuario vuelva a interactuar con la página.
+// ============================================
 function ocultarCarga() {
+    // Buscar el overlay de carga usando su ID 'carga-overlay'
+    // getElementById busca un elemento en el documento con el ID especificado
+    // Devuelve el elemento si existe, o null si no existe
     const overlayCarga = document.getElementById('carga-overlay');
+    // Verificar si el overlay existe antes de intentar modificarlo
+    // Esto previene errores de JavaScript si el elemento no está en el DOM
     if (overlayCarga) {
+        // Ocultar el overlay cambiando su propiedad display a 'none'
+        // 'none' hace que el elemento no sea visible y no ocupe espacio en el DOM
+        // Esto efectivamente oculta el indicador de carga y permite que el usuario vuelva a interactuar
+        // con la página después de que la operación asíncrona haya terminado
         overlayCarga.style.display = 'none';
     }
 }
 
-// Función para limpiar errores
+// ============================================
+// FUNCIÓN: limpiarMensajeError(msg)
+// ============================================
+// Propósito: Convierte mensajes de error técnicos del servidor en mensajes amigables para el usuario.
+// 
+// Parámetros:
+//   - msg (string): Mensaje de error original del servidor o excepción
+// 
+// Retorna:
+//   - string: Mensaje de error limpio y amigable para mostrar al usuario
+// 
+// Flujo de ejecución:
+//   1. Valida que el mensaje exista, si no, retorna "Error desconocido"
+//   2. Convierte el mensaje a minúsculas para comparación sin case-sensitive
+//   3. Busca patrones específicos en el mensaje para identificar el tipo de error
+//   4. Retorna un mensaje amigable correspondiente al tipo de error encontrado
+//   5. Si no encuentra un patrón específico, limpia el mensaje (remueve HTML) y lo trunca
+// 
+// Tipos de errores manejados:
+//   - Duplicate key / Correo / Email: Correo ya registrado
+//   - 400 / Bad request: Error de validación
+//   - 500: Error interno del servidor
+//   - CSRF / Token: Error de seguridad
+//   - JSON / Syntax: Error al procesar respuesta
+//   - Otros: Mensaje original limpiado y truncado
+// 
+// Ejemplo de uso:
+//   const errorLimpio = limpiarMensajeError(error.message);
+//   mostrarMensaje('Error', errorLimpio, 'error');
+// ============================================
 function limpiarMensajeError(msg) {
-    if (!msg) return "Error desconocido.";
+    // ========== VALIDAR QUE EL MENSAJE EXISTA ==========
+    // Verificar si el mensaje es null, undefined, vacío o cualquier valor falsy
+    // Si el mensaje no existe, retornar un mensaje de error genérico
+    // Esto previene errores al intentar procesar un mensaje nulo
+    if (!msg) {
+        // Retornar un mensaje de error genérico si no hay mensaje
+        // Este es el mensaje que se mostrará al usuario si no hay información específica
+        return "Error desconocido.";
+    }
+    
+    // ========== CONVERTIR MENSAJE A MINÚSCULAS ==========
+    // Convertir el mensaje a minúsculas usando el método toLowerCase()
+    // Esto permite comparaciones sin case-sensitive (ignorar mayúsculas/minúsculas)
+    // Por ejemplo, "ERROR", "Error" y "error" serán tratados igual
+    // Guardar el resultado en una constante 'lower' para usarlo en las comparaciones
     const lower = msg.toLowerCase();
+    
+    // ========== DETECTAR TIPOS DE ERRORES ESPECÍFICOS ==========
+    // Buscar patrones específicos en el mensaje de error para identificar el tipo
+    // Cada tipo de error tiene un mensaje amigable diferente para el usuario
+    
+    // Error: Correo duplicado (base de datos)
+    // Verificar si el mensaje contiene palabras clave relacionadas con correo duplicado
+    // includes() verifica si un string contiene el substring especificado
+    // Usar operador OR (||) para verificar múltiples posibles palabras clave
+    // Detecta errores de clave duplicada en MongoDB o validaciones de correo
     if (lower.includes("duplicate key") || lower.includes("correo") || lower.includes("email")) {
+        // Retornar un mensaje amigable sobre correo duplicado
+        // Este mensaje es más claro que el mensaje técnico original
         return "Este correo electrónico ya está registrado.";
-    } else if (lower.includes("400") || lower.includes("bad request")) {
+    }
+    // Error 400: Solicitud incorrecta (validación fallida)
+    // Verificar si el mensaje contiene "400" o "bad request"
+    // El código 400 indica que la solicitud del cliente fue incorrecta
+    // Generalmente significa que los datos enviados no pasaron la validación del servidor
+    else if (lower.includes("400") || lower.includes("bad request")) {
+        // Retornar un mensaje que indica que debe verificar los datos ingresados
         return "Verifica los datos ingresados. Es posible que el correo ya exista.";
-    } else if (lower.includes("500")) {
+    }
+    // Error 500: Error interno del servidor
+    // Verificar si el mensaje contiene "500"
+    // El código 500 indica un error en el servidor, no es culpa del usuario
+    else if (lower.includes("500")) {
+        // Retornar un mensaje que indica que es un problema del servidor
+        // No culpamos al usuario, simplemente le pedimos que intente más tarde
         return "Error interno del servidor. Intenta más tarde.";
-    } else if (lower.includes("csrf") || lower.includes("token")) {
+    }
+    // Error CSRF: Token de seguridad inválido
+    // Verificar si el mensaje contiene "csrf" o "token"
+    // CSRF (Cross-Site Request Forgery) es un error de seguridad
+    // Requiere recargar la página para obtener un nuevo token
+    else if (lower.includes("csrf") || lower.includes("token")) {
+        // Retornar un mensaje que indica que debe recargar la página
         return "Error de seguridad. Recarga la página e inténtalo nuevamente.";
-    } else if (lower.includes("json") || lower.includes("syntax")) {
+    }
+    // Error de JSON: Respuesta malformada del servidor
+    // Verificar si el mensaje contiene "json" o "syntax"
+    // Esto indica un problema al parsear la respuesta JSON del servidor
+    else if (lower.includes("json") || lower.includes("syntax")) {
+        // Retornar un mensaje sobre error al procesar la respuesta
         return "Error al procesar la respuesta del servidor.";
     }
+    
+    // ========== LIMPIAR Y TRUNCAR MENSAJE GENÉRICO ==========
+    // Si no se detecta un tipo específico de error, limpiar el mensaje original
+    // Esto asegura que el mensaje sea seguro y legible
+    
+    // Paso 1: Remover cualquier HTML del mensaje usando regex
+    // replace() reemplaza todas las coincidencias del patrón con una cadena vacía
+    // Patrón regex: /<[^>]*>?/gm
+    //   - <[^>]*>: Coincide con cualquier etiqueta HTML (<tag> o </tag>)
+    //   - ?: Hace el match opcional (para casos como < > sin etiqueta)
+    //   - g: flag global (busca todas las coincidencias, no solo la primera)
+    //   - m: flag multilínea (permite coincidencias en múltiples líneas)
+    // Esto previene inyección de HTML en el mensaje de error
+    
+    // Paso 2: Truncar el mensaje a 300 caracteres usando slice()
+    // slice(0, 300) toma los primeros 300 caracteres del string
+    // Si el mensaje es más largo, se corta; si es más corto, se mantiene igual
+    // Esto asegura que el mensaje no sea demasiado largo para mostrar al usuario
+    
+    // Retornar el mensaje limpio y truncado
     return msg.replace(/<[^>]*>?/gm, "").slice(0, 300);
 }
 
-// Espera a que TODO el HTML esté cargado y listo antes de ejecutar el código
+// INICIALIZACIÓN AL CARGAR EL DOCUMENTO
+// ======================================
+// Espera a que TODO el HTML esté cargado y listo antes de ejecutar el código.
+// Esto asegura que todos los elementos del DOM estén disponibles.
 document.addEventListener('DOMContentLoaded', function() { 
     console.log("DOM Cargado. Iniciando TODOS los scripts...");
     
     // Inicializar el modal de mensajes si las funciones están disponibles
+    // (el modal se define en home.js y está disponible globalmente)
     if (typeof inicializarModalMensaje === 'function') {
         inicializarModalMensaje();
     } 
 
-    //SECCION 1: Selección/Deseleccion de Usuarios
+    // ============================================
+    // SECCIÓN 1: SELECCIÓN/DESELECCIÓN DE USUARIOS
+    // ============================================
+    // Permite seleccionar usuarios haciendo clic en sus tarjetas.
+    // Los botones de modificar/eliminar se habilitan según la cantidad seleccionada.
     const userCards = document.querySelectorAll('.user-card');
     const btnModificar = document.querySelector('#btn-modificar-usuario');
     const btnEliminar = document.querySelector('#btn-eliminar-usuario');  

@@ -1,4 +1,19 @@
 {% load static %}
+<!-- 
+    =======================================================
+    Permite a los administradores gestionar usuarios del sistema.
+    Solo accesible para usuarios con rol de administrador.
+    
+    Funcionalidades:
+    - Ver todos los usuarios en un grid de tarjetas
+    - Crear nuevos usuarios
+    - Modificar usuarios existentes (seleccionar 1 usuario)
+    - Eliminar usuarios (seleccionar 1 o más usuarios)
+    - Ver logs del sistema
+    - Seleccionar usuarios haciendo clic en sus tarjetas
+    
+    Los botones de modificar/eliminar se habilitan según la cantidad de usuarios seleccionados.
+-->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -45,37 +60,57 @@
         </div>
     </header>
 
+    <!-- CONTENIDO PRINCIPAL: ADMINISTRACIÓN DE USUARIOS -->
     <main class="admin-container">
-        
         <div class="user-management-layout">
-            
+            <!-- SECCIÓN DE BOTONES DE ACCIÓN
+                 =============================
+                 Botones para crear, modificar y eliminar usuarios.
+                 Los botones de modificar/eliminar se habilitan según la selección.
+            -->
             <div class="user-actions">
                 <button class="btn" id="btn-abrir-crear-usuario">Crear Usuario</button>
+                <!-- Botón Modificar: Solo se habilita cuando hay exactamente 1 usuario seleccionado -->
                 <button class="btn btn-action-orange" id="btn-modificar-usuario" disabled>MODIFICAR</button> 
+                <!-- Botón Eliminar: Se habilita cuando hay 1 o más usuarios seleccionados -->
                 <button class="btn btn-action-orange" id="btn-eliminar-usuario" disabled>ELIMINAR</button> 
                 
                 {% if is_admin %}
                     <a href="{% url 'ver_logs' %}" class="btn btn-warning" style="margin-left: 10px;">Ver Logs</a>
                 {% endif %}
-                </div>
+            </div>
 
+            <!-- GRID DE TARJETAS DE USUARIOS
+                 =============================
+                 Muestra todos los usuarios del sistema en un grid responsivo.
+                 Cada tarjeta es clickeable para seleccionar/deseleccionar usuarios.
+            -->
             <div class="user-grid">
-                
                 {% for usuario in lista_usuarios %}
+                    <!-- TARJETA DE USUARIO
+                         ==================
+                         Cada tarjeta representa un usuario.
+                         Contiene: foto de perfil, nombre, correo y rol.
+                         Se puede hacer clic para seleccionar/deseleccionar.
+                    -->
                     <div class="user-card" 
                          data-user-id="{{ usuario.id }}"
                          data-correo="{{ usuario.correo }}"
                          data-nombre="{{ usuario.nombre }}"
                          data-rol="{% if usuario.rol %}true{% else %}false{% endif %}"> 
+                        <!-- Contenedor de la foto de perfil -->
                         <div class="user-card-avatar-container">
                             {% if usuario.foto_perfil %}
+                                <!-- Foto de perfil del usuario (si existe) -->
                                 <img src="/media/{{ usuario.foto_perfil }}" alt="Foto de {{ usuario.nombre }}" class="user-card-avatar">
                             {% else %}
+                                <!-- Placeholder con la inicial del nombre (si no hay foto) -->
                                 <div class="user-card-avatar user-card-avatar-placeholder">
                                     <span>{{ usuario.nombre|first|upper }}</span>
                                 </div>
                             {% endif %}
                         </div>
+                        <!-- Cuerpo de la tarjeta: nombre, correo y rol -->
                         <div class="user-card-body">
                             <h4 class="user-card-name">{{ usuario.nombre }}</h4>
                             <p class="user-card-email">{{ usuario.correo }}</p>
@@ -91,7 +126,6 @@
                 {% empty %}
                     <p>No hay usuarios registrados.</p>
                 {% endfor %}
-
             </div>
         </div>
     </main> 
@@ -100,10 +134,14 @@
     {% include 'prueba/modal_modificar_usuario.html' %}
     {% include 'prueba/modal_mensaje.html' %}
 
+    <!-- CONFIGURACIÓN DE VARIABLES GLOBALES PARA JAVASCRIPT
+         ====================================================
+         Pasa URLs y datos de Django al JavaScript para peticiones AJAX.
+    -->
     <script>
-        // Variable global para la URL de eliminar usuarios (necesaria para JavaScript externo)
+        // URL para eliminar usuarios (usada por administrar.js)
         window.ELIMINAR_USUARIOS_URL = "{% url 'eliminar_usuarios' %}";
-        // ID del usuario actual para prevenir autoeliminación
+        // ID del usuario actual: previene que el usuario se elimine a sí mismo
         window.CURRENT_USER_ID = "{{ current_user_id }}";
     </script>
     

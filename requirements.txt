@@ -1,5 +1,80 @@
+# ============================================
+# REQUIREMENTS.TXT - Dependencias del Proyecto
+# ============================================
+# Este archivo lista todas las librerías Python necesarias para el proyecto.
+# Instalar con: pip install -r requirements.txt
+# ============================================
+
+# DJANGO - Framework web principal
+# ============================================
+# Versión: >=5.1.0,<6.0.0
+# Uso: Framework web completo para la aplicación
+# Archivos donde se usa:
+#   - nuppy/manage.py (punto de entrada)
+#   - nuppy/nuppy/settings.py (configuraciones)
+#   - nuppy/nuppy/urls.py (rutas)
+#   - nuppy/prueba/urls.py (rutas de la app)
+#   - nuppy/prueba/views.py (vistas - todas las funciones)
+#   - nuppy/prueba/formulario.py (formularios Django)
+#   - nuppy/prueba/admin.py (panel de administración)
+#   - Todos los templates HTML (sintaxis {% %})
 Django>=5.1.0,<6.0.0
+
+# MONGOENGINE - ORM para MongoDB
+# ============================================
+# Versión: >=0.29.0,<0.30.0
+# Uso: ORM (Object-Relational Mapping) para interactuar con MongoDB
+# Archivos donde se usa:
+#   - nuppy/nuppy/settings.py (línea 84-88: conexión a MongoDB)
+#   - nuppy/prueba/models.py (todos los modelos: usuarios, Calificacion, Log)
+#   - nuppy/prueba/views.py (todas las vistas que interactúan con la BD)
+#     * _crear_log() - crear logs
+#     * login_view() - autenticar usuarios
+#     * todas las vistas CRUD de usuarios y calificaciones
 mongoengine>=0.29.0,<0.30.0
+
+# PILLOW - Procesamiento de imágenes
+# ============================================
+# Versión: >=11.0.0,<12.0.0
+# Uso: Redimensionar y procesar fotos de perfil de usuarios
+# Archivos donde se usa:
+#   - nuppy/prueba/views.py
+#     * _guardar_foto_perfil() (líneas 78-118)
+#     * crear_usuario_view() - al crear usuario con foto
+#     * modificar_usuario_view() - al modificar foto de perfil
+# Funcionalidad: Redimensiona imágenes a máximo 500x500px antes de guardarlas
 Pillow>=11.0.0,<12.0.0
+
+# PANDAS - Procesamiento de datos CSV
+# ============================================
+# Versión: >=2.0.0,<3.0.0
+# Uso: Leer y procesar archivos CSV para carga masiva de calificaciones
+# Archivos donde se usa:
+#   - nuppy/prueba/views.py
+#     * preview_factor_view() (línea 1367+) - previsualizar CSV con factores
+#     * preview_monto_view() (línea 1449+) - previsualizar CSV con montos
+#     * cargar_factor_view() (línea 1536+) - cargar CSV con factores calculados
+#     * cargar_monto_view() (línea 1747+) - cargar CSV con montos (calcular factores)
+# Funcionalidad: 
+#   - Lee archivos CSV con pandas.read_csv()
+#   - Convierte datos a DataFrame para procesamiento
+#   - Maneja diferentes encodings (UTF-8, latin-1)
+#   - Procesa filas y convierte tipos de datos
 pandas>=2.0.0,<3.0.0
+
+# BCRYPT - Hashing de contraseñas
+# ============================================
+# Versión: >=4.0.0,<5.0.0
+# Uso: Hashear contraseñas de usuarios de forma segura (nunca guardar en texto plano)
+# Archivos donde se usa:
+#   - nuppy/prueba/views.py
+#     * _hash_password() (línea 122-129) - hashear contraseñas
+#     * _check_password() (línea 131-138) - verificar contraseñas
+#     * login_view() (línea 184) - verificar contraseña al iniciar sesión
+#     * crear_usuario_view() (línea 918) - hashear al crear usuario
+#     * modificar_usuario_view() (línea 1074) - hashear al cambiar contraseña
+# Funcionalidad:
+#   - Hashea contraseñas con salt aleatorio
+#   - Verifica contraseñas sin almacenarlas en texto plano
+#   - Usado en todas las operaciones de autenticación
 bcrypt>=4.0.0,<5.0.0

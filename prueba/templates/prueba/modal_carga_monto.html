@@ -1,32 +1,73 @@
-<!-- Modal para Carga X Monto -->
+<!-- 
+    ========================
+    Este modal permite cargar archivos CSV con información financiera de montos.
+    Flujo de uso:
+    1. Usuario selecciona un archivo CSV mediante el botón "SELECCIONAR ARCHIVO"
+    2. El sistema previsualiza los datos en una tabla
+    3. Usuario puede calcular factores y validar los datos
+    4. Usuario graba los datos procesados
+-->
+<!-- Contenedor principal del modal - overlay que cubre toda la pantalla cuando está visible -->
 <div id="carga-monto-modal-overlay" class="modal-overlay">
+    <!-- Contenedor del contenido del modal con clase modal-large para tamaño ampliado -->
     <div class="modal-content modal-large">
+        
+        <!-- CABECERA DEL MODAL -->
+        <!-- Encabezado con el título y botón de cierre -->
         <div class="modal-header">
+            <!-- Título que indica la funcionalidad del modal -->
             <h2>Cargar archivo carga x monto</h2>
+            <!-- Botón para cerrar el modal - click en la X cierra la ventana -->
             <span id="btn-cerrar-carga-monto-x" class="modal-close">&times;</span>
         </div>
         
+        <!-- CUERPO DEL MODAL -->
+        <!-- Contenedor principal con el formulario y previsualización -->
         <div class="modal-body">
+            
+            <!-- SECCIÓN DE SELECCIÓN DE ARCHIVO -->
+            <!-- Contenedor para el campo de selección de archivo -->
             <div style="margin-bottom: 1.5rem;">
+                <!-- Etiqueta descriptiva para el campo de archivo -->
                 <label for="archivo-monto-input" class="form-field" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Archivo</label>
+                
+                <!-- Input de archivo nativo - oculto para personalizar la interfaz -->
+                <!-- Acepta solo archivos con extensión .csv -->
                 <input type="file" id="archivo-monto-input" accept=".csv" style="display: none;">
+                
+                <!-- Contenedor personalizado que simula el input de archivo -->
                 <div class="archivo-input-container">
+                    <!-- Campo de texto de solo lectura que muestra el nombre del archivo seleccionado -->
+                    <!-- Placeholder indica que no hay archivo seleccionado inicialmente -->
                     <input type="text" id="archivo-monto-nombre" readonly class="archivo-nombre-input" placeholder="Ningún archivo seleccionado">
+                    
+                    <!-- Botón que activa el input de archivo oculto al hacer click -->
+                    <!-- JavaScript conectará este botón con el input oculto -->
                     <button type="button" id="btn-seleccionar-archivo-monto" class="btn">SELECCIONAR ARCHIVO</button>
                 </div>
             </div>
             
+            <!-- SECCIÓN DE PREVISUALIZACIÓN DE DATOS -->
+            <!-- Contenedor para la tabla que muestra los datos del CSV antes de grabarlos -->
             <div class="preview-table-container">
+                <!-- Tabla que muestra una vista previa de los datos del archivo CSV cargado -->
+                <!-- Permite al usuario validar visualmente los datos antes de procesarlos -->
                 <table id="tabla-preview-monto" class="preview-table">
+                    <!-- Encabezados de la tabla - definen las columnas que debe tener el CSV -->
                     <thead>
                         <tr>
-                            <th>Ejercicio</th>
-                            <th>Mercado</th>
-                            <th>Instrumento</th>
-                            <th>FEC_PAGO</th>
-                            <th>SEC_EVE</th>
-                            <th>DESCRIPCION</th>
+                            <!-- Columnas de información básica -->
+                            <th>Ejercicio</th>          <!-- Año o período fiscal -->
+                            <th>Mercado</th>            <!-- Tipo de mercado financiero -->
+                            <th>Instrumento</th>        <!-- Tipo de instrumento financiero -->
+                            <th>FEC_PAGO</th>           <!-- Fecha de pago -->
+                            <th>SEC_EVE</th>            <!-- Secuencia del evento -->
+                            <th>DESCRIPCION</th>        <!-- Descripción del registro -->
+                            
+                            <!-- Columnas de montos mensuales - F8 a F37 representan diferentes meses o períodos -->
+                            <!-- F8 MONT: Monto del mes 8 (probablemente agosto) -->
                             <th>F8 MONT</th>
+                            <!-- F9 a F37 M: Montos de los meses 9 a 37 respectivamente -->
                             <th>F9 MONT</th>
                             <th>F10 M</th>
                             <th>F11 M</th>
@@ -56,22 +97,44 @@
                             <th>F35 M</th>
                             <th>F36 M</th>
                             <th>F37 M</th>
+                            <!-- Total: 38 columnas (6 de información básica + 32 de montos mensuales) -->
                         </tr>
                     </thead>
+                    
+                    <!-- Cuerpo de la tabla - aquí se insertarán dinámicamente las filas con los datos del CSV -->
                     <tbody id="tabla-preview-monto-body">
+                        <!-- Mensaje inicial cuando no hay datos cargados -->
+                        <!-- colspan="38" hace que el mensaje ocupe todas las columnas -->
                         <tr>
                             <td colspan="38" class="preview-empty-message">No hay datos para mostrar. Seleccione un archivo CSV.</td>
                         </tr>
+                        <!-- JavaScript reemplazará este contenido con los datos del CSV al cargar un archivo -->
                     </tbody>
                 </table>
             </div>
         </div>
 
+        <!-- PIE DEL MODAL -->
+        <!-- Contenedor con los botones de acción del modal -->
         <div class="modal-footer" style="display: flex; gap: 1rem; justify-content: flex-end;">
+            
+            <!-- Botón para seleccionar archivo (duplicado del del cuerpo para acceso rápido desde el footer) -->
             <button type="button" id="btn-seleccionar-archivo-monto-footer" class="btn">SELECCIONAR ARCHIVO</button>
+            
+            <!-- Botón para calcular factores - inicialmente deshabilitado hasta que haya datos cargados -->
+            <!-- JavaScript habilitará este botón cuando haya datos válidos en la tabla -->
             <button type="button" id="btn-calcular-factores-monto" class="btn" disabled>CALCULAR FACTORES</button>
+            
+            <!-- Botón para grabar los datos procesados - inicialmente deshabilitado -->
+            <!-- Se habilita después de calcular factores o validar los datos -->
             <button type="button" id="btn-grabar-monto" class="btn" disabled>GRABAR</button>
+            
+            <!-- Botón para cancelar y cerrar el modal sin guardar cambios -->
+            <!-- Siempre habilitado para permitir salir en cualquier momento -->
             <button type="button" id="btn-cancelar-monto" class="btn btn-secondary">CANCELAR</button>
+            
+            <!-- Botón para ver el formato esperado del archivo CSV -->
+            <!-- Probablemente abre otro modal o ventana con las especificaciones del formato -->
             <button type="button" id="btn-ver-formato-monto" class="btn">VER FORMATO</button>
         </div>
     </div>

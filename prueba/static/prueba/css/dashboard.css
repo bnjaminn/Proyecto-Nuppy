@@ -1,6 +1,24 @@
+/*
+    DASHBOARD.CSS - Estilos del Dashboard Principal
+    ================================================
+    Contiene todos los estilos CSS para la página principal (home.html).
+    Incluye:
+    - Variables CSS para colores y temas
+    - Estilos para tema claro y oscuro
+    - Layout del header, main y footer
+    - Estilos de la tabla de calificaciones
+    - Estilos de filtros y botones
+    - Responsive design
+*/
 
+/* ============================================
+   VARIABLES CSS - COLORES Y TEMA
+   ============================================
+   Define las variables de color que se usan en toda la aplicación.
+   Se pueden cambiar aquí para modificar el esquema de colores completo.
+*/
 :root {
-    /* Color Principal */
+    /* Color Principal - Naranja corporativo */
     --color-primary: #FF6B00;
     --color-primary-dark: #E55A00;
     --color-primary-light: #FFF4E6;

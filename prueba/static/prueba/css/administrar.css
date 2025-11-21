@@ -1,6 +1,23 @@
+/*
+    ADMINISTRAR.CSS - Estilos de la Página de Administración de Usuarios
+    =====================================================================
+    Contiene todos los estilos CSS específicos para la página de administración (administrar.html).
+    Incluye:
+    - Variables CSS para colores
+    - Layout de tarjetas de usuarios (grid)
+    - Estilos de selección de usuarios
+    - Botones de acción (crear, modificar, eliminar)
+    - Sistema de notificaciones
+    - Indicadores de carga
+    - Estilos para tema oscuro/claro
+*/
 
+/* ============================================
+   VARIABLES CSS - COLORES Y TEMA
+   ============================================
+*/
 :root {
-    /* Color Principal */
+    /* Color Principal - Naranja corporativo */
     --color-primary: #FF6B00;
     --color-primary-dark: #E55A00;
     --color-primary-light: #FFF4E6;
@@ -26,6 +43,11 @@
     --color-warning: #FFC107;
 }
 
+/* ============================================
+   CONTENEDOR PRINCIPAL DE ADMINISTRACIÓN
+   ============================================
+   Contenedor principal que envuelve todo el contenido de la página de administración
+*/
 .admin-container {
     padding: 2rem;
     background: var(--bg-primary);
@@ -34,51 +56,73 @@
     border-radius: 8px;
 }
 
-/* Contenedor principal: Acciones arriba, Grid abajo */
+/* ============================================
+   LAYOUT DE GESTIÓN DE USUARIOS
+   ============================================
+   Estructura principal: botones de acción arriba, grid de usuarios abajo
+*/
 .user-management-layout {
     display: flex;
-    flex-direction: column;
-    gap: 2rem; /* Espacio entre acciones y grid */
+    flex-direction: column;  /* Apila verticalmente */
+    gap: 2rem;               /* Espacio entre la sección de botones y el grid */
 }
 
-/* Contenedor para los botones de acción */
+/* ============================================
+   CONTENEDOR DE BOTONES DE ACCIÓN
+   ============================================
+   Contiene los botones: Crear Usuario, Modificar, Eliminar, Ver Logs
+*/
 .user-actions {
     display: flex;
-    gap: 1rem;
+    gap: 1rem;               /* Espacio entre botones */
     padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);  /* Línea separadora */
 }
 
- /* Grid para mostrar los usuarios - Tarjetas verticales */
+/* ============================================
+   GRID DE TARJETAS DE USUARIOS
+   ============================================
+   Grid responsivo que muestra las tarjetas de usuarios en columnas.
+   Se adapta automáticamente al ancho de la pantalla.
+*/
 .user-grid {
     display: grid;
-    /* Columnas responsivas, mínimo 200px para tarjetas verticales */
+    /* Columnas responsivas: mínimo 200px por tarjeta, máximo el espacio disponible */
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
-    gap: 1.5rem;
+    gap: 1.5rem;             /* Espacio entre tarjetas */
 }
 
+/* ============================================
+   TARJETA DE USUARIO
+   ============================================
+   Cada tarjeta representa un usuario del sistema.
+   El usuario puede hacer clic para seleccionar/deseleccionar.
+*/
 .user-card {
     border: 2px solid var(--border);
     border-radius: 12px;
     background-color: var(--bg-primary);
-    cursor: pointer;
-    transition: all 0.3s ease;
+    cursor: pointer;          /* Indica que es clickeable */
+    transition: all 0.3s ease;  /* Animación suave al interactuar */
     display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    flex-direction: column;   /* Apila contenido verticalmente */
+    overflow: hidden;         /* Oculta contenido que se sale */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);  /* Sombra suave */
 }
 
+/* Estado hover: resalta la tarjeta al pasar el mouse */
 .user-card:hover {
-    border-color: var(--color-primary);
-    box-shadow: 0 4px 16px rgba(255, 107, 0, 0.2);
-    transform: translateY(-4px);
+    border-color: var(--color-primary);                      /* Borde naranja */
+    box-shadow: 0 4px 16px rgba(255, 107, 0, 0.2);          /* Sombra más prominente */
+    transform: translateY(-4px);                             /* Eleva la tarjeta */
 }
 
+/* Estado seleccionado: indica que el usuario está seleccionado */
 .user-card.selected {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.25), 0 4px 16px rgba(255, 107, 0, 0.2);
-    background-color: var(--color-primary-light);
+    border-color: var(--color-primary);                      /* Borde naranja */
+    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.25),          /* Anillo de selección */
+                0 4px 16px rgba(255, 107, 0, 0.2);          /* Sombra */
+    background-color: var(--color-primary-light);            /* Fondo naranja claro */
 }
 
 /* Contenedor de la foto arriba - Centrado perfecto */
@@ -225,16 +269,21 @@
     opacity: 0.6;
 }
 
-/* ===== SISTEMA DE NOTIFICACIONES ===== */
+/* ============================================
+   SISTEMA DE NOTIFICACIONES
+   ============================================
+   Notificaciones que aparecen en la esquina superior derecha.
+   Tipos: success (éxito), error (error), warning (advertencia), info (información)
+*/
 #notificaciones-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 10000;
+    position: fixed;          /* Fijo respecto a la ventana */
+    top: 20px;                /* 20px desde arriba */
+    right: 20px;              /* 20px desde la derecha */
+    z-index: 10000;           /* Por encima de todos los elementos */
     display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    max-width: 400px;
+    flex-direction: column;   /* Apila notificaciones verticalmente */
+    gap: 0.75rem;             /* Espacio entre notificaciones */
+    max-width: 400px;         /* Ancho máximo */
 }
 
 .notificacion {
@@ -306,18 +355,23 @@
     color: #17a2b8;
 }
 
-/* ===== INDICADOR DE CARGA ===== */
+/* ============================================
+   INDICADOR DE CARGA
+   ============================================
+   Overlay que muestra un spinner de carga durante operaciones asíncronas.
+   Se muestra cuando se está creando/modificando/eliminando usuarios.
+*/
 #carga-overlay {
-    display: none;
-    position: fixed;
+    display: none;            /* Oculto por defecto, se muestra con JavaScript */
+    position: fixed;          /* Fijo respecto a la ventana */
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
+    width: 100%;              /* Cubre todo el ancho */
+    height: 100%;             /* Cubre todo el alto */
+    background-color: rgba(0, 0, 0, 0.5);  /* Fondo negro semitransparente */
+    justify-content: center;  /* Centra horizontalmente */
+    align-items: center;      /* Centra verticalmente */
+    z-index: 9999;            /* Por encima de otros elementos */
 }
 
 .carga-spinner {

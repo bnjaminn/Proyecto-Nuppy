@@ -1,17 +1,34 @@
+<!-- 
+    =======================================================
+    Permite al usuario configurar preferencias de la aplicación.
+    Actualmente incluye:
+    - Toggle para activar/desactivar tema oscuro
+    
+    La preferencia se guarda en localStorage para persistir entre sesiones.
+    Se aplica inmediatamente al cambiar el toggle.
+-->
 <div id="opciones-modal-overlay" class="modal-overlay">
     <div class="modal-content modal-small">
+        <!-- CABECERA DEL MODAL -->
         <div class="modal-header">
             <h2>Opciones</h2>
             <span id="btn-cerrar-opciones-x" class="modal-close">&times;</span>
         </div>
         
+        <!-- CUERPO DEL MODAL: LISTA DE OPCIONES -->
         <div class="modal-body">
             <div class="opciones-list">
+                <!-- OPCIÓN: TEMA OSCURO
+                     ===================
+                     Toggle switch para activar/desactivar el tema oscuro.
+                     La preferencia se guarda en localStorage.
+                -->
                 <div class="opcion-item">
                     <div class="opcion-info">
                         <label for="toggle-tema-oscuro" class="opcion-label">Tema Oscuro</label>
                         <small class="opcion-description">Activa el modo oscuro para una mejor experiencia visual</small>
                     </div>
+                    <!-- Toggle switch: estilo moderno de interruptor -->
                     <label class="toggle-switch">
                         <input type="checkbox" id="toggle-tema-oscuro" name="tema_oscuro">
                         <span class="toggle-slider"></span>
@@ -20,6 +37,7 @@
             </div>
         </div>
 
+        <!-- PIE DEL MODAL: BOTÓN CERRAR -->
         <div class="modal-footer">
             <button type="button" id="btn-cerrar-opciones" class="btn btn-secondary">Cerrar</button>
         </div>

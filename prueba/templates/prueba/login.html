@@ -1,4 +1,10 @@
 {% load static %}
+<!-- 
+    =========================================
+    Permite a los usuarios autenticarse en el sistema.
+    Valida credenciales (correo y contraseña) contra MongoDB.
+    Si el usuario ya tiene sesión activa, muestra opciones para ir al home o cerrar sesión.
+-->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -24,12 +30,21 @@
 </head>
 <body>
 
+    <!-- CONTENEDOR DEL FORMULARIO DE LOGIN
+         ===================================
+         Contiene el logo de la empresa y el formulario de autenticación
+    -->
     <div class="login-container">
-        
+        <!-- Logo de la empresa -->
         <div class="logo-container">
             <img src="{% static 'prueba/img/Nuam.png' %}" alt="NUAM Logo" class="nuam-logo">
         </div>
 
+        <!-- VERIFICACIÓN DE SESIÓN ACTIVA
+             ==============================
+             Si el usuario ya está autenticado, muestra opciones para navegar.
+             Si no, muestra el formulario de login.
+        -->
         {% if request.session.user_id %}
             <p>Ya estás logueado como: {{ request.session.user_nombre }}</p>
             <a href="{% url 'home' %}">Ir al Home</a> | 

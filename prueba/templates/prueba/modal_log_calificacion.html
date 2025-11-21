@@ -1,18 +1,45 @@
+<!-- 
+    =======================================================================
+    Muestra el historial completo de cambios realizados en una calificación específica.
+    
+    Incluye:
+    - Información básica de la calificación (ejercicio, instrumento, mercado)
+    - Tabla con todos los logs de cambios
+    - Detalles de cada cambio (campo modificado, valor anterior, valor nuevo)
+    
+    Los logs se agrupan por tipo:
+    - Cambios en Cálculo (SumaBase)
+    - Cambios en Montos (valores ingresados)
+    - Cambios en Factores (valores calculados)
+    - Cambios en Campos Básicos (información general)
+    
+    Se abre desde el botón "Ver Log" en la tabla de calificaciones del dashboard.
+-->
 <!-- Modal para mostrar logs de una calificación -->
 <div id="log-calificacion-modal-overlay" class="modal-overlay">
     <div class="modal-content modal-extra-large">
+        <!-- CABECERA DEL MODAL -->
         <div class="modal-header">
             <h2>Log de Cambios - Calificación</h2>
             <span id="btn-cerrar-log-calificacion-x" class="modal-close">&times;</span>
         </div>
         
+        <!-- CUERPO DEL MODAL: INFORMACIÓN Y TABLA DE LOGS -->
         <div class="modal-body">
-            <!-- Información de la calificación -->
+            <!-- INFORMACIÓN DE LA CALIFICACIÓN
+                 ===============================
+                 Muestra datos básicos de la calificación (ejercicio, instrumento, mercado).
+                 Se llena dinámicamente con JavaScript al abrir el modal.
+            -->
             <div id="log-calificacion-info" style="margin-bottom: 1.5rem; padding: 1rem; background-color: var(--bg-secondary); border-radius: 6px;">
                 <!-- Se llena dinámicamente con JavaScript -->
             </div>
             
-            <!-- Tabla de logs -->
+            <!-- TABLA DE LOGS
+                 ==============
+                 Muestra todos los registros de cambios realizados en esta calificación.
+                 Incluye fecha, usuario que hizo el cambio, acción y detalles de los cambios.
+            -->
             <div style="max-height: 70vh; overflow-y: auto;">
                 <table class="log-table" style="width: 100%;">
                     <thead>
@@ -24,12 +51,13 @@
                         </tr>
                     </thead>
                     <tbody id="log-calificacion-tbody">
-                        <!-- Se llena dinámicamente con JavaScript -->
+                        <!-- Se llena dinámicamente con JavaScript desde home.js -->
                     </tbody>
                 </table>
             </div>
         </div>
 
+        <!-- PIE DEL MODAL: BOTÓN CERRAR -->
         <div class="modal-footer">
             <button type="button" id="btn-cerrar-log-calificacion" class="btn">Cerrar</button>
         </div>

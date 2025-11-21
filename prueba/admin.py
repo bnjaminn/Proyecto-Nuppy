@@ -1,3 +1,7 @@
-from django.contrib import admin
+"""
+===============================================================
+Este archivo permite registrar modelos en el panel de administración de Django.
+"""
 
-# Register your models here.
+from django.contrib import admin
+# Por ahora no hay modelos registrados porque usamos MongoDB con MongoEngine

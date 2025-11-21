@@ -1,13 +1,30 @@
+/*
+    LOGS.CSS - Estilos de la Página de Logs/Auditoría
+    ===================================================
+    Contiene todos los estilos CSS específicos para la página de logs (ver_logs.html).
+    Incluye:
+    - Estilos de la tabla de logs
+    - Badges de acciones (crear, modificar, eliminar, carga)
+    - Badges de tipo de elemento afectado
+    - Scrollbar personalizado
+    - Estilos para tema oscuro/claro
+    - Hover effects en filas
+*/
 
+/* ============================================
+   CONTENEDOR DE LA TABLA DE LOGS
+   ============================================
+   Contenedor con scroll para la tabla de logs.
+   Permite desplazarse verticalmente cuando hay muchos registros.
+*/
 .log-table-container {
-    /* Define una altura máxima y permite scroll vertical */
-    max-height: 75vh; 
-    overflow-y: auto; 
-    overflow-x: auto;
+    max-height: 75vh;         /* Altura máxima: 75% de la altura de la ventana */
+    overflow-y: auto;         /* Permite scroll vertical si el contenido es más alto */
+    overflow-x: auto;         /* Permite scroll horizontal si el contenido es más ancho */
     background-color: #fff;
     border-radius: 8px;
     border: 2px solid var(--border);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);  /* Sombra suave */
     position: relative;
 }
 
@@ -86,39 +103,49 @@
     background: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary));
 }
 
-/* Badges para acciones */
+/* ============================================
+   BADGES DE ACCIONES
+   ============================================
+   Etiquetas de colores que indican el tipo de acción realizada.
+   Se muestran en la columna "Acción Realizada" de la tabla de logs.
+*/
 .accion-badge {
     display: inline-block;
     padding: 4px 12px;
     border-radius: 12px;
     font-size: 0.85rem;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    text-transform: uppercase;  /* Texto en mayúsculas */
+    letter-spacing: 0.5px;      /* Espaciado entre letras */
 }
 
-/* Colores específicos para diferentes acciones */
+/* Colores específicos para diferentes tipos de acciones */
 .accion-crear {
-    background-color: #d4edda;
-    color: #155724;
+    background-color: #d4edda;  /* Verde claro */
+    color: #155724;              /* Verde oscuro */
 }
 
 .accion-modificar {
-    background-color: #fff3cd;
-    color: #856404;
+    background-color: #fff3cd;  /* Amarillo claro */
+    color: #856404;              /* Amarillo oscuro */
 }
 
 .accion-eliminar {
-    background-color: #f8d7da;
-    color: #721c24;
+    background-color: #f8d7da;  /* Rojo claro */
+    color: #721c24;              /* Rojo oscuro */
 }
 
 .accion-carga {
-    background-color: #d1ecf1;
-    color: #0c5460;
+    background-color: #d1ecf1;  /* Azul claro */
+    color: #0c5460;              /* Azul oscuro */
 }
 
-/* Badges para tipo de elemento afectado */
+/* ============================================
+   BADGES DE TIPO DE ELEMENTO AFECTADO
+   ============================================
+   Etiquetas que indican qué tipo de documento fue afectado por la acción.
+   Se muestran en la columna "Elemento Afectado" de la tabla de logs.
+*/
 .tipo-afectado {
     display: inline-block;
     padding: 3px 10px;
@@ -128,13 +155,13 @@
 }
 
 .tipo-usuario {
-    background-color: #e3f2fd;
-    color: #1565c0;
+    background-color: #e3f2fd;  /* Azul claro */
+    color: #1565c0;              /* Azul oscuro */
 }
 
 .tipo-calificacion {
-    background-color: #f3e5f5;
-    color: #7b1fa2;
+    background-color: #f3e5f5;  /* Púrpura claro */
+    color: #7b1fa2;              /* Púrpura oscuro */
 }
 
 /* ===== TEMA OSCURO PARA LOGS ===== */

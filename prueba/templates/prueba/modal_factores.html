@@ -1,16 +1,38 @@
+<!-- 
+    =============================================================
+    Este es el segundo modal del flujo de ingreso de calificaciones.
+    Permite:
+    - Ver información básica de la calificación (solo lectura)
+    - Ingresar montos (dinero) del 8 al 37
+    - Calcular factores automáticamente: Factor = Monto / SumaBase
+    - Ver factores calculados (solo lectura)
+    - Grabar los factores en la base de datos
+    
+    Flujo:
+    1. Usuario ingresa montos del 8 al 37
+    2. Presiona "Calcular" → Sistema calcula factores automáticamente
+    3. Usuario revisa los factores calculados
+    4. Presiona "Grabar" → Se guardan los factores en MongoDB
+-->
 <div id="factores-modal-overlay" class="modal-overlay">
     <div class="modal-content modal-extra-large"> 
-        
+        <!-- CABECERA DEL MODAL -->
         <div class="modal-header">
             <h2>Ingreso de montos para la calificación tributaria</h2>
             <span id="btn-cerrar-modal-factores-x" class="modal-close">&times;</span>
         </div>
         
+        <!-- CUERPO DEL MODAL: FORMULARIO DE MONTOS Y FACTORES -->
         <div class="modal-body">
             <form onsubmit="return false;" id="form-factores">
-                <!-- Campo oculto para almacenar el ID de la calificación -->
+                <!-- Campo oculto: almacena el ID de la calificación creada en el modal 1 -->
                 <input type="hidden" id="calificacion_id" name="calificacion_id" value="">
-                <!-- Información general en la parte superior -->
+                
+                <!-- GRID DE INFORMACIÓN SUPERIOR
+                     ============================
+                     Muestra información básica de la calificación (solo lectura).
+                     Se llena automáticamente con los datos del modal 1.
+                -->
                 <div class="factores-info-grid">
                     <div class="form-field">
                         <label for="factores-mercado">Mercado:</label>
@@ -48,15 +70,21 @@
                         <label for="factores-ingreso-montos">Ingreso por Montos:</label>
                         <input type="text" id="factores-ingreso-montos" name="factores_ingreso_montos" value="Sí" readonly class="readonly-field">
                     </div>
+                    <!-- SUMA BASE: Muestra la suma de montos del 8 al 19 en tiempo real -->
                     <div class="form-field">
                         <label for="suma-base-display">Suma Base (8-19):</label>
                         <input type="text" id="suma-base-display" name="suma_base_display" value="0.00" readonly class="readonly-field" style="font-weight: bold; color: var(--color-primary);">
                     </div>
                 </div>
 
-                <!-- Montos organizados en 3 columnas según mockup exacto -->
+                <!-- GRID DE MONTOS EN 3 COLUMNAS
+                     =============================
+                     Organiza los 30 montos (del 8 al 37) en 3 columnas.
+                     Cada monto se ingresa como dinero (2 decimales).
+                     Los montos se usan para calcular los factores: Factor = Monto / SumaBase
+                -->
                 <div class="factores-grid-3cols">
-                    <!-- Columna 1: 10 montos -->
+                    <!-- COLUMNA 1: 10 montos (8, 11, 14, 17, 20, 23, 26, 29, 32, 35) -->
                     <div class="factores-col">
                         <div class="form-field">
                             <label for="monto_8">Factor-08<small>No Constitutiva de Renta No Acogido a Impto.</small></label>
@@ -100,7 +128,7 @@
                         </div>
                     </div>
 
-                    <!-- Columna 2: 9 montos + 1 campo adicional -->
+                    <!-- COLUMNA 2: 10 montos (9, 12, 15, 18, 21, 24, 27, 30, 33, 36) -->
                     <div class="factores-col">
                         <div class="form-field">
                             <label for="monto_9">Factor-09<small>Impto. 1ra Categ. Afecto Gl. Comp. Con Devolución</small></label>
@@ -144,7 +172,7 @@
                         </div>
                     </div>
 
-                    <!-- Columna 3: 9 montos + 1 campo adicional -->
+                    <!-- COLUMNA 3: 10 montos (10, 13, 16, 19, 22, 25, 28, 31, 34, 37) -->
                     <div class="factores-col">
                         <div class="form-field">
                             <label for="monto_10">Factor-10<small>Impuesto Tasa Adicional Exento Art. 21</small></label>
@@ -189,11 +217,17 @@
                     </div>
                 </div>
 
-                <!-- Sección de Factores Calculados (solo lectura, se muestra después de calcular) -->
+                <!-- SECCIÓN DE FACTORES CALCULADOS
+                     =================================
+                     Se muestra después de presionar "Calcular".
+                     Muestra los factores calculados automáticamente (solo lectura).
+                     Los factores se calculan: Factor = Monto / SumaBase
+                     Precisión: 8 decimales
+                -->
                 <div class="factores-calculados-section" id="factores-calculados-section" style="display: none;">
                     <h3>Factores Calculados</h3>
                     <div class="factores-grid-3cols">
-                        <!-- Columna 1: Factores -->
+                        <!-- COLUMNA 1: Factores calculados (8, 11, 14, 17, 20, 23, 26, 29, 32, 35) -->
                         <div class="factores-col">
                             <div class="form-field">
                                 <label for="Factor08">Factor-08<small>No Constitutiva de Renta No Acogido a Impto.</small></label>
@@ -237,7 +271,7 @@
                             </div>
                         </div>
 
-                        <!-- Columna 2: Factores -->
+                        <!-- COLUMNA 2: Factores calculados (9, 12, 15, 18, 21, 24, 27, 30, 33, 36) -->
                         <div class="factores-col">
                             <div class="form-field">
                                 <label for="Factor09">Factor-09<small>Impto. 1ra Categ. Afecto Gl. Comp. Con Devolución</small></label>
@@ -281,7 +315,7 @@
                             </div>
                         </div>
 
-                        <!-- Columna 3: Factores -->
+                        <!-- COLUMNA 3: Factores calculados (10, 13, 16, 19, 22, 25, 28, 31, 34, 37) -->
                         <div class="factores-col">
                             <div class="form-field">
                                 <label for="Factor10">Factor-10<small>Impuesto Tasa Adicional Exento Art. 21</small></label>
@@ -329,9 +363,12 @@
             </form>
         </div>
 
+        <!-- PIE DEL MODAL: BOTONES DE ACCIÓN -->
         <div class="modal-footer">
             <button type="button" id="btn-cerrar-modal-factores" class="btn btn-secondary">Cancelar</button>
+            <!-- Botón Calcular: Calcula factores desde los montos ingresados (Factor = Monto / SumaBase) -->
             <button type="button" id="btn-calcular-factores" class="btn">Calcular</button>
+            <!-- Botón Grabar: Guarda los factores calculados en la base de datos MongoDB -->
             <button type="button" id="btn-grabar-factores" class="btn">Grabar</button>
         </div>
     </div>

@@ -1,26 +1,41 @@
+<!-- 
+    ======================================================================
+    Permite a los administradores modificar datos de usuarios existentes.
+    Los campos se prellenan automáticamente con los datos del usuario seleccionado.
+    
+    Características:
+    - Contraseña es opcional (solo se cambia si se proporciona)
+    - Foto de perfil es opcional (solo se cambia si se sube una nueva)
+    - Validación de correo único (no puede duplicarse con otro usuario)
+-->
 <div id="modificar-usuario-modal-overlay" class="modal-overlay">
     <div class="modal-content modal-small"> 
-        
+        <!-- CABECERA DEL MODAL -->
         <div class="modal-header">
             <h2>Modificar Usuario</h2>
             <span id="btn-cerrar-modificar-usuario-x" class="modal-close">&times;</span>
         </div>
         
+        <!-- CUERPO DEL MODAL: FORMULARIO -->
         <div class="modal-body">
             <form id="form-modificar-usuario" method="post" action="{% url 'modificar_usuario' %}" enctype="multipart/form-data">
                 {% csrf_token %} 
                 
+                <!-- Campo oculto: ID del usuario a modificar -->
                 <input type="hidden" id="modificar-user-id" name="user_id">
                 
                 <div class="modal-form-grid-vertical"> 
+                    <!-- Nombre: se puede modificar -->
                     <div class="form-field">
                         <label for="modificar-nombre">Nombre:</label>
                         <input type="text" id="modificar-nombre" name="nombre" required>
                     </div>
+                    <!-- Correo: se puede modificar (debe ser único) -->
                     <div class="form-field">
                         <label for="modificar-correo">Correo Electrónico:</label>
                         <input type="email" id="modificar-correo" name="correo" required>
                     </div>
+                    <!-- Contraseña: OPCIONAL - solo se cambia si se proporciona -->
                     <div class="form-field">
                         <label for="modificar-contrasena">Nueva Contraseña (dejar en blanco para no cambiar):</label>
                         <input type="password" id="modificar-contrasena" name="contrasena" placeholder="Dejar en blanco para no cambiar">
@@ -28,15 +43,18 @@
                             Si desea cambiar la contraseña, debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y un símbolo especial.
                         </small>
                     </div>
+                    <!-- Confirmación de contraseña: solo necesaria si se cambia la contraseña -->
                     <div class="form-field">
                         <label for="modificar-confirmar-contrasena">Confirmar Nueva Contraseña:</label>
                         <input type="password" id="modificar-confirmar-contrasena" name="confirmar_contrasena" placeholder="Confirme la nueva contraseña">
                     </div>
+                    <!-- Foto de perfil: OPCIONAL - solo se cambia si se sube una nueva -->
                     <div class="form-field">
                         <label for="modificar-foto-perfil">Foto de Perfil (opcional):</label>
                         <input type="file" id="modificar-foto-perfil" name="foto_perfil" accept="image/*">
                         <small style="color: #666;">Dejar en blanco para mantener la foto actual. Formatos: JPG, PNG, GIF. Máx. 5MB</small>
                     </div>
+                    <!-- Checkbox para cambiar rol de administrador -->
                     <div class="form-field form-field-checkbox"> 
                         <input type="checkbox" id="modificar-rol" name="rol">
                         <label for="modificar-rol">¿Es Administrador?</label> 
@@ -45,8 +63,10 @@
             </form>
         </div>
 
+        <!-- PIE DEL MODAL: BOTONES -->
         <div class="modal-footer">
             <button type="button" id="btn-cerrar-modificar-usuario" class="btn btn-secondary">Cancelar</button>
+            <!-- Botón que envía el formulario vía AJAX (manejado por administrar.js) -->
             <button type="submit" form="form-modificar-usuario" class="btn">Guardar Cambios</button>
         </div>
     </div>

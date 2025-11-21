@@ -1,10 +1,28 @@
-/* ============================================
-   CSS ESPECÍFICO PARA MODAL DE FACTORES
-   (Modal de ingreso de montos para calificación tributaria)
-   ============================================ */
+/*
+    MODAL_FACTORES.CSS - Estilos del Modal de Factores
+    ====================================================
+    Contiene todos los estilos CSS específicos para el modal de factores (modal_factores.html).
+    Este modal se usa para:
+    - Ingresar montos (dinero) para calcular factores
+    - Ver factores calculados automáticamente
+    - Modificar factores existentes
+    
+    Incluye:
+    - Variables CSS específicas para el modal
+    - Grid de información superior (mercado, instrumento, etc.)
+    - Grid de factores en 3 columnas (diseño tipo cartas)
+    - Estilos de inputs de montos y factores
+    - Botones de acción (Calcular, Grabar, Cancelar)
+    - Responsive design para diferentes tamaños de pantalla
+    - Estilos para tema oscuro/claro
+*/
 
+/* ============================================
+   VARIABLES CSS ESPECÍFICAS PARA MODAL FACTORES
+   ============================================
+*/
 :root {
-    /* Colores específicos para modal factores */
+    /* Colores específicos para el modal de factores */
     --factores-primary: #FF6B00;
     --factores-bg-light: #F9F9F9;
     --factores-border: #E0E0E0;
@@ -53,18 +71,31 @@ body.dark-theme .factores-calculados-section h3 {
     border-bottom-color: #4CAF50;
 }
 
-/* Tamaño extra grande para modal de factores */
+/* ============================================
+   TAMAÑO DEL MODAL
+   ============================================
+   Modal extra grande para mostrar todos los factores (30 factores del 8 al 37)
+*/
 .modal-extra-large {
-    max-width: 1200px;
-    width: 95%;
+    max-width: 1200px;  /* Ancho máximo */
+    width: 95%;         /* 95% del ancho disponible en pantallas pequeñas */
 }
 
-/* Grid de información superior (header de factores) */
+/* ============================================
+   GRID DE INFORMACIÓN SUPERIOR
+   ============================================
+   Grid que muestra información básica de la calificación:
+   - Mercado
+   - Instrumento
+   - Fecha de pago
+   - Secuencia de evento
+   - Etc.
+*/
 .factores-info-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    margin-bottom: 2rem;
+    grid-template-columns: repeat(4, 1fr);  /* 4 columnas iguales */
+    gap: 1rem;                               /* Espacio entre columnas */
+    margin-bottom: 2rem;                     /* Espacio inferior */
     padding: 1.5rem;
     background: linear-gradient(135deg, var(--factores-bg-light) 0%, #FFFFFF 100%);
     border-radius: 8px;
@@ -87,22 +118,38 @@ body.dark-theme .factores-calculados-section h3 {
     font-size: 0.9rem;
 }
 
-/* Grid de factores en 3 columnas - Diseño tipo cartas */
+/* ============================================
+   GRID DE FACTORES EN 3 COLUMNAS
+   ============================================
+   Grid que organiza los 30 factores (F8-F37) en 3 columnas.
+   Cada factor se muestra como una tarjeta individual.
+*/
 .factores-grid-3cols {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    grid-template-columns: repeat(3, 1fr);  /* 3 columnas iguales */
+    gap: 1rem;                               /* Espacio entre tarjetas */
     margin-top: 1rem;
-    align-items: start; /* Alinea todas las cartas desde arriba */
+    align-items: start;                      /* Alinea todas las cartas desde arriba */
 }
 
+/* ============================================
+   COLUMNA DE FACTORES
+   ============================================
+   Cada columna contiene aproximadamente 10 factores apilados verticalmente
+*/
 .factores-col {
     display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    flex-direction: column;  /* Apila factores verticalmente */
+    gap: 1rem;               /* Espacio entre factores */
 }
 
-/* Diseño de carta/tarjeta para cada factor */
+/* ============================================
+   DISEÑO DE TARJETA PARA CADA FACTOR
+   ============================================
+   Cada factor se muestra como una tarjeta individual con:
+   - Label descriptivo (nombre del factor)
+   - Input para ingresar el valor
+*/
 .factores-col .form-field {
     margin-bottom: 0;
     display: flex;
@@ -111,9 +158,9 @@ body.dark-theme .factores-calculados-section h3 {
     border: 1px solid var(--factores-border);
     border-radius: 8px;
     padding: 1rem;
-    min-height: 120px; /* Altura mínima para consistencia */
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    transition: box-shadow 0.2s ease;
+    min-height: 120px;                       /* Altura mínima para consistencia visual */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);  /* Sombra suave */
+    transition: box-shadow 0.2s ease;        /* Animación al hover */
 }
 
 .factores-col .form-field:hover {
@@ -163,9 +210,14 @@ body.dark-theme .factores-calculados-section h3 {
     text-align: right; /* Alinea números a la derecha */
 }
 
-/* Estilos para inputs de montos (monto_8, monto_9, etc.) */
+/* ============================================
+   INPUTS DE MONTOS
+   ============================================
+   Inputs para ingresar montos (dinero) que se usan para calcular los factores.
+   Los montos se ingresan con 2 decimales (centavos).
+*/
 .factores-col .form-field input[type="number"] {
-    text-align: right;
+    text-align: right;  /* Alinea números a la derecha (estándar para montos) */
 }
 
 .factores-col .form-field input.factor-input:hover {
@@ -317,13 +369,19 @@ body.dark-theme .factores-calculados-section h3 {
     animation: fadeInFactores 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Estilos para la sección de factores calculados */
+/* ============================================
+   SECCIÓN DE FACTORES CALCULADOS
+   ============================================
+   Sección que muestra los factores calculados automáticamente.
+   Aparece después de presionar el botón "CALCULAR FACTORES".
+   Tiene un estilo verde para diferenciarlo de los campos de entrada.
+*/
 .factores-calculados-section {
     margin: 1.5rem 0;
     padding: 1.5rem;
-    background-color: #E8F5E9;
+    background-color: #E8F5E9;    /* Fondo verde claro */
     border-radius: 8px;
-    border: 2px solid #4CAF50;
+    border: 2px solid #4CAF50;    /* Borde verde */
 }
 
 .factores-calculados-section h3 {
