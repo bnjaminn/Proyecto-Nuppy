@@ -148,6 +148,8 @@
     <!-- Cargar funciones del modal de mensajes desde home.js -->
     <script src="{% static 'prueba/js/home.js' %}" defer></script>
     <script src="{% static 'prueba/js/administrar.js' %}" defer></script>
+    <!-- Script para detectar inactividad y cerrar sesión automáticamente -->
+    {% include 'prueba/includes/inactividad_detector.html' %}
 
 </body>
 </html>

@@ -918,3 +918,53 @@ body.dark-theme .preview-table tbody tr:hover td {
 body.dark-theme .preview-empty-message {
     color: var(--text-secondary);
 }
+
+/* ===== ESTILOS PARA MODAL DE INACTIVIDAD ===== */
+.modal-inactividad-overlay {
+    z-index: 10003 !important; /* Z-index más alto para estar sobre otros modales */
+    background-color: rgba(0, 0, 0, 0.8); /* Fondo más oscuro para urgencia */
+    backdrop-filter: blur(5px);
+}
+
+#modal-inactividad {
+    animation: shake 0.5s ease-in-out;
+}
+
+#contador-inactividad {
+    text-shadow: 0 2px 10px rgba(255, 193, 7, 0.5);
+    transition: all 0.3s ease;
+}
+
+/* Animación de pulso para el contador cuando está por llegar a 0 */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.9;
+    }
+}
+
+/* Animación de temblor para el modal */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Tema oscuro para modal de inactividad */
+body.dark-theme #modal-inactividad .modal-body p {
+    color: var(--text-primary);
+}
+
+body.dark-theme #contador-inactividad {
+    color: var(--color-warning);
+    text-shadow: 0 2px 10px rgba(255, 193, 7, 0.7);
+}
+
+body.dark-theme #contador-inactividad[style*="color: var(--color-danger)"] {
+    color: var(--color-danger) !important;
+    text-shadow: 0 2px 10px rgba(220, 53, 69, 0.7);
+}

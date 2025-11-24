@@ -14,6 +14,7 @@ Ejemplos de uso:
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -21,6 +22,10 @@ from django.conf.urls.static import static
 # ============================
 # Define las rutas del proyecto y las vistas que las manejan
 urlpatterns = [
+    # Redirección automática desde la raíz (/) a la página de login
+    # Cuando el usuario accede a http://localhost:8000/, será redirigido a /prueba/login/
+    path('', RedirectView.as_view(url='/prueba/login/', permanent=False), name='root'),
+    
     # Ruta para el panel de administración de Django
     # Accesible en: http://localhost:8000/admin/
     path('admin/', admin.site.urls),

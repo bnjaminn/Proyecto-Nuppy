@@ -235,5 +235,7 @@
     {% include 'prueba/modal_opciones.html' %}
 
     <script src="{% static 'prueba/js/home.js' %}"></script>
+    <!-- Script para detectar inactividad y cerrar sesión automáticamente -->
+    {% include 'prueba/includes/inactividad_detector.html' %}
 </body>
 </html>
