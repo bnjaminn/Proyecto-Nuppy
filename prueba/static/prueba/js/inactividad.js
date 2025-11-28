@@ -16,7 +16,7 @@
     // ============================================
     // CONFIGURACIÓN
     // ============================================
-    const INACTIVIDAD_TIMEOUT = 5000; // 5 segundos para testing (5000 ms)
+    const INACTIVIDAD_TIMEOUT = 300000; // 5 minutos de inactividad (300000 ms = 5 min × 60 seg × 1000 ms)
     const CUENTA_REGRESIVA = 10; // 10 segundos de cuenta regresiva
     const LOGOUT_URL = '/prueba/logout/'; // URL de logout
 
@@ -147,7 +147,7 @@
         
         modal.innerHTML = `
             <div class="modal-header">
-                <h2>⚠️ Sesión por expirar</h2>
+                <h2><i class="bi bi-exclamation-triangle-fill" style="margin-right: 0.5rem;"></i>Sesión por expirar</h2>
             </div>
             <div class="modal-body">
                 <div style="text-align: center; padding: 1rem;">
@@ -254,7 +254,7 @@
     // EVENTOS DE ACTIVIDAD DEL USUARIO
     // ============================================
     
-    // Eventos que indican actividad del usuario
+    // Eventos que indican actividad del usuario para evitar que se cierre la sesión
     const eventosActividad = [
         'mousedown',
         'mousemove',

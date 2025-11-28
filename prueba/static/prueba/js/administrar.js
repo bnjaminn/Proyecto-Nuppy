@@ -73,15 +73,15 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
     const icono = document.createElement('span');
     icono.className = 'notificacion-icono';
     
-    // Asignar el icono correspondiente según el tipo
+    // Asignar el icono correspondiente según el tipo usando Bootstrap Icons
     if (tipo === 'success') {
-        icono.textContent = '✓'; // Check verde para éxito
+        icono.innerHTML = '<i class="bi bi-check-circle-fill"></i>'; // Check verde para éxito
     } else if (tipo === 'error') {
-        icono.textContent = '✕'; // X roja para error
+        icono.innerHTML = '<i class="bi bi-x-circle-fill"></i>'; // X roja para error
     } else if (tipo === 'warning') {
-        icono.textContent = '⚠'; // Alerta amarilla para advertencia
+        icono.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>'; // Alerta amarilla para advertencia
     } else {
-        icono.textContent = 'ℹ'; // Información azul para info
+        icono.innerHTML = '<i class="bi bi-info-circle-fill"></i>'; // Información azul para info
     }
     
     // Insertar el icono al inicio de la notificación (antes del texto)
@@ -287,11 +287,15 @@ function limpiarMensajeError(msg) {
     // Cada tipo de error tiene un mensaje amigable diferente para el usuario
     
     // Error: Correo duplicado (base de datos)
-    // Verificar si el mensaje contiene palabras clave relacionadas con correo duplicado
-    // includes() verifica si un string contiene el substring especificado
-    // Usar operador OR (||) para verificar múltiples posibles palabras clave
-    // Detecta errores de clave duplicada en MongoDB o validaciones de correo
-    if (lower.includes("duplicate key") || lower.includes("correo") || lower.includes("email")) {
+    // Verificar solo patrones MUY específicos de error de correo duplicado
+    // NO buscar solo "correo" ya que puede aparecer en otros contextos (como en mensajes de éxito)
+    // Solo detectar si el mensaje contiene explícitamente el mensaje de error de correo duplicado
+    const esErrorCorreoDuplicado = 
+        lower.includes("duplicate key") || 
+        lower.includes("este correo electrónico ya está registrado") ||
+        (lower.includes("correo") && lower.includes("ya está registrado") && !lower.includes("éxito") && !lower.includes("exitosamente") && !lower.includes("creado"));
+    
+    if (esErrorCorreoDuplicado) {
         // Retornar un mensaje amigable sobre correo duplicado
         // Este mensaje es más claro que el mensaje técnico original
         return "Este correo electrónico ya está registrado.";
@@ -411,12 +415,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (icon && texto) {
             if (cumplido) {
-                icon.textContent = '✓';
+                icon.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
                 icon.style.color = '#28a745';
                 texto.style.color = '#28a745';
                 requisito.style.opacity = '1';
             } else {
-                icon.textContent = '✗';
+                icon.innerHTML = '<i class="bi bi-x-circle"></i>';
                 icon.style.color = '#dc3545';
                 texto.style.color = '#666';
                 requisito.style.opacity = '0.6';
@@ -520,22 +524,59 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
             })
             .then(response => {
-                if (!response.ok) {
-                    return response.text().then(text => { 
-                        throw new Error(`Error ${response.status}: ${text}`); 
+                // Siempre intentar parsear como JSON primero
+                return response.json().then(data => {
+                    // Si la respuesta no es OK, lanzar error
+                    if (!response.ok) {
+                        const errorMsg = data && data.error ? data.error : `Error ${response.status}`;
+                        throw new Error(errorMsg);
+                    }
+                    return data;
+                }).catch(error => {
+                    // Si el error ya fue lanzado intencionalmente, re-lanzarlo
+                    if (error.message && error.message.startsWith('Error')) {
+                        throw error;
+                    }
+                    // Si falla el parseo JSON, leer como texto
+                    return response.text().then(text => {
+                        throw new Error(`Error ${response.status}: ${text}`);
                     });
-                }
-                return response.json();
+                });
             })
             .then(data => {
                 ocultarCarga();
-                if (data.success) {
+                // Verificar explícitamente si la respuesta indica éxito
+                if (data && data.success === true) {
                     mostrarMensaje('Éxito', 'Usuario creado exitosamente!', 'success');
                     cerrarModalCrear();
                     setTimeout(() => window.location.reload(), 1500);
-                } else {
-                    mostrarMensaje('Error', 'Error al crear usuario: ' + (data.error || 'Intenta de nuevo.'), 'error');
+                    return; // Salir temprano si fue exitoso
                 }
+                
+                // Si llegamos aquí, hubo un error
+                let errorMsg = 'Intenta de nuevo.';
+                if (data && data.error) {
+                    // Si el error es un string JSON, intentar parsearlo
+                    if (typeof data.error === 'string' && data.error.trim().startsWith('{')) {
+                        try {
+                            const errorObj = JSON.parse(data.error);
+                            // Extraer el primer error del objeto
+                            const firstKey = Object.keys(errorObj)[0];
+                            if (errorObj[firstKey] && Array.isArray(errorObj[firstKey]) && errorObj[firstKey].length > 0) {
+                                const firstError = errorObj[firstKey][0];
+                                errorMsg = typeof firstError === 'object' && firstError.message 
+                                    ? firstError.message 
+                                    : String(firstError);
+                            }
+                        } catch (e) {
+                            // Si falla el parseo, usar el string directamente
+                            errorMsg = data.error;
+                        }
+                    } else {
+                        errorMsg = String(data.error);
+                    }
+                }
+                mostrarMensaje('Error', 'Error al crear usuario: ' + errorMsg, 'error');
             })
             .catch(error => {
                 ocultarCarga();

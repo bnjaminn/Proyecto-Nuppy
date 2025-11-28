@@ -1,0 +1,59 @@
+<!-- 
+    =======================================================
+    Modal para seleccionar calificaciones a exportar.
+    Permite al usuario:
+    - Ver todas las calificaciones disponibles
+    - Seleccionar individualmente las calificaciones a exportar
+    - Usar checkbox "Todas" para seleccionar/deseleccionar todas
+    - Exportar solo las calificaciones seleccionadas
+-->
+<div id="exportar-modal-overlay" class="modal-overlay">
+    <div class="modal-content modal-large">
+        <!-- CABECERA DEL MODAL -->
+        <div class="modal-header">
+            <h2><i class="bi bi-download" style="margin-right: 0.5rem;"></i>Exportar Calificaciones</h2>
+            <span id="btn-cerrar-exportar-x" class="modal-close">&times;</span>
+        </div>
+        
+        <!-- CUERPO DEL MODAL: LISTA DE CALIFICACIONES -->
+        <div class="modal-body exportar-modal-body">
+            <!-- Checkbox "Seleccionar Todas" -->
+            <div class="exportar-select-all-container">
+                <label class="exportar-select-all-label">
+                    <input type="checkbox" id="checkbox-todas-exportar" class="exportar-checkbox-todas">
+                    <span class="exportar-select-all-text">
+                        <i class="bi bi-check-square"></i>
+                        <strong>Seleccionar Todas</strong>
+                    </span>
+                </label>
+            </div>
+            
+            <!-- Lista de calificaciones -->
+            <div class="exportar-list-container">
+                <div id="exportar-calificaciones-list" class="exportar-calificaciones-list">
+                    <div class="exportar-loading">
+                        <i class="bi bi-hourglass-split"></i>
+                        <p>Cargando calificaciones...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contador de seleccionadas -->
+            <div id="exportar-contador" class="exportar-contador">
+                <i class="bi bi-check-circle"></i>
+                <span class="exportar-contador-text">0 calificaciones seleccionadas</span>
+            </div>
+        </div>
+
+        <!-- PIE DEL MODAL: BOTONES -->
+        <div class="modal-footer">
+            <button type="button" id="btn-cerrar-exportar" class="btn btn-secondary">
+                <i class="bi bi-x-circle"></i> Cancelar
+            </button>
+            <button type="button" id="btn-exportar-seleccionadas" class="btn" disabled>
+                <i class="bi bi-download"></i> Exportar Seleccionadas
+            </button>
+        </div>
+    </div>
+</div>
+

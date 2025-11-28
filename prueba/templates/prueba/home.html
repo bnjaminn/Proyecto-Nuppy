@@ -24,6 +24,9 @@
     <link rel="stylesheet" href="{% static 'prueba/css/modal_factores.css' %}">
     <link rel="stylesheet" href="{% static 'prueba/css/logs.css' %}">
     
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    
     <!-- Script inline para cargar tema oscuro ANTES de renderizar (previene flash) -->
     <script>
         (function() {
@@ -67,16 +70,14 @@
             previewMonto: '{% url "preview_monto" %}',
             cargarFactor: '{% url "cargar_factor" %}',
             cargarMonto: '{% url "cargar_monto" %}',
-            calcularFactoresMasivo: '{% url "calcular_factores_masivo" %}'
+            calcularFactoresMasivo: '{% url "calcular_factores_masivo" %}',
+            exportarCalificaciones: '{% url "exportar_calificaciones" %}'
         };
         console.log('URLs configuradas:', window.DJANGO_URLS);
         
         // Cargar calificaciones iniciales si existen
-        {% if calificaciones_json %}
-        window.CALIFICACIONES_INICIALES = {{ calificaciones_json|safe }};
-        {% else %}
-        window.CALIFICACIONES_INICIALES = [];
-        {% endif %}
+        var calificacionesJson = document.getElementById('calificaciones-data');
+        window.CALIFICACIONES_INICIALES = calificacionesJson ? JSON.parse(calificacionesJson.textContent) : [];
     </script>
 </head>
 <body>
@@ -105,14 +106,29 @@
             <div class="filter-group">
                 <label for="origen">Origen:</label>
                 <select id="origen" name="origen">
+                    <option value="">Todos</option>
                     <option value="corredor">Corredor</option>
                     <option value="csv">CSV</option>
                 </select>
             </div>
             <!-- Filtro de Período: Año fiscal (ejercicio) -->
-            <div class="filter-group">
+            <div class="filter-group" style="position: relative;">
                 <label for="periodo">Periodo Comercial:</label>
-                <input type="text" id="periodo" name="periodo" value="2025">
+                <div style="position: relative; display: inline-block; width: 100%;">
+                    <input type="number" id="periodo" name="periodo" value="2025" min="2000" max="2100" step="1" style="padding-right: 32px; width: 100%; box-sizing: border-box;">
+                    <span id="periodo-calendar-icon" style="position: absolute; right: 0px; top: 0px; bottom: 0px; cursor: pointer; font-size: 1.2rem; color: var(--color-primary); user-select: none; pointer-events: auto; display: flex; align-items: center; justify-content: center; width: 30px; padding-right: 0.4rem; box-sizing: border-box;"><i class="bi bi-calendar3"></i></span>
+                </div>
+                <!-- Calendario de año (oculto por defecto) -->
+                <div id="periodo-year-picker" style="display: none; position: absolute; top: 100%; left: 0; background: var(--bg-primary); border: 2px solid var(--border); border-radius: 8px; padding: 1rem; margin-top: 0.5rem; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 250px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <button type="button" id="periodo-year-prev" style="background: var(--color-primary); color: white; border: none; border-radius: 4px; padding: 0.5rem 1rem; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center;"><i class="bi bi-chevron-left"></i></button>
+                        <span id="periodo-year-display" style="font-weight: 600; font-size: 1.1rem; color: var(--text-primary);">2025 - 2029</span>
+                        <button type="button" id="periodo-year-next" style="background: var(--color-primary); color: white; border: none; border-radius: 4px; padding: 0.5rem 1rem; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center;"><i class="bi bi-chevron-right"></i></button>
+                    </div>
+                    <div id="periodo-year-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem;">
+                        <!-- Los años se generarán dinámicamente con JavaScript -->
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -136,11 +152,12 @@
             </div>
             
             <div class="btn-group">
-                <button type="button" id="btn-buscar" class="btn">buscar</button>
-                <button type="button" id="btn-limpiar" class="btn">limpiar</button>
+                <button type="button" id="btn-buscar" class="btn"><i class="bi bi-search"></i> buscar</button>
+                <button type="button" id="btn-limpiar" class="btn"><i class="bi bi-arrow-counterclockwise"></i> limpiar</button>
+                <button type="button" id="btn-exportar" class="btn"><i class="bi bi-download"></i> exportar</button>
                 
                 {% if is_admin %}
-                    <a href="{% url 'administrar' %}" class="btn">administrar</a>
+                    <a href="{% url 'administrar' %}" class="btn"><i class="bi bi-person-gear"></i> administrar</a>
                 {% endif %}     
             </div>
         </div>
@@ -216,13 +233,13 @@
     <footer class="footer">
         
         <div class="footer-actions">
-            <button type="button" id="btn-abrir-modal" class="btn">INGRESAR</button>
-            <button type="button" id="btn-carga-factor" class="btn">CARGA X FACTOR</button>
-            <button type="button" id="btn-carga-monto" class="btn">CARGA X MONTO</button>
+            <button type="button" id="btn-abrir-modal" class="btn"><i class="bi bi-plus-circle"></i> INGRESAR</button>
+            <button type="button" id="btn-carga-factor" class="btn"><i class="bi bi-file-earmark-spreadsheet"></i> CARGA X FACTOR</button>
+            <button type="button" id="btn-carga-monto" class="btn"><i class="bi bi-file-earmark-spreadsheet"></i> CARGA X MONTO</button>
         </div>
 
         <div class="footer-actions">
-            <button type="button" id="btn-abrir-opciones" class="btn">OPCIONES</button>
+            <button type="button" id="btn-abrir-opciones" class="btn"><i class="bi bi-sliders"></i> OPCIONES</button>
         </div>
     </footer>
 
@@ -233,6 +250,7 @@
     {% include 'prueba/modal_carga_factor.html' %}
     {% include 'prueba/modal_carga_monto.html' %}
     {% include 'prueba/modal_opciones.html' %}
+    {% include 'prueba/modal_exportar.html' %}
 
     <script src="{% static 'prueba/js/home.js' %}"></script>
     <!-- Script para detectar inactividad y cerrar sesión automáticamente -->

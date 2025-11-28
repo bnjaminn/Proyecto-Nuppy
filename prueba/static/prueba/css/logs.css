@@ -164,6 +164,11 @@
     color: #7b1fa2;              /* Púrpura oscuro */
 }
 
+.tipo-carga-masiva {
+    background-color: #fff3e0;  /* Naranja claro */
+    color: #e65100;              /* Naranja oscuro */
+}
+
 /* ===== TEMA OSCURO PARA LOGS ===== */
 body.dark-theme .log-table-container {
     background-color: var(--bg-primary);
@@ -211,6 +216,11 @@ body.dark-theme .tipo-usuario {
 body.dark-theme .tipo-calificacion {
     background-color: #4a148c;
     color: #ce93d8;
+}
+
+body.dark-theme .tipo-carga-masiva {
+    background-color: #5d4037;
+    color: #ffb74d;
 }
 
 /* ============================================

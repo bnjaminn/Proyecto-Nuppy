@@ -173,9 +173,8 @@ function mostrarMensaje(titulo, mensaje, tipo = 'info', advertencia = null) {
     switch(tipo) {
         case 'success':
             // Si el tipo es 'success' (éxito), ejecutar este bloque de código
-            // Asignar el carácter de check (✓) como contenido de texto del icono
-            // Este símbolo representa éxito/éxito completado
-            iconoMensaje.textContent = '✓';
+            // Usar Bootstrap Icon de check
+            iconoMensaje.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
             // Asignar un gradiente verde como fondo del icono usando la propiedad style.background
             // linear-gradient crea un gradiente lineal con los colores especificados
             // 135deg es el ángulo del gradiente (diagonal de arriba-izquierda a abajo-derecha)
@@ -185,9 +184,8 @@ function mostrarMensaje(titulo, mensaje, tipo = 'info', advertencia = null) {
             break;
         case 'error':
             // Si el tipo es 'error', ejecutar este bloque de código
-            // Asignar el carácter X (✕) como contenido de texto del icono
-            // Este símbolo representa error/fallo
-            iconoMensaje.textContent = '✕';
+            // Usar Bootstrap Icon de X
+            iconoMensaje.innerHTML = '<i class="bi bi-x-circle-fill"></i>';
             // Asignar un gradiente rojo como fondo del icono
             // #DC3545 y #C82333 son los colores rojo claro y rojo oscuro del gradiente
             iconoMensaje.style.background = 'linear-gradient(135deg, #DC3545 0%, #C82333 100%)';
@@ -195,9 +193,8 @@ function mostrarMensaje(titulo, mensaje, tipo = 'info', advertencia = null) {
             break;
         case 'warning':
             // Si el tipo es 'warning' (advertencia), ejecutar este bloque de código
-            // Asignar el carácter de alerta (⚠) como contenido de texto del icono
-            // Este símbolo representa advertencia/precaución
-            iconoMensaje.textContent = '⚠';
+            // Usar Bootstrap Icon de advertencia
+            iconoMensaje.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
             // Asignar un gradiente amarillo/naranja como fondo del icono
             // #FFC107 y #FF9800 son los colores amarillo y naranja del gradiente
             iconoMensaje.style.background = 'linear-gradient(135deg, #FFC107 0%, #FF9800 100%)';
@@ -206,9 +203,8 @@ function mostrarMensaje(titulo, mensaje, tipo = 'info', advertencia = null) {
         default: // info
             // Si el tipo es 'info' o cualquier otro valor (caso por defecto), ejecutar este bloque
             // El caso default se ejecuta si ningún otro caso coincide con el valor de 'tipo'
-            // Asignar el carácter de información (ℹ) como contenido de texto del icono
-            // Este símbolo representa información general
-            iconoMensaje.textContent = 'ℹ';
+            // Usar Bootstrap Icon de información
+            iconoMensaje.innerHTML = '<i class="bi bi-info-circle-fill"></i>';
             // Asignar un gradiente azul como fondo del icono
             // #17A2B8 y #138496 son los colores azul claro y azul oscuro del gradiente
             iconoMensaje.style.background = 'linear-gradient(135deg, #17A2B8 0%, #138496 100%)';
@@ -323,7 +319,7 @@ function mostrarConfirmacion(titulo, mensaje, advertencia, onConfirmar, tipoBoto
     
     // ========== CONFIGURAR ICONO (SIEMPRE ADVERTENCIA) ==========
     // Los modales de confirmación siempre usan el icono de advertencia
-    iconoMensaje.textContent = '⚠';
+    iconoMensaje.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
     iconoMensaje.style.background = 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)';
     
     // ========== CONFIGURAR BOTONES (MODO CONFIRMACIÓN: DOS BOTONES) ==========
@@ -486,6 +482,102 @@ document.addEventListener('DOMContentLoaded', function() {
     // ========== MODAL DE MENSAJES ==========
     inicializarModalMensaje();
     
+    // ========== CALENDARIO DE AÑO PARA PERIODO COMERCIAL ==========
+    (function() {
+        const periodoInput = document.getElementById('periodo');
+        const periodoIcon = document.getElementById('periodo-calendar-icon');
+        const periodoPicker = document.getElementById('periodo-year-picker');
+        const periodoYearDisplay = document.getElementById('periodo-year-display');
+        const periodoYearGrid = document.getElementById('periodo-year-grid');
+        const periodoYearPrev = document.getElementById('periodo-year-prev');
+        const periodoYearNext = document.getElementById('periodo-year-next');
+        
+        if (!periodoInput || !periodoIcon || !periodoPicker) return;
+        
+        let currentDecade = Math.floor(parseInt(periodoInput.value || new Date().getFullYear()) / 10) * 10;
+        
+        // Función para generar la grilla de años
+        function generarGrillaAnos(decadeStart) {
+            periodoYearGrid.innerHTML = '';
+            periodoYearDisplay.textContent = decadeStart + ' - ' + (decadeStart + 9);
+            
+            for (let i = 0; i < 10; i++) {
+                const year = decadeStart + i;
+                const yearButton = document.createElement('button');
+                yearButton.type = 'button';
+                yearButton.textContent = year;
+                yearButton.style.cssText = 'padding: 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); cursor: pointer; transition: all 0.2s; font-size: 0.9rem;';
+                
+                // Resaltar el año actual si coincide
+                const currentYear = parseInt(periodoInput.value) || new Date().getFullYear();
+                if (year === currentYear) {
+                    yearButton.style.background = 'var(--color-primary)';
+                    yearButton.style.color = 'white';
+                    yearButton.style.borderColor = 'var(--color-primary)';
+                }
+                
+                yearButton.addEventListener('mouseenter', function() {
+                    if (year !== currentYear) {
+                        this.style.background = 'var(--color-primary-light)';
+                        this.style.borderColor = 'var(--color-primary)';
+                    }
+                });
+                
+                yearButton.addEventListener('mouseleave', function() {
+                    if (year !== currentYear) {
+                        this.style.background = 'var(--bg-secondary)';
+                        this.style.borderColor = 'var(--border)';
+                    }
+                });
+                
+                yearButton.addEventListener('click', function() {
+                    periodoInput.value = year;
+                    periodoPicker.style.display = 'none';
+                    // Regenerar la grilla para actualizar el resaltado
+                    generarGrillaAnos(currentDecade);
+                    // Disparar evento change para que se actualice la búsqueda si es necesario
+                    periodoInput.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                
+                periodoYearGrid.appendChild(yearButton);
+            }
+        }
+        
+        // Mostrar/ocultar calendario al hacer clic en el icono
+        periodoIcon.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (periodoPicker.style.display === 'none' || !periodoPicker.style.display) {
+                currentDecade = Math.floor(parseInt(periodoInput.value || new Date().getFullYear()) / 10) * 10;
+                generarGrillaAnos(currentDecade);
+                periodoPicker.style.display = 'block';
+            } else {
+                periodoPicker.style.display = 'none';
+            }
+        });
+        
+        // Navegar a década anterior
+        periodoYearPrev.addEventListener('click', function() {
+            currentDecade -= 10;
+            generarGrillaAnos(currentDecade);
+        });
+        
+        // Navegar a década siguiente
+        periodoYearNext.addEventListener('click', function() {
+            currentDecade += 10;
+            generarGrillaAnos(currentDecade);
+        });
+        
+        // Cerrar calendario al hacer clic fuera
+        document.addEventListener('click', function(e) {
+            if (periodoPicker && !periodoPicker.contains(e.target) && e.target !== periodoIcon && e.target !== periodoInput) {
+                periodoPicker.style.display = 'none';
+            }
+        });
+        
+        // Inicializar grilla con el año actual
+        generarGrillaAnos(currentDecade);
+    })();
+    
     // ========== MODAL 1 (Ingreso de Calificaciones) ==========
     const modalOverlay1 = document.getElementById('ingreso-modal-overlay');
     const btnAbrirModal1 = document.getElementById('btn-abrir-modal');
@@ -581,10 +673,21 @@ document.addEventListener('DOMContentLoaded', function() {
             // Obtener el valor del mercado: del select si está visible, o del input readonly
             let mercadoValue = '';
             if (modal1MercadoSelect && modal1MercadoSelect.style.display !== 'none') {
+                // Si el select está visible, usar su valor (puede ser modificación con dashboard en "Todos")
                 mercadoValue = modal1MercadoSelect.value || '';
             } else if (modal1Mercado && modal1Mercado.style.display !== 'none') {
-                // Si es readonly, usar el valor del dashboard original
-                mercadoValue = dashboardMercado ? dashboardMercado.value || '' : '';
+                // Si es readonly, verificar si es modificación o creación
+                const calificacionIdHidden = document.getElementById('calificacion-id-hidden');
+                const esModificacion = calificacionIdHidden && calificacionIdHidden.value;
+                if (esModificacion) {
+                    // En modificación, el readonly tiene el valor de la calificación
+                    // Necesitamos obtener el valor real del mercado de la calificación
+                    // Usar el valor del input readonly que ya tiene el mercado de la calificación
+                    mercadoValue = modal1Mercado.value || '';
+                } else {
+                    // En creación, usar el valor del dashboard original
+                    mercadoValue = dashboardMercado ? dashboardMercado.value || '' : '';
+                }
             }
             
             // Validar campos mínimos requeridos
@@ -920,6 +1023,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ========== BOTÓN BUSCAR ==========
     const btnBuscar = document.getElementById('btn-buscar');
     const btnLimpiar = document.getElementById('btn-limpiar');
+    const btnExportar = document.getElementById('btn-exportar');
     const buscarCalificacionesUrl = window.DJANGO_URLS ? window.DJANGO_URLS.buscarCalificaciones : '/buscar-calificaciones/';
     const tablaBody = document.getElementById('tabla-calificaciones-body');
 
@@ -957,36 +1061,19 @@ document.addEventListener('DOMContentLoaded', function() {
             
             html += '<tr>';
             
-            // Columna de Acciones con botones con iconos SVG minimalistas (al principio)
+            // Columna de Acciones con botones con iconos Bootstrap Icons
             html += `<td class="acciones-cell">
                 <button class="btn-row-icon btn-modificar-row" data-calificacion-id="${calId}" title="Modificar">
-                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                    </svg>
+                    <i class="bi bi-pencil"></i>
                 </button>
                 <button class="btn-row-icon btn-eliminar-row" data-calificacion-id="${calId}" title="Eliminar">
-                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        <line x1="10" y1="11" x2="10" y2="17"></line>
-                        <line x1="14" y1="11" x2="14" y2="17"></line>
-                    </svg>
+                    <i class="bi bi-trash"></i>
                 </button>
                 <button class="btn-row-icon btn-copiar-row" data-calificacion-id="${calId}" title="Copiar">
-                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
+                    <i class="bi bi-copy"></i>
                 </button>
                 <button class="btn-row-icon btn-log-row" data-calificacion-id="${calId}" title="Ver Log de Cambios">
-                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
+                    <i class="bi bi-file-text"></i>
                 </button>
             </td>`;
             
@@ -1187,12 +1274,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 const cal = data.calificacion;
                 
                 // Llenar campos del modal 1
-                // Para modificar: siempre mostrar readonly con el valor guardado
-                if (modal1Mercado) {
-                    modal1Mercado.value = cal.mercado || '';
-                    modal1Mercado.style.display = 'block';
+                // Para modificar: mostrar select si el dashboard tiene "Todos", sino mostrar readonly
+                const mercadoValue = dashboardMercado ? dashboardMercado.value : '';
+                if (!mercadoValue || mercadoValue === '') {
+                    // Dashboard tiene "Todos" seleccionado: mostrar select para permitir cambiar
+                    if (modal1Mercado) modal1Mercado.style.display = 'none';
+                    if (modal1MercadoSelect) {
+                        modal1MercadoSelect.style.display = 'block';
+                        modal1MercadoSelect.value = cal.mercado || '';
+                    }
+                } else {
+                    // Dashboard tiene un mercado específico: mostrar readonly
+                    if (modal1Mercado) {
+                        modal1Mercado.value = cal.mercado || '';
+                        modal1Mercado.style.display = 'block';
+                    }
+                    if (modal1MercadoSelect) modal1MercadoSelect.style.display = 'none';
                 }
-                if (modal1MercadoSelect) modal1MercadoSelect.style.display = 'none';
                 if (modal1Instrumento) modal1Instrumento.value = cal.instrumento || '';
                 if (modal1Descripcion) modal1Descripcion.value = cal.descripcion || '';
                 if (modal1FechaPago) {
@@ -1735,21 +1833,235 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (btnLimpiar) {
         btnLimpiar.addEventListener('click', function() {
-            // Resetear filtros a valores por defecto
+            // Resetear filtros a valores vacíos para limpiar todos los filtros
             if (dashboardMercado) dashboardMercado.value = ''; // Vacío para mostrar todos
-            if (dashboardOrigen) dashboardOrigen.value = 'corredor';
-            if (dashboardPeriodo) dashboardPeriodo.value = new Date().getFullYear().toString();
+            if (dashboardOrigen) dashboardOrigen.value = ''; // Vacío para mostrar todos
+            if (dashboardPeriodo) dashboardPeriodo.value = ''; // Vacío para mostrar todos
 
-            // Limpiar tabla
-            if (tablaBody) {
-                tablaBody.innerHTML = `
-                    <tr>
-                        <td colspan="37" style="text-align: center; padding: 20px;">
-                            <em>Seleccione los filtros y haga clic en "buscar" para ver las calificaciones</em>
-                        </td>
-                    </tr>
-                `;
+            // Ejecutar búsqueda automáticamente para mostrar todas las calificaciones sin filtros
+            if (btnBuscar) {
+                btnBuscar.click();
             }
+        });
+    }
+    
+    // ========== MODAL DE EXPORTAR CALIFICACIONES ==========
+    const modalExportarOverlay = document.getElementById('exportar-modal-overlay');
+    const btnCerrarExportar = document.getElementById('btn-cerrar-exportar');
+    const btnCerrarExportarX = document.getElementById('btn-cerrar-exportar-x');
+    const btnExportarSeleccionadas = document.getElementById('btn-exportar-seleccionadas');
+    const checkboxTodasExportar = document.getElementById('checkbox-todas-exportar');
+    const exportarCalificacionesList = document.getElementById('exportar-calificaciones-list');
+    const exportarContador = document.getElementById('exportar-contador');
+    
+    let calificacionesFiltradas = []; // Almacenar las calificaciones filtradas para el modal
+    
+    // Función para cargar las calificaciones filtradas del dashboard en el modal
+    function cargarCalificacionesParaExportar() {
+        if (!exportarCalificacionesList) return;
+        
+        exportarCalificacionesList.innerHTML = '<div class="exportar-loading"><i class="bi bi-hourglass-split"></i><p>Cargando calificaciones...</p></div>';
+        
+        // Obtener los filtros actuales del dashboard
+        const mercado = dashboardMercado ? dashboardMercado.value : '';
+        const origen = dashboardOrigen ? dashboardOrigen.value : '';
+        const periodo = dashboardPeriodo ? dashboardPeriodo.value : '';
+        
+        // Construir URL con los mismos filtros que el dashboard
+        const buscarCalificacionesUrl = window.DJANGO_URLS?.buscarCalificaciones || '/prueba/buscar-calificaciones/';
+        const params = new URLSearchParams();
+        if (mercado) params.append('mercado', mercado);
+        if (origen) params.append('origen', origen);
+        if (periodo) params.append('periodo', periodo);
+        
+        const url = params.toString() ? `${buscarCalificacionesUrl}?${params.toString()}` : buscarCalificacionesUrl;
+        
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': csrftoken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.calificaciones) {
+                calificacionesFiltradas = data.calificaciones;
+                renderizarListaExportar();
+            } else {
+                exportarCalificacionesList.innerHTML = '<div class="exportar-loading"><i class="bi bi-exclamation-triangle"></i><p>No se pudieron cargar las calificaciones</p></div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar calificaciones:', error);
+            exportarCalificacionesList.innerHTML = '<div class="exportar-loading"><i class="bi bi-x-circle" style="color: var(--color-danger);"></i><p style="color: var(--color-danger);">Error al cargar calificaciones</p></div>';
+        });
+    }
+    
+    // Función para renderizar la lista de calificaciones en el modal
+    function renderizarListaExportar() {
+        if (!exportarCalificacionesList || calificacionesFiltradas.length === 0) {
+            exportarCalificacionesList.innerHTML = '<div class="exportar-loading"><i class="bi bi-inbox"></i><p>No hay calificaciones disponibles con los filtros actuales</p></div>';
+            return;
+        }
+        
+        let html = '';
+        calificacionesFiltradas.forEach((cal, index) => {
+            const calId = cal.id || cal._id || '';
+            html += `
+                <div class="opcion-item opcion-item-exportar" data-index="${index}">
+                    <input type="checkbox" id="checkbox-exportar-${index}" class="checkbox-exportar-calificacion" data-cal-id="${calId}">
+                    <div>
+                        <div>${cal.instrumento || 'Sin instrumento'}</div>
+                        <div>
+                            <span><strong>Ejercicio:</strong> ${cal.ejercicio || 'N/A'}</span>
+                            <span><strong>Mercado:</strong> ${cal.mercado || 'N/A'}</span>
+                            <span><strong>Origen:</strong> ${cal.origen || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        exportarCalificacionesList.innerHTML = html;
+        
+        // Agregar event listeners a los checkboxes después de renderizar
+        const checkboxes = exportarCalificacionesList.querySelectorAll('.checkbox-exportar-calificacion');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function(e) {
+                e.stopPropagation(); // Evitar que el evento se propague al item
+                actualizarContadorExportar();
+            });
+            checkbox.addEventListener('click', function(e) {
+                e.stopPropagation(); // Evitar que el evento se propague al item
+            });
+        });
+        
+        // Agregar event listeners a los items para hacer clic en el checkbox
+        const items = exportarCalificacionesList.querySelectorAll('.opcion-item-exportar');
+        items.forEach(item => {
+            item.addEventListener('click', function(e) {
+                // Si el clic fue directamente en el checkbox, no hacer nada más (ya se maneja arriba)
+                if (e.target.type === 'checkbox') {
+                    return;
+                }
+                // Si el clic fue en el item, hacer toggle del checkbox
+                const checkbox = item.querySelector('.checkbox-exportar-calificacion');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    // Disparar evento change manualmente para que se actualice el contador
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+        
+        actualizarContadorExportar();
+    }
+    
+    // Función para actualizar el contador de calificaciones seleccionadas
+    function actualizarContadorExportar() {
+        if (!exportarContador) return;
+        
+        const checkboxes = document.querySelectorAll('.checkbox-exportar-calificacion:checked');
+        const count = checkboxes.length;
+        
+        const contadorText = exportarContador.querySelector('.exportar-contador-text');
+        if (contadorText) {
+            contadorText.textContent = `${count} calificación${count !== 1 ? 'es' : ''} seleccionada${count !== 1 ? 's' : ''}`;
+        } else {
+            exportarContador.textContent = `${count} calificación${count !== 1 ? 'es' : ''} seleccionada${count !== 1 ? 's' : ''}`;
+        }
+        
+        // Actualizar icono según cantidad
+        const contadorIcon = exportarContador.querySelector('i');
+        if (contadorIcon) {
+            if (count > 0) {
+                contadorIcon.className = 'bi bi-check-circle-fill';
+                contadorIcon.style.color = 'var(--color-success)';
+            } else {
+                contadorIcon.className = 'bi bi-check-circle';
+                contadorIcon.style.color = 'var(--color-primary)';
+            }
+        }
+        
+        // Habilitar/deshabilitar botón de exportar
+        if (btnExportarSeleccionadas) {
+            btnExportarSeleccionadas.disabled = count === 0;
+        }
+        
+        // Actualizar checkbox "Todas"
+        if (checkboxTodasExportar) {
+            const totalCheckboxes = document.querySelectorAll('.checkbox-exportar-calificacion').length;
+            checkboxTodasExportar.checked = count === totalCheckboxes && totalCheckboxes > 0;
+        }
+    }
+    
+    // Función para abrir modal de exportar
+    function abrirModalExportar() {
+        if (modalExportarOverlay) {
+            modalExportarOverlay.style.display = 'flex';
+            cargarCalificacionesParaExportar();
+        }
+    }
+    
+    // Función para cerrar modal de exportar
+    function cerrarModalExportar() {
+        if (modalExportarOverlay) {
+            modalExportarOverlay.style.display = 'none';
+            // Limpiar selecciones
+            if (checkboxTodasExportar) checkboxTodasExportar.checked = false;
+            const checkboxes = document.querySelectorAll('.checkbox-exportar-calificacion');
+            checkboxes.forEach(cb => cb.checked = false);
+            actualizarContadorExportar();
+        }
+    }
+    
+    // Event listeners para el modal de exportar
+    if (btnExportar) {
+        btnExportar.addEventListener('click', abrirModalExportar);
+    }
+    
+    if (btnCerrarExportar) {
+        btnCerrarExportar.addEventListener('click', cerrarModalExportar);
+    }
+    
+    if (btnCerrarExportarX) {
+        btnCerrarExportarX.addEventListener('click', cerrarModalExportar);
+    }
+    
+    // Checkbox "Todas" - seleccionar/deseleccionar todas
+    if (checkboxTodasExportar) {
+        checkboxTodasExportar.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.checkbox-exportar-calificacion');
+            checkboxes.forEach(cb => {
+                cb.checked = checkboxTodasExportar.checked;
+            });
+            actualizarContadorExportar();
+        });
+    }
+    
+    // Botón exportar seleccionadas
+    if (btnExportarSeleccionadas) {
+        btnExportarSeleccionadas.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('.checkbox-exportar-calificacion:checked');
+            const ids = Array.from(checkboxes).map(cb => cb.getAttribute('data-cal-id')).filter(id => id);
+            
+            if (ids.length === 0) {
+                mostrarMensaje('Advertencia', 'Debe seleccionar al menos una calificación para exportar', 'warning');
+                return;
+            }
+            
+            // Construir URL con los IDs
+            const exportarUrl = window.DJANGO_URLS?.exportarCalificaciones || '/prueba/exportar-calificaciones/';
+            const params = new URLSearchParams();
+            params.append('ids', ids.join(','));
+            
+            const url = `${exportarUrl}?${params.toString()}`;
+            
+            // Cerrar modal y exportar
+            cerrarModalExportar();
+            
+            // Abrir en nueva ventana para descargar el archivo
+            window.open(url, '_blank');
         });
     }
 
@@ -1781,7 +2093,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnCerrarCargaMonto = document.getElementById('btn-cerrar-carga-monto-x');
     const btnCancelarMonto = document.getElementById('btn-cancelar-monto');
     const btnSeleccionarArchivoMonto = document.getElementById('btn-seleccionar-archivo-monto');
-    const btnSeleccionarArchivoMontoFooter = document.getElementById('btn-seleccionar-archivo-monto-footer');
     const inputArchivoMonto = document.getElementById('archivo-monto-input');
     const nombreArchivoMonto = document.getElementById('archivo-monto-nombre');
     const tablaPreviewMonto = document.getElementById('tabla-preview-monto-body');
@@ -1792,6 +2103,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Abrir modal de carga x factor
     if (btnCargaFactor) {
         btnCargaFactor.addEventListener('click', () => {
+            // Limpiar el modal antes de abrirlo
+            limpiarModalFactor();
             if (modalCargaFactor) modalCargaFactor.style.display = 'flex';
         });
     }
@@ -1799,6 +2112,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Abrir modal de carga x monto
     if (btnCargaMonto) {
         btnCargaMonto.addEventListener('click', () => {
+            // Limpiar el modal antes de abrirlo
+            limpiarModalMonto();
             if (modalCargaMonto) modalCargaMonto.style.display = 'flex';
         });
     }
@@ -1853,11 +2168,6 @@ document.addEventListener('DOMContentLoaded', function() {
             inputArchivoMonto.click();
         });
         
-        if (btnSeleccionarArchivoMontoFooter) {
-            btnSeleccionarArchivoMontoFooter.addEventListener('click', () => {
-                inputArchivoMonto.click();
-            });
-        }
         
         inputArchivoMonto.addEventListener('change', (e) => {
             const archivo = e.target.files[0];
@@ -2032,23 +2342,35 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Función para limpiar modal factor
     function limpiarModalFactor() {
+        // Limpiar variables de datos
         datosCSVFactor = null;
+        hashArchivoFactor = null;
+        nombreArchivoFactorData = null;
+        // Limpiar campos del formulario
         if (inputArchivoFactor) inputArchivoFactor.value = '';
         if (nombreArchivoFactor) nombreArchivoFactor.value = '';
+        // Limpiar tabla de preview
         if (tablaPreviewFactor) {
             tablaPreviewFactor.innerHTML = '<tr><td colspan="38" style="padding: 2rem; text-align: center; color: #999;">No hay datos para mostrar. Seleccione un archivo CSV.</td></tr>';
         }
+        // Deshabilitar botón de grabar
         if (btnGrabarFactor) btnGrabarFactor.disabled = true;
     }
     
     // Función para limpiar modal monto
     function limpiarModalMonto() {
+        // Limpiar variables de datos
         datosCSVMonto = null;
+        hashArchivoMonto = null;
+        nombreArchivoMontoData = null;
+        // Limpiar campos del formulario
         if (inputArchivoMonto) inputArchivoMonto.value = '';
         if (nombreArchivoMonto) nombreArchivoMonto.value = '';
+        // Limpiar tabla de preview
         if (tablaPreviewMonto) {
             tablaPreviewMonto.innerHTML = '<tr><td colspan="38" style="padding: 2rem; text-align: center; color: #999;">No hay datos para mostrar. Seleccione un archivo CSV.</td></tr>';
         }
+        // Deshabilitar botones
         if (btnCalcularFactoresMonto) btnCalcularFactoresMonto.disabled = true;
         if (btnGrabarMonto) btnGrabarMonto.disabled = true;
     }

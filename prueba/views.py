@@ -22,8 +22,9 @@ import bcrypt    # Para hashear contraseñas de forma segura
 import re        # Para expresiones regulares - usado en _extraer_object_id() para parsear DBRef
 import os        # Para operaciones del sistema de archivos (rutas, extensiones)
 import datetime  # Para manejar fechas y horas
+import csv       # Para exportar datos a CSV
 from django.shortcuts import render, redirect  # render: renderizar templates HTML | redirect: redirigir a otras URLs
-from django.http import HttpResponseForbidden, JsonResponse, HttpResponseServerError  # Respuestas HTTP: Forbidden(403), JSON, ServerError(500)
+from django.http import HttpResponseForbidden, JsonResponse, HttpResponseServerError, HttpResponse  # Respuestas HTTP: Forbidden(403), JSON, ServerError(500), HttpResponse para CSV
 from django.views.decorators.http import require_POST, require_GET  # Decoradores para restringir métodos HTTP (POST/GET)
 from django.contrib import messages  # Para mensajes flash al usuario
 from django.conf import settings  # Acceso a configuración de Django (MEDIA_ROOT, etc.)
@@ -571,6 +572,97 @@ def buscar_calificaciones_view(request):
         return JsonResponse({'success': False, 'error': f'Error al buscar: {str(e)}'}, status=500) #retornamos el error en formato JSON
 
 
+@require_GET
+def exportar_calificaciones_view(request):
+    """
+    Vista para exportar calificaciones a CSV según IDs seleccionados.
+    
+    Permite exportar calificaciones específicas pasando sus IDs como parámetros.
+    Si no se pasan IDs, exporta todas las calificaciones.
+    
+    Retorna un archivo CSV descargable con las calificaciones seleccionadas y sus factores.
+    
+    Argumentos:
+        request: Objeto HttpRequest de Django (solo GET permitido)
+        - ids: Lista de IDs de calificaciones separados por comas (opcional)
+        
+    Returns (lo que devuelve la funcion):
+        HttpResponse: Archivo CSV con las calificaciones
+    """
+    
+    if 'user_id' not in request.session: # Si el usuario no está autenticado, retorna error
+        return HttpResponseForbidden('No autenticado')
+    
+    try:
+        # Obtener IDs de calificaciones a exportar
+        ids_param = request.GET.get('ids', '').strip()
+        
+        if ids_param:
+            # Si hay IDs, exportar solo esas calificaciones
+            ids_list = [id.strip() for id in ids_param.split(',') if id.strip()]
+            try:
+                # Convertir strings a ObjectId
+                object_ids = [ObjectId(id) for id in ids_list]
+                calificaciones = Calificacion.objects(id__in=object_ids).order_by('-FechaAct')
+            except Exception as e:
+                print(f"Error al convertir IDs: {e}")
+                return HttpResponseServerError('Error: IDs inválidos')
+        else:
+            # Si no hay IDs, exportar todas las calificaciones
+            calificaciones = Calificacion.objects().order_by('-FechaAct')
+        
+        # Crear respuesta HTTP con tipo CSV
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="calificaciones_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        
+        # Crear escritor CSV
+        writer = csv.writer(response)
+        
+        # Escribir encabezados
+        headers = [
+            'ID', 'Ejercicio', 'Mercado', 'Origen', 'Instrumento', 'Fecha Pago', 
+            'Secuencia Evento', 'Descripcion', 'Fecha Act', 'Dividendo', 
+            'Valor Historico', 'Factor Actualizacion', 'Anho', 'ISFUT'
+        ]
+        # Agregar factores F8-F37
+        for i in range(8, 38):
+            headers.append(f'Factor{i:02d}')
+        
+        writer.writerow(headers)
+        
+        # Escribir datos de cada calificación
+        for cal in calificaciones:
+            row = [
+                str(cal.id) if cal.id else '',
+                cal.Ejercicio or '',
+                cal.Mercado or '',
+                cal.Origen or '',
+                cal.Instrumento or '',
+                cal.FechaPago.strftime('%Y-%m-%d') if cal.FechaPago else '',
+                cal.SecuenciaEvento or '',
+                cal.Descripcion or '',
+                cal.FechaAct.strftime('%Y-%m-%d %H:%M:%S') if cal.FechaAct else '',
+                str(cal.Dividendo) if cal.Dividendo else '0.0',
+                str(cal.ValorHistorico) if cal.ValorHistorico else '0.0',
+                str(cal.FactorActualizacion) if cal.FactorActualizacion else '0.0',
+                cal.Anho or '',
+                'True' if cal.ISFUT else 'False'
+            ]
+            # Agregar factores F8-F37
+            for i in range(8, 38):
+                field_name = f'Factor{i:02d}'
+                valor = getattr(cal, field_name, 0.0)
+                row.append(str(valor) if valor else '0.0')
+            
+            writer.writerow(row)
+        
+        return response
+        
+    except Exception as e:
+        print(f"Error al exportar calificaciones: {e}")
+        return HttpResponseServerError(f'Error al exportar: {str(e)}')
+
+
 # =====================================================================
 # VISTAS DE CERRAR SESIÓN
 # =====================================================================
@@ -589,6 +681,26 @@ def logout_view(request):
     """
     request.session.flush() #elimina todos los datos de la sesión
     return redirect('login') #redirige a la página de login
+
+
+# =====================================================================
+# VISTAS DE INFORMACIÓN
+# =====================================================================
+
+def contacto_view(request):
+    """
+    Vista para mostrar la página de contacto de Nuam.
+    
+    Muestra información de contacto de la empresa Nuam.
+    No requiere autenticación.
+    
+    Argumentos:
+        request: Objeto HttpRequest de Django
+        
+    Returns (lo que devuelve la funcion):
+        HttpResponse: Renderiza contacto.html con información de contacto
+    """
+    return render(request, 'prueba/contacto.html')
 
 
 # =====================================================================
@@ -1251,11 +1363,24 @@ def crear_usuario_view(request):
                     nuevo_usuario.delete()  # Eliminar usuario si falla la foto
                     print(f"Error al guardar foto: {e}") # Si hay error, se imprime el error
                     return JsonResponse({'success': False, 'error': f'Error al guardar foto: {e}'}, status=500) # Si hay error, se retorna un error
+            
+            # Crear log de la acción
+            _crear_log(admin_user, "Crear Usuario", usuario_afectado=nuevo_usuario)
+            
+            # Retornar éxito después de crear el usuario exitosamente
+            return JsonResponse({'success': True, 'message': 'Usuario creado exitosamente'})
         except Exception as e:
             print(f"Error al crear usuario: {e}")
             return JsonResponse({'success': False, 'error': f'Error interno: {e}'}, status=500)
     else:
-        return JsonResponse({'success': False, 'error': form.errors.as_json()}, status=400)
+        # Convertir errores del formulario a un formato más legible
+        error_mensaje = "Error de validación: "
+        if form.errors:
+            # Extraer el primer error del formulario
+            primer_campo = list(form.errors.keys())[0]
+            primer_error = form.errors[primer_campo][0]
+            error_mensaje = str(primer_error)
+        return JsonResponse({'success': False, 'error': error_mensaje}, status=400)
 
 
 # =====================================================================
@@ -1525,7 +1650,7 @@ def ver_logs_view(request):
                     tipo_afectado = "Calificacion" # Asigna el tipo de afectado a la calificación
             elif hasattr(l, "hash_archivo_csv") and l.hash_archivo_csv and getattr(l, "accion", "") == "Carga Masiva": # Si es una carga masiva, usar el hash del archivo como ID
                 afectado_id = l.hash_archivo_csv # Usar el hash del archivo CSV como ID
-                tipo_afectado = "Calificacion" # Las cargas masivas afectan calificaciones
+                tipo_afectado = "Carga-Masiva" # Las cargas masivas se muestran como "Carga Masiva" (con guión para CSS)
             # Agregar el log procesado a la lista de logs procesados
             logs_procesados.append({
                 "fecha": getattr(l, "fecharegistrada", None), # Asigna la fecha del log al log
