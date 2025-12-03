@@ -1,14 +1,32 @@
-// ============================================
-// ADMINISTRAR.JS - JavaScript para Administración de Usuarios
-// ============================================
-// Este archivo contiene la lógica JavaScript para la página de administración de usuarios.
-// Maneja:
-// - Selección/deselección de usuarios
-// - Crear nuevos usuarios
-// - Modificar usuarios existentes
-// - Eliminar usuarios (con confirmación)
-// - Validación de formularios en el cliente
-// ============================================
+/**
+ * ADMINISTRAR.JS - JavaScript para Administración de Usuarios
+ * ============================================
+ * 
+ * POR QUÉ ESTE SCRIPT ES IMPORTANTE:
+ * - Proporciona toda la funcionalidad de administración de usuarios en el cliente
+ * - Permite crear, modificar y eliminar usuarios sin recargar la página
+ * - Valida formularios en el cliente antes de enviarlos al servidor
+ * - Muestra notificaciones y mensajes de carga para mejor UX
+ * - Previene auto-eliminación y otros errores comunes
+ * 
+ * CÓMO FUNCIONA:
+ * 1. Al cargar la página, inicializa todos los event listeners
+ * 2. Permite seleccionar usuarios haciendo clic en sus tarjetas
+ * 3. Muestra modales para crear y modificar usuarios
+ * 4. Valida contraseñas en tiempo real con indicadores visuales
+ * 5. Envía peticiones AJAX al servidor para operaciones CRUD
+ * 6. Muestra notificaciones de éxito/error al usuario
+ * 
+ * FUNCIONALIDADES PRINCIPALES:
+ * - Selección/deselección de usuarios (múltiple selección)
+ * - Crear nuevos usuarios (con validación de contraseña)
+ * - Modificar usuarios existentes (con validación opcional de contraseña)
+ * - Eliminar usuarios (con confirmación y prevención de auto-eliminación)
+ * - Validación de formularios en el cliente
+ * - Sistema de notificaciones elegantes
+ * - Indicadores de carga durante operaciones asíncronas
+ * ============================================
+ */
 
 // ============================================
 // SISTEMA DE NOTIFICACIONES

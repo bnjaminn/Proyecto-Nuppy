@@ -1,58 +1,121 @@
-// ============================================
-// HOME.JS - JavaScript Principal del Dashboard
-// ============================================
-// Este archivo contiene toda la lógica JavaScript para el dashboard principal.
-// Maneja:
-// - Modales de ingreso y edición de calificaciones
-// - Cálculo de factores desde montos
-// - Búsqueda y filtrado de calificaciones
-// - Carga masiva de archivos CSV (factores y montos)
-// - Modificación, eliminación y copia de calificaciones
-// - Visualización de logs de cambios
-// - Gestión de tema oscuro
-// ============================================
+/**
+ * HOME.JS - JavaScript Principal del Dashboard
+ * ============================================
+ * 
+ * POR QUÉ ESTE SCRIPT ES CRÍTICO:
+ * - Es el corazón de la funcionalidad del dashboard
+ * - Maneja todas las operaciones CRUD de calificaciones
+ * - Calcula factores financieros desde montos (lógica de negocio crítica)
+ * - Permite carga masiva de datos desde CSV
+ * - Proporciona búsqueda y filtrado dinámico
+ * - Gestiona modales complejos para ingreso y edición
+ * 
+ * CÓMO FUNCIONA:
+ * 1. Al cargar la página, inicializa todos los event listeners
+ * 2. Carga calificaciones desde el servidor y las muestra en la tabla
+ * 3. Permite abrir modales para crear/editar calificaciones
+ * 4. Calcula factores financieros en tiempo real desde montos
+ * 5. Maneja carga masiva de CSV con previsualización
+ * 6. Permite buscar, filtrar, exportar, eliminar y copiar calificaciones
+ * 7. Muestra logs de auditoría para cada calificación
+ * 
+ * FUNCIONALIDADES PRINCIPALES:
+ * - Modales de ingreso y edición de calificaciones (dos modales: datos básicos + factores)
+ * - Cálculo de factores desde montos (Fórmula: Factor = Monto / SumaBase)
+ * - Búsqueda y filtrado de calificaciones (por mercado, origen, período)
+ * - Carga masiva de archivos CSV (factores y montos con previsualización)
+ * - Modificación, eliminación y copia de calificaciones
+ * - Visualización de logs de cambios (auditoría)
+ * - Exportación de calificaciones a CSV
+ * - Gestión de tema oscuro/claro
+ * 
+ * CÁLCULOS FINANCIEROS:
+ * - SumaBase = suma de montos del 8 al 19
+ * - Factor = Monto / SumaBase (para cada monto del 8 al 37)
+ * - Precisión: 8 decimales usando Decimal para evitar errores de punto flotante
+ * ============================================
+ */
 
 // ============================================
 // FUNCIÓN AUXILIAR: getCookie(name)
 // ============================================
-// Propósito: Obtiene el valor de una cookie específica por su nombre.
-// 
-// Parámetros:
-//   - name (string): Nombre de la cookie que se desea obtener
-// 
-// Retorna:
-//   - string | null: El valor de la cookie si existe, o null si no se encuentra
-// 
-// Uso principal:
-//   Se usa principalmente para obtener el token CSRF de Django, que es requerido
-//   para todas las peticiones POST/PUT/DELETE para prevenir ataques CSRF.
-// 
-// Ejemplo de uso:
-//   const csrfToken = getCookie('csrftoken');
-// ============================================
+/**
+ * Obtiene el valor de una cookie específica por su nombre.
+ * 
+ * POR QUÉ ESTA FUNCIÓN ES NECESARIA:
+ * - Las cookies se almacenan en document.cookie como un string único
+ * - Necesitamos extraer el valor de una cookie específica
+ * - Se usa principalmente para obtener el token CSRF de Django
+ * - El token CSRF es requerido para todas las peticiones POST/PUT/DELETE
+ * - Previene ataques CSRF (Cross-Site Request Forgery)
+ * 
+ * CÓMO FUNCIONA:
+ * 1. Verifica que existan cookies en el documento
+ * 2. Divide todas las cookies por el separador ';'
+ * 3. Busca la cookie que coincida con el nombre proporcionado
+ * 4. Extrae y decodifica el valor de la cookie
+ * 5. Retorna el valor o null si no se encuentra
+ * 
+ * Parámetros:
+ *   - name (string): Nombre de la cookie que se desea obtener
+ * 
+ * Retorna:
+ *   - string | null: El valor de la cookie si existe, o null si no se encuentra
+ * 
+ * Ejemplo de uso:
+ *   const csrfToken = getCookie('csrftoken');
+ */
 function getCookie(name) {
+    // Inicializar variable para almacenar el valor de la cookie
+    // POR QUÉ: Necesitamos una variable para guardar el valor encontrado
+    // CÓMO: Se inicializa en null y se actualiza si se encuentra la cookie
     let cookieValue = null;
     
     // Verificar que existen cookies en el documento
+    // POR QUÉ: Si no hay cookies, no tiene sentido buscar
+    // CÓMO: document.cookie contiene todas las cookies como un string
+    // LÓGICA: Si document.cookie está vacío o es null, no hay cookies
     if (document.cookie && document.cookie !== '') {
         // Dividir todas las cookies por el separador ';'
-        // Las cookies vienen en formato: "cookie1=valor1; cookie2=valor2; cookie3=valor3"
+        // POR QUÉ: Las cookies vienen en formato: "cookie1=valor1; cookie2=valor2; cookie3=valor3"
+        // CÓMO: split(';') divide el string en un array de strings
+        // LÓGICA: Cada elemento del array es una cookie en formato "nombre=valor"
         const cookies = document.cookie.split(';');
         
         // Buscar la cookie que coincida con el nombre proporcionado
+        // POR QUÉ: Necesitamos iterar sobre todas las cookies para encontrar la correcta
+        // CÓMO: for loop itera sobre cada cookie en el array
         for (let i = 0; i < cookies.length; i++) {
             // Limpiar espacios en blanco alrededor de la cookie
+            // POR QUÉ: Los espacios pueden causar problemas al comparar
+            // CÓMO: trim() elimina espacios al inicio y final del string
+            // LÓGICA: " cookie=valor " se convierte en "cookie=valor"
             const cookie = cookies[i].trim();
             
             // Verificar si esta cookie comienza con el nombre buscado seguido de '='
-            // Ejemplo: si buscamos 'csrftoken', verificamos si la cookie es 'csrftoken=valor...'
+            // POR QUÉ: Las cookies tienen formato "nombre=valor", necesitamos verificar el nombre
+            // CÓMO: substring(0, name.length + 1) obtiene los primeros caracteres (nombre + '=')
+            // LÓGICA: Si buscamos 'csrftoken', verificamos si la cookie es 'csrftoken=valor...'
+            // Ejemplo: cookie.substring(0, 9) de "csrftoken=abc123" es "csrftoken="
             if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                // Extraer el valor después del '=' y decodificarlo (por si tiene caracteres especiales)
+                // Extraer el valor después del '=' y decodificarlo
+                // POR QUÉ: El valor puede tener caracteres especiales codificados (ej: espacios como %20)
+                // CÓMO: substring(name.length + 1) obtiene todo después del '='
+                // decodeURIComponent() decodifica caracteres especiales (ej: %20 → espacio)
+                // LÓGICA: "csrftoken=abc123" → substring(10) → "abc123"
                 cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break; // Encontrada, salir del bucle
+                
+                // Salir del bucle porque ya encontramos la cookie
+                // POR QUÉ: No necesitamos seguir buscando si ya la encontramos
+                // CÓMO: break sale inmediatamente del bucle for
+                break;
             }
         }
     }
+    
+    // Retornar el valor de la cookie encontrada o null
+    // POR QUÉ: Si no se encontró la cookie, retornamos null
+    // CÓMO: return sale de la función y devuelve el valor
     return cookieValue;
 }
 
@@ -611,9 +674,33 @@ document.addEventListener('DOMContentLoaded', function() {
     // Obtener URLs desde window.DJANGO_URLS (configurado en el template)
     const ingresarUrl = window.DJANGO_URLS ? window.DJANGO_URLS.ingresar : '/ingresar/';
 
-    // --- Funciones para abrir/cerrar Modal 1 ---
+    // ============================================
+    // FUNCIÓN: abrirModal1()
+    // ============================================
+    /**
+     * Abre el modal de ingreso de calificaciones (Modal 1 - Datos básicos).
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES NECESARIA:
+     * - Es el primer paso del flujo de creación de calificaciones
+     * - Prellena campos con valores del dashboard si es creación nueva
+     * - No sobrescribe valores si es modificación (valores ya cargados)
+     * - Maneja la lógica de mostrar select o input readonly según el contexto
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Verifica si es modificación o creación nueva
+     * 2. Si es creación: copia valores del dashboard (mercado, período)
+     * 3. Si es modificación: mantiene valores ya cargados (no sobrescribe)
+     * 4. Muestra el modal cambiando display a 'flex'
+     * 
+     * FLUJO:
+     * - Creación: Dashboard → Modal 1 (prellenado) → Modal 2 (factores)
+     * - Modificación: Tabla → Modal 1 (datos cargados) → Modal 2 (factores)
+     */
     function abrirModal1() { 
         // Verificar si estamos modificando una calificación existente
+        // POR QUÉ: Necesitamos saber si es creación o modificación para manejar los valores correctamente
+        // CÓMO: Buscamos un campo hidden que contiene el ID de la calificación
+        // LÓGICA: Si existe y tiene valor, es modificación. Si no, es creación nueva
         const calificacionIdHidden = document.getElementById('calificacion-id-hidden');
         const esModificacion = calificacionIdHidden && calificacionIdHidden.value;
         
@@ -652,8 +739,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if (modalOverlay1) modalOverlay1.style.display = 'flex'; 
     }
     
+    /**
+     * Cierra el modal de ingreso de calificaciones (Modal 1).
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES NECESARIA:
+     * - Permite cerrar el modal cuando el usuario cancela o termina
+     * - Oculta el overlay y el contenido del modal
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Busca el elemento del overlay del modal
+     * 2. Cambia su display a 'none' para ocultarlo
+     */
     function cerrarModal1() { 
-        // Oculta el modal
+        // Ocultar el modal
+        // POR QUÉ: El usuario quiere cerrar el modal
+        // CÓMO: Cambiamos display a 'none' para ocultar el overlay
+        // LÓGICA: Verificamos que el elemento exista antes de modificarlo
         if (modalOverlay1) modalOverlay1.style.display = 'none'; 
     }
 
@@ -773,6 +874,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const guardarFactoresUrl = window.DJANGO_URLS ? window.DJANGO_URLS.guardarFactores : '/guardar-factores/';
     const calcularFactoresUrl = window.DJANGO_URLS ? window.DJANGO_URLS.calcularFactores : '/calcular-factores/';
 
+    // ============================================
+    // FUNCIÓN: abrirModal2(data)
+    // ============================================
+    /**
+     * Abre el modal de factores y montos (Modal 2 - Segundo paso).
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES CRÍTICA:
+     * - Es el segundo paso del flujo de creación de calificaciones
+     * - Permite ingresar montos y calcular factores
+     * - Muestra factores existentes si es modificación
+     * - Prellena campos con datos de la calificación creada/modificada
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Recibe datos de la calificación (ID, datos básicos, factores, montos)
+     * 2. Prellena todos los campos del modal con los datos recibidos
+     * 3. Si es modificación: muestra factores originales como referencia
+     * 4. Carga montos si están disponibles, o limpia campos si no
+     * 5. Muestra el modal
+     * 
+     * FLUJO:
+     * - Modal 1 guarda datos básicos → Retorna calificacion_id → Esta función abre Modal 2
+     * - Usuario ingresa montos → Calcula factores → Guarda factores
+     */
     function abrirModal2(data) {
         // Llenar campos del modal de factores con los datos recibidos
         const calificacionId = document.getElementById('calificacion_id');
@@ -861,7 +985,21 @@ document.addEventListener('DOMContentLoaded', function() {
         if (modalOverlay2) modalOverlay2.style.display = 'flex';
     }
 
+    /**
+     * Cierra el modal de factores y montos (Modal 2).
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES NECESARIA:
+     * - Permite cerrar el modal cuando el usuario cancela o termina
+     * - Oculta el overlay y el contenido del modal
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Busca el elemento del overlay del modal
+     * 2. Cambia su display a 'none' para ocultarlo
+     */
     function cerrarModal2() {
+        // Ocultar el modal
+        // POR QUÉ: El usuario quiere cerrar el modal
+        // CÓMO: Cambiamos display a 'none' para ocultar el overlay
         if (modalOverlay2) modalOverlay2.style.display = 'none';
     }
 
@@ -874,7 +1012,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Event listener para cerrar modal al hacer clic fuera eliminado por solicitud del usuario
 
-    // Función para calcular Suma Base en tiempo real
+    // ============================================
+    // FUNCIÓN: actualizarSumaBase()
+    // ============================================
+    /**
+     * Calcula y actualiza la Suma Base en tiempo real mientras el usuario ingresa montos.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES IMPORTANTE:
+     * - Muestra al usuario la Suma Base mientras escribe
+     * - La Suma Base es crítica para calcular factores (Factor = Monto / SumaBase)
+     * - Proporciona feedback inmediato sin necesidad de calcular factores
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Suma todos los montos del 8 al 19 (inclusive)
+     * 2. Actualiza el campo de visualización de Suma Base
+     * 3. Se ejecuta automáticamente cada vez que el usuario cambia un monto
+     * 
+     * FÓRMULA:
+     * - SumaBase = suma de montos del 8 al 19
+     * - Esta suma es el denominador para calcular todos los factores
+     */
     function actualizarSumaBase() {
         let suma = 0;
         for (let i = 8; i <= 19; i++) {
@@ -1027,19 +1184,92 @@ document.addEventListener('DOMContentLoaded', function() {
     const buscarCalificacionesUrl = window.DJANGO_URLS ? window.DJANGO_URLS.buscarCalificaciones : '/buscar-calificaciones/';
     const tablaBody = document.getElementById('tabla-calificaciones-body');
 
+    // ============================================
+    // FUNCIÓN: formatearNumero(valor)
+    // ============================================
+    /**
+     * Formatea un número eliminando ceros innecesarios y manteniendo precisión.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES ÚTIL:
+     * - Mejora la presentación de números en la interfaz
+     * - Elimina ceros innecesarios (ej: "0.25000000" → "0.25")
+     * - Mantiene precisión de hasta 8 decimales cuando es necesario
+     * - Convierte valores inválidos a "0"
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Valida que el valor no sea null, undefined, o "0"
+     * 2. Convierte a número usando parseFloat
+     * 3. Si es NaN, retorna "0"
+     * 4. Formatea con hasta 8 decimales
+     * 5. Elimina ceros innecesarios al final
+     * 
+     * Parámetros:
+     *   - valor: Valor a formatear (string o number)
+     * 
+     * Retorna:
+     *   - string: Número formateado sin ceros innecesarios
+     */
     function formatearNumero(valor) {
+        // Validar que el valor no sea null, undefined, o "0"
+        // POR QUÉ: Estos valores deben mostrarse como "0" en la interfaz
+        // CÓMO: Verificamos múltiples variaciones de cero
+        // LÓGICA: Si el valor es alguno de estos, retornamos "0" directamente
         if (!valor || valor === '0' || valor === '0.0' || valor === '0.00000000') {
             return '0';
         }
+        
+        // Convertir el valor a número
+        // POR QUÉ: Necesitamos un número para formatearlo correctamente
+        // CÓMO: parseFloat() convierte string a número decimal
+        // LÓGICA: Si el valor es "123.45", parseFloat() retorna 123.45
         const num = parseFloat(valor);
+        
+        // Validar que sea un número válido
+        // POR QUÉ: Si parseFloat() no puede convertir, retorna NaN
+        // CÓMO: isNaN() verifica si el valor es "Not a Number"
+        // LÓGICA: Si es NaN, retornamos "0" como valor por defecto
         if (isNaN(num)) return '0';
+        
         // Formatear con hasta 8 decimales, eliminando ceros innecesarios
         return num.toFixed(8).replace(/\.?0+$/, '');
     }
 
+    // ============================================
+    // FUNCIÓN: renderizarCalificaciones(calificaciones)
+    // ============================================
+    /**
+     * Renderiza las calificaciones en la tabla del dashboard.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES CRÍTICA:
+     * - Actualiza la tabla dinámicamente sin recargar la página
+     * - Muestra todas las calificaciones con sus factores
+     * - Agrega botones de acción (modificar, eliminar, copiar, ver logs)
+     * - Formatea números para mejor presentación
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Valida que exista el elemento tablaBody
+     * 2. Si no hay calificaciones, muestra mensaje de "no encontradas"
+     * 3. Si hay calificaciones, genera HTML para cada fila
+     * 4. Incluye botones de acción con data-attributes para identificar cada calificación
+     * 5. Formatea factores usando formatearNumero()
+     * 6. Inserta el HTML en la tabla
+     * 7. Agrega event listeners a los botones
+     * 
+     * Parámetros:
+     *   - calificaciones: Array de objetos con datos de calificaciones
+     * 
+     * Retorna: void
+     */
     function renderizarCalificaciones(calificaciones) {
+        // Validar que el elemento tablaBody exista
+        // POR QUÉ: No podemos renderizar si no existe el contenedor
+        // CÓMO: Si no existe, salimos de la función inmediatamente
         if (!tablaBody) return;
 
+        // Verificar si hay calificaciones para mostrar
+        // POR QUÉ: Si no hay calificaciones, mostramos un mensaje informativo
+        // CÓMO: Verificamos si el array está vacío o es null/undefined
+        // LÓGICA: Si no hay calificaciones, mostramos mensaje y salimos
         if (!calificaciones || calificaciones.length === 0) {
             tablaBody.innerHTML = `
                 <tr>
@@ -1166,7 +1396,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ========== FUNCIÓN PARA AGREGAR EVENT LISTENERS A BOTONES DE ACCIONES ==========
+    // ============================================
+    // FUNCIÓN: agregarEventListenersBotones()
+    // ============================================
+    /**
+     * Agrega event listeners a todos los botones de acción de las filas de calificaciones.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES NECESARIA:
+     * - Los botones se crean dinámicamente al renderizar la tabla
+     * - Necesitan event listeners para funcionar (modificar, eliminar, copiar, ver logs)
+     * - Se llama después de cada renderizado para asegurar que los botones funcionen
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Busca todos los botones de cada tipo (modificar, eliminar, copiar, log)
+     * 2. Para cada botón, obtiene el ID de la calificación desde data-attribute
+     * 3. Agrega event listener que llama a la función correspondiente
+     * 4. Valida que el ID exista antes de ejecutar la acción
+     * 
+     * Botones configurados:
+     * - .btn-modificar-row: Llama a modificarCalificacion()
+     * - .btn-eliminar-row: Llama a eliminarCalificacion()
+     * - .btn-copiar-row: Llama a copiarCalificacion()
+     * - .btn-log-row: Llama a verLogCalificacion()
+     */
     function agregarEventListenersBotones() {
         // Botones MODIFICAR
         const botonesModificar = document.querySelectorAll('.btn-modificar-row');
@@ -1241,7 +1493,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ========== FUNCIÓN PARA MODIFICAR CALIFICACIÓN ==========
+    // ============================================
+    // FUNCIÓN: modificarCalificacion(calificacionId)
+    // ============================================
+    /**
+     * Obtiene los datos de una calificación y abre el modal de edición.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES IMPORTANTE:
+     * - Permite editar calificaciones existentes
+     * - Carga datos desde el servidor para prellenar formularios
+     * - Calcula montos desde factores guardados (cálculo inverso)
+     * - Maneja el flujo completo de modificación
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Valida que el ID no esté vacío
+     * 2. Envía petición AJAX al servidor para obtener datos de la calificación
+     * 3. El servidor calcula montos desde factores (Monto = Factor * SumaBase)
+     * 4. Prellena Modal 1 con datos básicos
+     * 5. Guarda datos en window.calificacionModificarData para Modal 2
+     * 6. Abre Modal 1 para editar
+     * 
+     * CÁLCULO INVERSO:
+     * - Si tenemos factores y SumaBase, podemos calcular montos
+     * - Fórmula: Monto = Factor * SumaBase
+     * - Esto permite reconstruir montos cuando solo tenemos factores guardados
+     * 
+     * Parámetros:
+     *   - calificacionId: ID de la calificación a modificar
+     */
     function modificarCalificacion(calificacionId) {
         // Validar que el ID no esté vacío
         if (!calificacionId || calificacionId.trim() === '') {
@@ -1346,7 +1625,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ========== FUNCIÓN PARA ELIMINAR CALIFICACIÓN ==========
+    // ============================================
+    // FUNCIÓN: eliminarCalificacion(calificacionId)
+    // ============================================
+    /**
+     * Elimina una calificación después de confirmación del usuario.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES IMPORTANTE:
+     * - Permite eliminar calificaciones del sistema
+     * - Muestra confirmación antes de eliminar (previene eliminaciones accidentales)
+     * - Actualiza la tabla después de eliminar sin recargar la página
+     * - Maneja errores y muestra mensajes apropiados
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Valida que el ID no esté vacío
+     * 2. Muestra modal de confirmación
+     * 3. Si el usuario confirma, envía petición AJAX al servidor
+     * 4. El servidor elimina la calificación de MongoDB
+     * 5. Actualiza la tabla mostrando todas las calificaciones
+     * 
+     * Parámetros:
+     *   - calificacionId: ID de la calificación a eliminar
+     */
     function eliminarCalificacion(calificacionId) {
         // Validar que el ID no esté vacío
         if (!calificacionId || calificacionId.trim() === '') {
@@ -1399,7 +1699,28 @@ document.addEventListener('DOMContentLoaded', function() {
         );
     }
 
-    // ========== FUNCIÓN PARA COPIAR CALIFICACIÓN ==========
+    // ============================================
+    // FUNCIÓN: copiarCalificacion(calificacionId)
+    // ============================================
+    /**
+     * Copia una calificación completa creando una nueva con todos los datos.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES ÚTIL:
+     * - Permite duplicar calificaciones existentes
+     * - Útil para crear variaciones de una calificación base
+     * - Copia todos los campos: datos básicos, factores, montos, SumaBase
+     * - La nueva calificación tiene un ID único (nuevo documento en MongoDB)
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Valida que el ID no esté vacío
+     * 2. Muestra confirmación antes de copiar
+     * 3. Si el usuario confirma, envía petición AJAX al servidor
+     * 4. El servidor crea una copia completa con nuevo ID
+     * 5. Actualiza la tabla para mostrar la nueva calificación
+     * 
+     * Parámetros:
+     *   - calificacionId: ID de la calificación a copiar
+     */
     function copiarCalificacion(calificacionId) {
         // Validar que el ID no esté vacío
         if (!calificacionId || calificacionId.trim() === '') {
@@ -1468,7 +1789,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnCerrarLogCalificacion = document.getElementById('btn-cerrar-log-calificacion');
     const btnCerrarLogCalificacionX = document.getElementById('btn-cerrar-log-calificacion-x');
 
+    /**
+     * Cierra el modal de logs de calificación.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES NECESARIA:
+     * - Permite cerrar el modal cuando el usuario termina de revisar los logs
+     * - Oculta el overlay y el contenido del modal
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Busca el elemento del overlay del modal
+     * 2. Cambia su display a 'none' para ocultarlo
+     */
     function cerrarModalLogCalificacion() {
+        // Ocultar el modal
+        // POR QUÉ: El usuario quiere cerrar el modal
+        // CÓMO: Cambiamos display a 'none' para ocultar el overlay
         if (modalLogCalificacionOverlay) modalLogCalificacionOverlay.style.display = 'none';
     }
 
@@ -1480,6 +1815,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ========== FUNCIÓN PARA VER LOG DE CALIFICACIÓN ==========
+    // ============================================
+    // FUNCIÓN: verLogCalificacion(calificacionId)
+    // ============================================
+    /**
+     * Obtiene y muestra los logs de auditoría de una calificación específica.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES ÚTIL:
+     * - Permite ver el historial completo de cambios de una calificación
+     * - Muestra quién hizo qué cambios y cuándo
+     * - Útil para auditoría y debugging
+     * - Muestra cambios detallados en formato legible
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Valida que el ID no esté vacío
+     * 2. Envía petición AJAX al servidor para obtener logs
+     * 3. El servidor busca todos los logs relacionados con esa calificación
+     * 4. Retorna logs con información del actor y cambios detallados
+     * 5. Llama a mostrarLogsCalificacion() para mostrar en modal
+     * 
+     * Parámetros:
+     *   - calificacionId: ID de la calificación para obtener sus logs
+     */
     function verLogCalificacion(calificacionId) {
         // Validar que el ID no esté vacío
         if (!calificacionId || calificacionId.trim() === '') {
@@ -1522,7 +1879,35 @@ document.addEventListener('DOMContentLoaded', function() {
     let logsCalificacionActuales = null;
     let calificacionInfoActual = null;
 
-    // ========== FUNCIÓN PARA MOSTRAR LOGS EN MODAL ==========
+    // ============================================
+    // FUNCIÓN: mostrarLogsCalificacion(logs, calificacionInfo)
+    // ============================================
+    /**
+     * Muestra los logs de auditoría de una calificación en un modal.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES IMPORTANTE:
+     * - Presenta los logs de forma legible y organizada
+     * - Separa cambios por tipo (factores, montos, campos básicos)
+     * - Muestra valores anteriores y nuevos de forma clara
+     * - Adapta colores según el tema (oscuro/claro)
+     * - Permite ver el historial completo de una calificación
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Recibe logs y información de la calificación
+     * 2. Guarda datos para regenerar cuando cambie el tema
+     * 3. Llena información básica de la calificación
+     * 4. Para cada log:
+     *    a. Formatea fecha y acción
+     *    b. Separa cambios por tipo (factores, montos, básicos)
+     *    c. Genera HTML con colores según tema
+     *    d. Muestra valores anteriores y nuevos
+     * 5. Inserta HTML en la tabla del modal
+     * 6. Muestra el modal
+     * 
+     * Parámetros:
+     *   - logs: Array de objetos con información de cada log
+     *   - calificacionInfo: Objeto con información básica de la calificación
+     */
     function mostrarLogsCalificacion(logs, calificacionInfo) {
         const modalOverlay = document.getElementById('log-calificacion-modal-overlay');
         if (!modalOverlay) {
@@ -1857,6 +2242,26 @@ document.addEventListener('DOMContentLoaded', function() {
     let calificacionesFiltradas = []; // Almacenar las calificaciones filtradas para el modal
     
     // Función para cargar las calificaciones filtradas del dashboard en el modal
+    // ============================================
+    // FUNCIÓN: cargarCalificacionesParaExportar()
+    // ============================================
+    /**
+     * Carga las calificaciones disponibles para exportar según los filtros del dashboard.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES NECESARIA:
+     * - Permite seleccionar calificaciones específicas para exportar
+     * - Usa los mismos filtros que el dashboard (consistencia)
+     * - Muestra indicador de carga mientras obtiene datos
+     * - Actualiza la lista de calificaciones disponibles
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Muestra indicador de carga
+     * 2. Obtiene filtros actuales del dashboard (mercado, origen, período)
+     * 3. Envía petición AJAX al servidor con los filtros
+     * 4. El servidor retorna calificaciones filtradas
+     * 5. Guarda calificaciones en variable global
+     * 6. Llama a renderizarListaExportar() para mostrarlas
+     */
     function cargarCalificacionesParaExportar() {
         if (!exportarCalificacionesList) return;
         
@@ -1897,7 +2302,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Función para renderizar la lista de calificaciones en el modal
+    // ============================================
+    // FUNCIÓN: renderizarListaExportar()
+    // ============================================
+    /**
+     * Renderiza la lista de calificaciones en el modal de exportar con checkboxes.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES ÚTIL:
+     * - Muestra calificaciones disponibles para exportar
+     * - Permite seleccionar múltiples calificaciones con checkboxes
+     * - Muestra información básica de cada calificación
+     * - Agrega event listeners para manejar selecciones
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Valida que existan calificaciones para mostrar
+     * 2. Genera HTML para cada calificación con checkbox
+     * 3. Muestra información básica (instrumento, ejercicio, mercado, origen)
+     * 4. Inserta HTML en el contenedor
+     * 5. Agrega event listeners a checkboxes y items
+     * 6. Actualiza contador de seleccionadas
+     */
     function renderizarListaExportar() {
         if (!exportarCalificacionesList || calificacionesFiltradas.length === 0) {
             exportarCalificacionesList.innerHTML = '<div class="exportar-loading"><i class="bi bi-inbox"></i><p>No hay calificaciones disponibles con los filtros actuales</p></div>';
@@ -1958,6 +2382,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Función para actualizar el contador de calificaciones seleccionadas
+    // ============================================
+    // FUNCIÓN: actualizarContadorExportar()
+    // ============================================
+    /**
+     * Actualiza el contador de calificaciones seleccionadas para exportar.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES ÚTIL:
+     * - Muestra cuántas calificaciones están seleccionadas
+     * - Actualiza el icono según la cantidad (vacío o con check)
+     * - Habilita/deshabilita el botón de exportar según la selección
+     * - Actualiza el checkbox "Todas" si todas están seleccionadas
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Cuenta cuántos checkboxes están marcados
+     * 2. Actualiza el texto del contador
+     * 3. Cambia el icono según la cantidad (vacío o con check)
+     * 4. Habilita/deshabilita el botón de exportar
+     * 5. Actualiza el estado del checkbox "Todas"
+     */
     function actualizarContadorExportar() {
         if (!exportarContador) return;
         
@@ -1995,7 +2438,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Función para abrir modal de exportar
+    // ============================================
+    // FUNCIÓN: abrirModalExportar()
+    // ============================================
+    /**
+     * Abre el modal de exportar calificaciones.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES NECESARIA:
+     * - Permite al usuario seleccionar calificaciones para exportar
+     * - Carga las calificaciones disponibles según filtros
+     * - Muestra el modal con la lista de calificaciones
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Muestra el modal cambiando display a 'flex'
+     * 2. Carga calificaciones disponibles llamando a cargarCalificacionesParaExportar()
+     */
     function abrirModalExportar() {
         if (modalExportarOverlay) {
             modalExportarOverlay.style.display = 'flex';
@@ -2003,7 +2460,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Función para cerrar modal de exportar
+    // ============================================
+    // FUNCIÓN: cerrarModalExportar()
+    // ============================================
+    /**
+     * Cierra el modal de exportar calificaciones y limpia las selecciones.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES NECESARIA:
+     * - Permite cerrar el modal cuando el usuario termina
+     * - Limpia las selecciones para la próxima vez
+     * - Oculta el overlay y el contenido del modal
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Oculta el modal cambiando display a 'none'
+     * 2. Desmarca el checkbox "Todas"
+     * 3. Desmarca todos los checkboxes individuales
+     * 4. Actualiza el contador
+     */
     function cerrarModalExportar() {
         if (modalExportarOverlay) {
             modalExportarOverlay.style.display = 'none';
@@ -2178,7 +2651,37 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Función para leer archivo CSV (envía al backend para procesamiento en Python)
+    // ============================================
+    // FUNCIÓN: leerArchivoCSV(archivo, tipo)
+    // ============================================
+    /**
+     * Lee un archivo CSV y lo envía al servidor para previsualización.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES CRÍTICA:
+     * - Permite cargar archivos CSV con calificaciones en masa
+     * - Valida el formato del archivo antes de guardar
+     * - Detecta archivos duplicados usando hash SHA-256
+     * - Muestra previsualización para que el usuario revise antes de confirmar
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Valida que se haya seleccionado un archivo
+     * 2. Crea FormData con el archivo y el tipo (factor o monto)
+     * 3. Envía petición AJAX al servidor para previsualizar
+     * 4. El servidor lee el CSV, calcula hash, valida formato
+     * 5. Si es exitoso, muestra previsualización en tabla
+     * 6. Si hay errores, muestra mensajes apropiados
+     * 
+     * DETECCIÓN DE DUPLICADOS:
+     * - El servidor calcula hash SHA-256 del contenido
+     * - Compara con archivos ya subidos
+     * - Previene cargar el mismo archivo múltiples veces
+     * 
+     * Parámetros:
+     *   - archivo: Objeto File del archivo CSV seleccionado
+     *   - tipo: Tipo de carga ('factor' o 'monto')
+     *     - 'factor': CSV con factores ya calculados
+     *     - 'monto': CSV con montos (se calcularán factores después)
+     */
     function leerArchivoCSV(archivo, tipo) {
         if (!archivo) {
             mostrarMensaje('Error', 'No se seleccionó ningún archivo', 'error');
@@ -2244,7 +2747,27 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Función para mostrar preview - Factor
+    // ============================================
+    // FUNCIÓN: mostrarPreviewFactor(datos)
+    // ============================================
+    /**
+     * Muestra una previsualización de los datos CSV con factores en una tabla.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES ÚTIL:
+     * - Permite al usuario revisar los datos antes de guardar
+     * - Muestra factores ya calculados del CSV
+     * - Valida visualmente que los datos sean correctos
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Valida que exista el elemento tablaPreviewFactor
+     * 2. Si no hay datos, muestra mensaje informativo
+     * 3. Genera HTML para cada fila del CSV
+     * 4. Muestra datos básicos y factores F8 a F37
+     * 5. Inserta el HTML en la tabla de previsualización
+     * 
+     * Parámetros:
+     *   - datos: Array de objetos con datos del CSV (cada objeto es una fila)
+     */
     function mostrarPreviewFactor(datos) {
         if (!tablaPreviewFactor) return;
         
@@ -2275,7 +2798,27 @@ document.addEventListener('DOMContentLoaded', function() {
         tablaPreviewFactor.innerHTML = html;
     }
     
-    // Función para mostrar preview - Monto
+    // ============================================
+    // FUNCIÓN: mostrarPreviewMonto(datos)
+    // ============================================
+    /**
+     * Muestra una previsualización de los datos CSV con montos en una tabla.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES ÚTIL:
+     * - Permite al usuario revisar los montos antes de calcular factores
+     * - Muestra montos del CSV (F8 MONT a F37 MONT)
+     * - Valida visualmente que los datos sean correctos
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Valida que exista el elemento tablaPreviewMonto
+     * 2. Si no hay datos, muestra mensaje informativo
+     * 3. Genera HTML para cada fila del CSV
+     * 4. Muestra datos básicos y montos F8 MONT a F37 MONT
+     * 5. Inserta el HTML en la tabla de previsualización
+     * 
+     * Parámetros:
+     *   - datos: Array de objetos con datos del CSV (cada objeto es una fila)
+     */
     function mostrarPreviewMonto(datos) {
         if (!tablaPreviewMonto) return;
         
@@ -2309,7 +2852,34 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Función para mostrar preview con factores calculados (después de calcular)
+    // ============================================
+    // FUNCIÓN: mostrarPreviewMontoConFactores(datos)
+    // ============================================
+    /**
+     * Muestra una previsualización de los datos CSV con montos y factores calculados.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES ÚTIL:
+     * - Muestra los factores calculados después de presionar "Calcular Factores"
+     * - Permite al usuario revisar los factores antes de guardar
+     * - Reemplaza la vista de montos con la vista de factores
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Valida que exista el elemento tablaPreviewMonto
+     * 2. Si no hay datos, muestra mensaje informativo
+     * 3. Genera HTML para cada fila del CSV
+     * 4. Muestra datos básicos y factores F8 a F37 (calculados)
+     * 5. Inserta el HTML en la tabla de previsualización
+     * 
+     * DIFERENCIA CON mostrarPreviewMonto:
+     * - mostrarPreviewMonto: Muestra montos (F8 MONT a F37 MONT)
+     * - mostrarPreviewMontoConFactores: Muestra factores calculados (F8 a F37)
+     * 
+     * Parámetros:
+     *   - datos: Array de objetos con datos del CSV (cada objeto es una fila con factores calculados)
+     */
     function mostrarPreviewMontoConFactores(datos) {
+        // Validar que el elemento tablaPreviewMonto exista
+        // POR QUÉ: No podemos renderizar si no existe el contenedor
         if (!tablaPreviewMonto) return;
         
         if (datos.length === 0) {
@@ -2340,7 +2910,25 @@ document.addEventListener('DOMContentLoaded', function() {
         tablaPreviewMonto.innerHTML = html;
     }
     
-    // Función para limpiar modal factor
+    // ============================================
+    // FUNCIÓN: limpiarModalFactor()
+    // ============================================
+    /**
+     * Limpia todos los datos y campos del modal de carga por factores.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES ÚTIL:
+     * - Resetea el modal cuando se cierra o se abre nuevamente
+     * - Limpia variables globales de datos CSV
+     * - Limpia campos del formulario
+     * - Limpia la tabla de previsualización
+     * - Deshabilita botones hasta que se cargue un nuevo archivo
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Limpia variables globales (datosCSVFactor, hashArchivoFactor, nombreArchivoFactorData)
+     * 2. Limpia campos del formulario (input de archivo, nombre de archivo)
+     * 3. Limpia la tabla de previsualización
+     * 4. Deshabilita el botón de grabar
+     */
     function limpiarModalFactor() {
         // Limpiar variables de datos
         datosCSVFactor = null;
@@ -2357,7 +2945,25 @@ document.addEventListener('DOMContentLoaded', function() {
         if (btnGrabarFactor) btnGrabarFactor.disabled = true;
     }
     
-    // Función para limpiar modal monto
+    // ============================================
+    // FUNCIÓN: limpiarModalMonto()
+    // ============================================
+    /**
+     * Limpia todos los datos y campos del modal de carga por montos.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES ÚTIL:
+     * - Resetea el modal cuando se cierra o se abre nuevamente
+     * - Limpia variables globales de datos CSV
+     * - Limpia campos del formulario
+     * - Limpia la tabla de previsualización
+     * - Deshabilita botones hasta que se cargue un nuevo archivo
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Limpia variables globales (datosCSVMonto, hashArchivoMonto, nombreArchivoMontoData)
+     * 2. Limpia campos del formulario (input de archivo, nombre de archivo)
+     * 3. Limpia la tabla de previsualización
+     * 4. Deshabilita botones (calcular factores, grabar)
+     */
     function limpiarModalMonto() {
         // Limpiar variables de datos
         datosCSVMonto = null;
@@ -2411,7 +3017,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Función para grabar datos CSV
+    // ============================================
+    // FUNCIÓN: grabarDatosCSV(datos, tipo)
+    // ============================================
+    /**
+     * Guarda los datos del CSV en la base de datos después de la previsualización.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES CRÍTICA:
+     * - Es el paso final de la carga masiva de calificaciones
+     * - Guarda múltiples calificaciones en una sola operación
+     * - Valida datos antes de guardar en el servidor
+     * - Maneja errores y muestra resultados detallados
+     * - Actualiza la tabla después de guardar
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Determina la URL según el tipo (factor o monto)
+     * 2. Obtiene hash y nombre del archivo guardados
+     * 3. Envía datos al servidor en formato JSON
+     * 4. El servidor valida y guarda cada calificación en MongoDB
+     * 5. Retorna cantidad de calificaciones creadas y errores encontrados
+     * 6. Muestra mensaje de éxito/error con detalles
+     * 7. Cierra el modal y actualiza la tabla
+     * 
+     * FLUJO COMPLETO:
+     * - Usuario selecciona CSV → leerArchivoCSV() → Previsualización → Esta función guarda
+     * 
+     * Parámetros:
+     *   - datos: Array de objetos con datos del CSV (cada objeto es una fila)
+     *   - tipo: Tipo de carga ('factor' o 'monto')
+     */
     function grabarDatosCSV(datos, tipo) {
         const url = tipo === 'factor' 
             ? (window.DJANGO_URLS?.cargarFactor || '/prueba/cargar-factor/')
@@ -2530,7 +3164,36 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Función para calcular factores desde montos
+    // ============================================
+    // FUNCIÓN: calcularFactoresDesdeMontos(datos)
+    // ============================================
+    /**
+     * Calcula factores desde montos para múltiples filas de CSV (carga masiva).
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES CRÍTICA:
+     * - Calcula factores para múltiples calificaciones a la vez
+     * - Optimiza el proceso de carga masiva
+     * - Aplica la misma fórmula que calcular_factores_view pero en lote
+     * - Valida que factores no excedan 1.0 (100%)
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Envía todas las filas del CSV al servidor
+     * 2. Para cada fila, el servidor:
+     *    a. Extrae montos (F8 MONT a F37 MONT)
+     *    b. Calcula SumaBase (suma de montos 8-19)
+     *    c. Calcula factores: Factor = Monto / SumaBase
+     *    d. Valida que factores no excedan 1.0
+     * 3. Retorna todas las filas con factores calculados
+     * 4. Actualiza la previsualización con factores calculados
+     * 
+     * FÓRMULA:
+     * - SumaBase = suma de montos del 8 al 19
+     * - Factor = Monto / SumaBase (para cada monto del 8 al 37)
+     * - Factor máximo = 1.0 (si excede, se ajusta a 1.0)
+     * 
+     * Parámetros:
+     *   - datos: Array de objetos con datos del CSV (cada objeto es una fila con montos)
+     */
     function calcularFactoresDesdeMontos(datos) {
         const url = window.DJANGO_URLS?.calcularFactoresMasivo || '/prueba/calcular-factores-masivo/';
         
@@ -2576,6 +3239,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Función para mostrar formato requerido
+    // ============================================
+    // FUNCIÓN: mostrarFormatoRequerido(tipo)
+    // ============================================
+    /**
+     * Muestra un modal informativo con el formato requerido para los archivos CSV.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES ÚTIL:
+     * - Ayuda al usuario a entender qué formato debe tener el CSV
+     * - Muestra diferentes formatos según el tipo de carga (factor o monto)
+     * - Previene errores al cargar archivos con formato incorrecto
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Determina el mensaje según el tipo (factor o monto)
+     * 2. Muestra las columnas requeridas y opcionales
+     * 3. Explica qué debe contener cada columna
+     * 4. Muestra el mensaje en un modal usando mostrarMensaje()
+     * 
+     * FORMATOS:
+     * - factor: CSV con columnas Ejercicio, Mercado, Instrumento, FEC_PAGO, SEC_EVE, DESCRIPCION, F8-F37 (factores)
+     * - monto: CSV con columnas Ejercicio, Mercado, Instrumento, FEC_PAGO, SEC_EVE, DESCRIPCION, F8 MONT-F37 MONT (montos)
+     * 
+     * Parámetros:
+     *   - tipo: Tipo de carga ('factor' o 'monto')
+     */
     function mostrarFormatoRequerido(tipo) {
         let mensaje = '';
         if (tipo === 'factor') {
@@ -2616,14 +3303,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnCerrarOpcionesX = document.getElementById('btn-cerrar-opciones-x');
     const toggleTemaOscuro = document.getElementById('toggle-tema-oscuro');
 
-    // Función para abrir modal de opciones
+    // ============================================
+    // FUNCIÓN: abrirModalOpciones()
+    // ============================================
+    /**
+     * Abre el modal de opciones del sistema.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES NECESARIA:
+     * - Permite al usuario acceder a configuraciones del sistema
+     * - Muestra opciones como cambio de tema oscuro/claro
+     * - Proporciona acceso a funcionalidades adicionales
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Busca el elemento del overlay del modal
+     * 2. Cambia su display a 'flex' para mostrarlo
+     */
     function abrirModalOpciones() {
         if (modalOpcionesOverlay) {
             modalOpcionesOverlay.style.display = 'flex';
         }
     }
 
-    // Función para cerrar modal de opciones
+    // ============================================
+    // FUNCIÓN: cerrarModalOpciones()
+    // ============================================
+    /**
+     * Cierra el modal de opciones del sistema.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES NECESARIA:
+     * - Permite cerrar el modal cuando el usuario termina
+     * - Oculta el overlay y el contenido del modal
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Busca el elemento del overlay del modal
+     * 2. Cambia su display a 'none' para ocultarlo
+     */
     function cerrarModalOpciones() {
         if (modalOpcionesOverlay) {
             modalOpcionesOverlay.style.display = 'none';
@@ -2642,8 +3356,33 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ========== FUNCIONALIDAD DE TEMA OSCURO ==========
-    // Cargar preferencia de tema desde localStorage
+    // ============================================
+    // FUNCIÓN: cargarTema()
+    // ============================================
+    /**
+     * Carga y aplica la preferencia de tema (oscuro/claro) guardada en localStorage.
+     * 
+     * POR QUÉ ESTA FUNCIÓN ES IMPORTANTE:
+     * - Mantiene la preferencia del usuario entre sesiones
+     * - Aplica el tema inmediatamente al cargar la página
+     * - Sincroniza el toggle con la preferencia guardada
+     * - Mejora la experiencia de usuario (consistencia)
+     * 
+     * CÓMO FUNCIONA:
+     * 1. Lee la preferencia de tema desde localStorage
+     * 2. Si el tema es oscuro, agrega clase 'dark-theme' al body
+     * 3. Si el tema es claro, elimina la clase 'dark-theme'
+     * 4. Actualiza el estado del toggle para reflejar la preferencia
+     * 
+     * ALMACENAMIENTO:
+     * - localStorage.getItem('temaOscuro'): 'true' para oscuro, 'false' para claro
+     * - Se guarda cuando el usuario cambia el toggle
+     */
     function cargarTema() {
+        // Leer preferencia de tema desde localStorage
+        // POR QUÉ: localStorage persiste entre sesiones, mantiene la preferencia del usuario
+        // CÓMO: localStorage.getItem() obtiene el valor guardado
+        // LÓGICA: Si el valor es 'true', el tema es oscuro. Si es 'false' o null, el tema es claro
         const temaOscuro = localStorage.getItem('temaOscuro') === 'true';
         if (temaOscuro) {
             document.body.classList.add('dark-theme');
