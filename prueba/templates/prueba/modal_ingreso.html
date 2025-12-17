@@ -75,10 +75,10 @@
                         <label for="modal-factor_actualizacion">Factor de Actualización:</label>
                         <input type="number" step="0.00000001" id="modal-factor_actualizacion" name="factor_actualizacion" value="0.0">
                     </div>
-                    <!-- Año: Campo readonly que se copia automáticamente del dashboard -->
+                    <!-- Año: Campo editable para seleccionar el año -->
                     <div class="form-field">
                         <label for="modal-anho">Año:</label>
-                        <input type="number" id="modal-anho" name="anho" readonly class="readonly-field">
+                        <input type="number" id="modal-anho" name="anho" min="2000" max="" step="1">
                     </div>
                     <!-- ISFUT: Checkbox para indicar si es futuro -->
                     <div class="form-field form-field-checkbox full-width"> 

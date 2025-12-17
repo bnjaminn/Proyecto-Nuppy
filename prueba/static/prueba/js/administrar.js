@@ -878,6 +878,139 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // ========== VALIDACIÓN DE CAMPOS NUMÉRICOS Y DE TEXTO ==========
+    function inicializarValidacionCampos() {
+        // Validar campos numéricos: solo permitir números, punto decimal y signo negativo
+        document.querySelectorAll('input[type="number"]').forEach(function(input) {
+            // Prevenir caracteres no numéricos al escribir
+            input.addEventListener('keydown', function(e) {
+                const key = e.key;
+                const value = this.value;
+                const cursorPos = this.selectionStart;
+                
+                // Permitir teclas de control (backspace, delete, tab, escape, enter, etc.)
+                if (['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key)) {
+                    return;
+                }
+                
+                // Permitir (copiar, pegar, cortar, seleccionar todo)
+                if (e.ctrlKey || e.metaKey) {
+                    if (['a', 'c', 'v', 'x'].includes(key.toLowerCase())) {
+                        return;
+                    }
+                }
+                
+                // Permitir números
+                if (key >= '0' && key <= '9') {
+                    return;
+                }
+                
+                // Permitir punto decimal solo si no existe ya uno
+                if (key === '.' || key === ',') {
+                    const decimalChar = this.step && this.step.toString().includes('.') ? '.' : '.';
+                    if (value.indexOf(decimalChar) === -1) {
+                        // Si se presiona coma, convertirla a punto
+                        if (key === ',') {
+                            e.preventDefault();
+                            const newValue = value.substring(0, cursorPos) + '.' + value.substring(cursorPos);
+                            this.value = newValue;
+                            this.setSelectionRange(cursorPos + 1, cursorPos + 1);
+                        }
+                        return;
+                    }
+                }
+                
+                // Permitir signo negativo solo al inicio
+                if (key === '-' && cursorPos === 0 && value.indexOf('-') === -1) {
+                    return;
+                }
+                
+                // Bloquear cualquier otro carácter
+                e.preventDefault();
+            });
+            
+            // Validar al pegar contenido
+            input.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+                const currentValue = this.value;
+                const cursorPos = this.selectionStart;
+                const selectionEnd = this.selectionEnd;
+                
+                // Limpiar el texto pegado: solo números, punto decimal y signo negativo
+                let cleanedText = pastedText.replace(/[^0-9.\-]/g, '');
+                
+                // Asegurar que solo haya un punto decimal
+                const parts = cleanedText.split('.');
+                if (parts.length > 2) {
+                    cleanedText = parts[0] + '.' + parts.slice(1).join('');
+                }
+                
+                // Asegurar que el signo negativo solo esté al inicio
+                if (cleanedText.includes('-')) {
+                    cleanedText = cleanedText.replace(/-/g, '');
+                    if (cursorPos === 0 && !currentValue.startsWith('-')) {
+                        cleanedText = '-' + cleanedText;
+                    }
+                }
+                
+                // Insertar el texto limpio
+                const newValue = currentValue.substring(0, cursorPos) + cleanedText + currentValue.substring(selectionEnd);
+                this.value = newValue;
+                this.setSelectionRange(cursorPos + cleanedText.length, cursorPos + cleanedText.length);
+            });
+        });
+        
+        // Validar campos de texto: mostrar advertencia si contienen solo números
+        document.querySelectorAll('input[type="text"]:not([readonly]):not([data-allow-numbers])').forEach(function(input) {
+            // Validar al escribir: mostrar advertencia visual si el campo contiene solo números
+            input.addEventListener('input', function() {
+                const value = this.value.trim();
+                // Si el campo contiene solo números, cambiar el color del borde a advertencia
+                if (value && /^\d+$/.test(value)) {
+                    this.style.borderColor = '#ffaa00';
+                    this.title = 'Advertencia: Este campo no debería contener solo números';
+                } else {
+                    this.style.borderColor = '';
+                    this.title = '';
+                }
+            });
+            
+            // Validar al perder el foco: mostrar notificación si contiene solo números
+            input.addEventListener('blur', function() {
+                const value = this.value.trim();
+                if (value && /^\d+$/.test(value)) {
+                    this.style.borderColor = '#ffaa00';
+                    mostrarNotificacion('Advertencia: Los campos de texto no deberían contener solo números.', 'warning');
+                }
+            });
+        });
+    }
+    
+    // Inicializar validación de campos
+    inicializarValidacionCampos();
+    
+    // Re-inicializar validación cuando se abren modales (porque se crean dinámicamente)
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.addedNodes.length) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) {
+                        // Si se agregó un modal o un contenedor de formulario, re-inicializar validación
+                        if (node.classList && (node.classList.contains('modal-overlay') || node.querySelector('input[type="number"], input[type="text"]'))) {
+                            setTimeout(inicializarValidacionCampos, 100);
+                        }
+                    }
+                });
+            }
+        });
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
     console.log("Script completo cargado y listeners asignados.");  
 });
 
