@@ -1,14 +1,64 @@
-# Crear Usuario Administrador en la Base de Datos
+# Crear Base de Datos y Usuario Administrador
 
-Este documento explica cómo crear un usuario administrador directamente en la base de datos usando el shell de Django.
+Este documento explica cómo crear la base de datos "NUPPY" en MongoDB Compass y cómo crear un usuario administrador directamente en la base de datos usando el shell de Django.
 
 ## Requisitos Previos
 
 - Tener el proyecto Django configurado y funcionando
 - Tener acceso a la terminal/consola
-- Tener MongoDB corriendo y configurado
+- Tener MongoDB instalado y corriendo
+- Tener MongoDB Compass instalado
 
-## Pasos para Crear un Usuario Admin
+## Parte 1: Crear la Base de Datos "NUPPY" en MongoDB Compass
+
+### 1. Abrir MongoDB Compass
+
+Abre la aplicación MongoDB Compass en tu computadora.
+
+### 2. Conectar a MongoDB
+
+- Si MongoDB está corriendo localmente, usa la cadena de conexión: `mongodb://localhost:27017`
+- Si tienes una conexión remota, usa la cadena de conexión correspondiente
+- Haz clic en "Connect" para conectarte
+
+### 3. Crear la Base de Datos "NUPPY"
+
+Una vez conectado, sigue estos pasos:
+
+1. En el panel izquierdo, verás una lista de bases de datos existentes
+2. Haz clic en el botón **"+"** o en **"Create Database"** (Crear Base de Datos)
+3. Se abrirá un diálogo para crear una nueva base de datos
+4. Ingresa los siguientes valores:
+   - **Database Name:** `nuppy`
+   - **Collection Name:** `usuarios`
+5. Haz clic en **"Create Database"**
+
+### 4. Verificar la Creación
+
+- Deberías ver la base de datos `NUPPY` en el panel izquierdo
+- Al hacer clic en ella, verás las colecciones (inicialmente puede estar vacía)
+
+### Nota sobre Colecciones
+
+Las colecciones se crearán automáticamente cuando Django guarde el primer documento en cada modelo. Por ejemplo:
+- `usuarios` - se creará cuando guardes el primer usuario
+- `calificaciones` - se creará cuando guardes la primera calificación
+
+### Configuración en Django
+
+Asegúrate de que tu archivo `settings.py` tenga configurada la conexión a MongoDB con el nombre de base de datos correcto:
+
+```python
+MONGODB_DATABASES = {
+    'default': {
+        'name': 'nuppy',
+        'host': 'localhost',
+        'port': 27017,
+    }
+}
+```
+
+## Parte 2: Crear Usuario Administrador
 
 ### 1. Iniciar el Shell de Django
 
