@@ -2,58 +2,30 @@
     =======================================================================
     Muestra el historial completo de cambios realizados en una calificación específica.
     
-    Incluye:
-    - Información básica de la calificación (ejercicio, instrumento, mercado)
-    - Tabla con todos los logs de cambios
-    - Detalles de cada cambio (campo modificado, valor anterior, valor nuevo)
-    
-    Los logs se agrupan por tipo:
-    - Cambios en Cálculo (SumaBase)
-    - Cambios en Montos (valores ingresados)
-    - Cambios en Factores (valores calculados)
-    - Cambios en Campos Básicos (información general)
-    
-    Se abre desde el botón "Ver Log" en la tabla de calificaciones del dashboard.
+    REDISEÑO: Modal más amigable con tarjetas en lugar de tabla
+    - Información de calificación destacada con iconos
+    - Tarjetas de cambios más visuales y fáciles de leer
+    - Mejor organización y espaciado
 -->
 <!-- Modal para mostrar logs de una calificación -->
 <div id="log-calificacion-modal-overlay" class="modal-overlay">
     <div class="modal-content modal-extra-large">
         <!-- CABECERA DEL MODAL -->
         <div class="modal-header">
-            <h2>Log de Cambios - Calificación</h2>
+            <h2><i class="bi bi-clock-history" style="margin-right: 0.5rem;"></i>Historial de Cambios</h2>
             <span id="btn-cerrar-log-calificacion-x" class="modal-close">&times;</span>
         </div>
         
-        <!-- CUERPO DEL MODAL: INFORMACIÓN Y TABLA DE LOGS -->
-        <div class="modal-body">
-            <!-- INFORMACIÓN DE LA CALIFICACIÓN
-                 ===============================
-                 Muestra datos básicos de la calificación (ejercicio, instrumento, mercado).
-                 Se llena dinámicamente con JavaScript al abrir el modal.
-            -->
-            <div id="log-calificacion-info" style="margin-bottom: 1.5rem; padding: 1rem; background-color: var(--bg-secondary); border-radius: 6px;">
+        <!-- CUERPO DEL MODAL: INFORMACIÓN Y LOGS -->
+        <div class="modal-body" style="padding: 1.5rem;">
+            <!-- INFORMACIÓN DE LA CALIFICACIÓN (Mejorada con iconos) -->
+            <div id="log-calificacion-info" class="log-calificacion-info-card">
                 <!-- Se llena dinámicamente con JavaScript -->
             </div>
             
-            <!-- TABLA DE LOGS
-                 ==============
-                 Muestra todos los registros de cambios realizados en esta calificación.
-                 Incluye fecha, usuario que hizo el cambio, acción y detalles de los cambios.
-            -->
-            <div style="max-height: 70vh; overflow-y: auto;">
-                <table class="log-table" style="width: 100%;">
-                    <thead>
-                        <tr>
-                            <th>Fecha y Hora</th>
-                            <th>Usuario que Realizó la Acción</th>
-                            <th>Acción Realizada</th>
-                            <th>Cambios Detallados</th>
-                        </tr>
-                    </thead>
-                    <tbody id="log-calificacion-tbody">
-                        <!-- Se llena dinámicamente con JavaScript desde home.js -->
-                    </tbody>
-                </table>
+            <!-- CONTENEDOR DE LOGS (Tarjetas en lugar de tabla) -->
+            <div id="log-calificacion-container" style="max-height: 65vh; overflow-y: auto; margin-top: 1.5rem;">
+                <!-- Se llena dinámicamente con JavaScript desde home.js -->
             </div>
         </div>
 

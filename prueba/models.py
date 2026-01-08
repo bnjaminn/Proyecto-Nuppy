@@ -71,6 +71,7 @@ class Calificacion(Document):
     hash_archivo_csv = StringField(max_length=64, required=False)  # Hash del archivo CSV del que proviene (si Origen='csv')
     Ejercicio = IntField(required=True)                    # Año o período fiscal (obligatorio)
     Instrumento = StringField(max_length=50, required=False)  # Código del instrumento financiero
+    Pais = StringField(max_length=50, required=False)      # País de la calificación (CHILE, PERU, COLOMBIA)
     EventoCapital = StringField(max_length=100, required=False)  # Tipo de evento de capital
     FechaPago = DateTimeField(required=False)             # Fecha de pago del instrumento
     SecuenciaEvento = IntField(required=False)            # Número secuencial del evento

@@ -208,6 +208,30 @@ function mostrarMensaje(titulo, mensaje, tipo = 'info', advertencia = null) {
     // NOTA: innerHTML puede ser vulnerable a XSS si el contenido no es confiable
     textoMensaje.innerHTML = mensaje;
     
+    // Agregar event listeners a los botones de descarga de plantilla si existen
+    // Esto es necesario porque los botones se crean dinámicamente en el HTML
+    setTimeout(() => {
+        const botonesDescargar = textoMensaje.querySelectorAll('button.btn-descargar-plantilla');
+        botonesDescargar.forEach(btn => {
+            const tipo = btn.getAttribute('data-tipo');
+            if (tipo) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('[MOSTRAR MENSAJE] Botón de descarga clickeado, tipo:', tipo);
+                    if (typeof window.descargarPlantillaCSV === 'function') {
+                        window.descargarPlantillaCSV(tipo);
+                    } else if (typeof descargarPlantillaCSV === 'function') {
+                        descargarPlantillaCSV(tipo);
+                    } else {
+                        console.error('La función descargarPlantillaCSV no está disponible');
+                        alert('Error: La función de descarga no está disponible. Por favor, recarga la página.');
+                    }
+                });
+            }
+        });
+    }, 100);
+    
     // ========== CONFIGURAR MENSAJE DE ADVERTENCIA ADICIONAL (OPCIONAL) ==========
     // Verificar si el elemento de advertencia existe antes de intentar usarlo
     // Esto previene errores si el elemento no está presente en el DOM
@@ -541,6 +565,258 @@ window.cerrarModalMensaje = cerrarModalMensaje;
 window.inicializarModalMensaje = inicializarModalMensaje;
 
 // Esperar a que el DOM esté listo
+// ============================================
+// FUNCIONES AUXILIARES PARA BANDERAS
+// ============================================
+/**
+ * Obtiene la URL de la bandera según el país
+ */
+function getBanderaUrl(pais) {
+    if (!pais) return '';
+    const paisUpper = pais.toUpperCase();
+    if (paisUpper === 'CHILE') return 'https://flagcdn.com/20x15/cl.png';
+    if (paisUpper === 'PERU' || paisUpper === 'PERÚ') return 'https://flagcdn.com/20x15/pe.png';
+    if (paisUpper === 'COLOMBIA') return 'https://flagcdn.com/20x15/co.png';
+    return '';
+}
+
+/**
+ * Inicializa el dropdown personalizado de país con banderas
+ */
+function inicializarCustomSelectPais(customSelect, hiddenSelect) {
+    const trigger = customSelect.querySelector('.custom-select-pais-trigger');
+    const options = customSelect.querySelector('.custom-select-pais-options');
+    const optionsList = options.querySelectorAll('.custom-select-pais-option');
+    
+    // Función para actualizar la visualización
+    function updateDisplay(selectedValue) {
+        const option = Array.from(optionsList).find(opt => opt.dataset.value === selectedValue);
+        const valueContainer = customSelect.querySelector('.custom-select-pais-value');
+        
+        if (option && option.dataset.value) {
+            const flagImg = option.querySelector('.custom-select-pais-flag');
+            const text = option.querySelector('.custom-select-pais-text').textContent;
+            
+            // Actualizar el trigger con bandera y texto
+            if (flagImg) {
+                valueContainer.innerHTML = `<img src="${flagImg.src}" alt="${text}" class="custom-select-pais-flag"><span class="custom-select-pais-text">${text}</span>`;
+            } else {
+                valueContainer.innerHTML = `<span class="custom-select-pais-text">${text}</span>`;
+            }
+        } else {
+            // Opción "Todos" (sin bandera)
+            valueContainer.innerHTML = `<span class="custom-select-pais-text">Todos</span>`;
+        }
+        
+        // Actualizar estado seleccionado en las opciones
+        optionsList.forEach(opt => {
+            opt.classList.remove('selected');
+            if (opt.dataset.value === selectedValue) {
+                opt.classList.add('selected');
+            }
+        });
+    }
+    
+    // Abrir/cerrar dropdown
+    trigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isActive = customSelect.classList.contains('active');
+        
+        // Cerrar todos los demás dropdowns
+        document.querySelectorAll('.custom-select-pais').forEach(sel => {
+            if (sel !== customSelect) {
+                sel.classList.remove('active');
+                sel.querySelector('.custom-select-pais-options').classList.remove('show');
+            }
+        });
+        
+        if (isActive) {
+            customSelect.classList.remove('active');
+            options.classList.remove('show');
+        } else {
+            customSelect.classList.add('active');
+            options.classList.add('show');
+        }
+    });
+    
+    // Seleccionar opción
+    optionsList.forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const value = this.dataset.value || '';
+            
+            // Actualizar el select oculto
+            hiddenSelect.value = value;
+            
+            // Disparar evento change en el select oculto para mantener compatibilidad
+            const changeEvent = new Event('change', { bubbles: true });
+            hiddenSelect.dispatchEvent(changeEvent);
+            
+            // Actualizar visualización
+            updateDisplay(value);
+            
+            // Cerrar dropdown
+            customSelect.classList.remove('active');
+            options.classList.remove('show');
+        });
+    });
+    
+    // Cerrar al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!customSelect.contains(e.target)) {
+            customSelect.classList.remove('active');
+            options.classList.remove('show');
+        }
+    });
+    
+    // Inicializar con el valor actual del select oculto
+    updateDisplay(hiddenSelect.value);
+    
+    // Sincronizar cambios externos al select oculto
+    hiddenSelect.addEventListener('change', function() {
+        updateDisplay(this.value);
+    });
+}
+
+/**
+ * Actualiza el background-image de un select para mostrar la bandera
+ */
+function actualizarBanderaSelect(selectElement) {
+    if (!selectElement) return;
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    const flagUrl = selectedOption ? selectedOption.getAttribute('data-flag') : '';
+    
+    if (flagUrl) {
+        selectElement.style.backgroundImage = `url(${flagUrl})`;
+        selectElement.style.backgroundRepeat = 'no-repeat';
+        selectElement.style.backgroundPosition = '0.5rem center';
+        selectElement.style.backgroundSize = '20px 15px';
+        selectElement.style.paddingLeft = '2.5rem';
+        selectElement.classList.add('has-flag');
+    } else {
+        selectElement.style.backgroundImage = 'none';
+        selectElement.style.paddingLeft = '';
+        selectElement.classList.remove('has-flag');
+    }
+}
+
+// ============================================
+// FUNCIÓN GLOBAL: descargarPlantillaCSV(tipo)
+// ============================================
+/**
+ * Descarga una plantilla CSV vacía con el formato correcto según el tipo especificado.
+ * 
+ * POR QUÉ ESTA FUNCIÓN ES ÚTIL:
+ * - Permite al usuario obtener un CSV con los encabezados correctos
+ * - Facilita la creación de archivos CSV con el formato adecuado
+ * - Evita errores de formato al cargar datos
+ * 
+ * CÓMO FUNCIONA:
+ * 1. Genera los encabezados según el tipo (factor o monto)
+ * 2. Crea un CSV con solo los encabezados (sin datos)
+ * 3. Descarga el archivo con un nombre descriptivo
+ * 
+ * Parámetros:
+ *   - tipo: Tipo de carga ('factor' o 'monto')
+ */
+function descargarPlantillaCSV(tipo) {
+    try {
+        console.log('[DESCARGAR PLANTILLA] Iniciando descarga de plantilla tipo:', tipo);
+        
+        // Crear encabezados según el tipo
+        let headers = [
+            'ID',
+            'Origen',
+            'Fecha Act',
+            'Dividendo',
+            'Valor Historico',
+            'Factor Actualizacion',
+            'Anho',
+            'ISFUT',
+            'Ejercicio',
+            'Mercado',
+            'Instrumento',
+            'PAIS',
+            'FEC_PAGO',
+            'SEC_EVE',
+            'DESCRIPCION'
+        ];
+        
+        // Agregar columnas según el tipo
+        if (tipo === 'factor') {
+            // Para factor: F8, F9, F10, ..., F37
+            for (let i = 8; i <= 37; i++) {
+                headers.push(`F${i}`);
+            }
+        } else if (tipo === 'monto') {
+            // Para monto: F8 MONT, F9 MONT, F10 M, ..., F37 M
+            for (let i = 8; i <= 37; i++) {
+                if (i <= 9) {
+                    headers.push(`F${i} MONT`);
+                } else {
+                    headers.push(`F${i} M`);
+                }
+            }
+        } else {
+            console.error('[DESCARGAR PLANTILLA] Tipo de plantilla no válido:', tipo);
+            alert('Tipo de plantilla no válido. Por favor, inténtalo nuevamente.');
+            return;
+        }
+        
+        console.log('[DESCARGAR PLANTILLA] Encabezados generados:', headers.length);
+        
+        // Crear contenido CSV (solo encabezados)
+        // Nota: Algunos nombres de columnas tienen espacios, pero no necesitan comillas en CSV estándar
+        let csvContent = headers.join(',') + '\r\n';
+        
+        console.log('[DESCARGAR PLANTILLA] Contenido CSV generado, longitud:', csvContent.length);
+        
+        // Crear un blob con BOM UTF-8 para Excel
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        
+        // Crear URL del blob
+        if (window.URL && window.URL.createObjectURL) {
+            const url = window.URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `plantilla_carga_${tipo}.csv`);
+            link.style.display = 'none';
+            
+            document.body.appendChild(link);
+            console.log('[DESCARGAR PLANTILLA] Ejecutando clic en enlace...');
+            link.click();
+            document.body.removeChild(link);
+            
+            // Limpiar el URL del objeto después de un momento
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+            }, 100);
+        } else {
+            // Fallback para navegadores antiguos
+            console.error('[DESCARGAR PLANTILLA] URL.createObjectURL no está disponible');
+            alert('Tu navegador no soporta la descarga de archivos. Por favor, usa un navegador más reciente.');
+            return;
+        }
+        
+        console.log('[DESCARGAR PLANTILLA] Descarga completada');
+        
+        // Cerrar el modal de formato después de un pequeño delay
+        setTimeout(() => {
+            const modalMensaje = document.getElementById('mensaje-modal-overlay');
+            if (modalMensaje) {
+                modalMensaje.style.display = 'none';
+            }
+        }, 500);
+    } catch (error) {
+        console.error('[DESCARGAR PLANTILLA] Error al descargar plantilla CSV:', error);
+        alert('Error al descargar la plantilla: ' + error.message + '. Por favor, inténtalo nuevamente.');
+    }
+}
+
+// Hacer la función disponible globalmente
+window.descargarPlantillaCSV = descargarPlantillaCSV;
+
 document.addEventListener('DOMContentLoaded', function() {
     // ========== MODAL DE MENSAJES ==========
     inicializarModalMensaje();
@@ -656,11 +932,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const modal1MercadoSelect = document.getElementById('modal-mercado-select');
     const modal1Dividendo = document.getElementById('modal-dividendo');
     const modal1ISFUT = document.getElementById('modal-isfut');
+    const modal1Pais = document.getElementById('modal-pais');
     
     // Campos del dashboard
     const dashboardMercado = document.getElementById('mercado');
     const dashboardOrigen = document.getElementById('origen');
+    const dashboardPais = document.getElementById('pais');
     const dashboardPeriodo = document.getElementById('periodo');
+    
+    // Inicializar dropdown personalizado de país con banderas
+    const customSelectPais = document.getElementById('custom-select-pais');
+    if (customSelectPais && dashboardPais) {
+        inicializarCustomSelectPais(customSelectPais, dashboardPais);
+    }
+    
+    // Inicializar banderas en los selects de país (para el modal)
+    if (modal1Pais) {
+        actualizarBanderaSelect(modal1Pais);
+        modal1Pais.addEventListener('change', function() {
+            actualizarBanderaSelect(this);
+        });
+    }
+    if (modal1Pais) {
+        actualizarBanderaSelect(modal1Pais);
+        modal1Pais.addEventListener('change', function() {
+            actualizarBanderaSelect(this);
+        });
+    }
 
     // Botón "Ingresar" DENTRO del Modal 1
     const btnSiguienteModal = document.getElementById('btn-siguiente-modal'); 
@@ -886,16 +1184,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Verificar si hay un ID de calificación (modificación) y datos guardados
+            // Verificar si hay un ID de calificación (modificación)
             const calificacionIdHidden = document.getElementById('calificacion-id-hidden');
             const esModificacion = calificacionIdHidden && calificacionIdHidden.value;
             
-            // Si es modificación y tenemos los datos guardados, abrir modal 2 directamente con los montos
-            if (esModificacion && window.calificacionModificarData) {
-                cerrarModal1();
-                abrirModal2(window.calificacionModificarData);
-                return;
-            }
+            // IMPORTANTE: SIEMPRE enviar los datos al servidor, incluso en modificación
+            // Esto asegura que los cambios en el modal 1 (incluyendo PAIS) se guarden correctamente
             
             // Preparar FormData con todos los campos
             const formData = new FormData();
@@ -905,6 +1199,9 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('Origen', origenValue);
             formData.append('Ejercicio', modal1Ejercicio ? modal1Ejercicio.value || modal1Anho.value : modal1Anho ? modal1Anho.value : '');
             formData.append('Instrumento', modal1Instrumento.value || '');
+            const paisValue = modal1Pais ? modal1Pais.value || '' : '';
+            formData.append('Pais', paisValue);
+            console.log('[DEBUG JS] Campo PAIS a enviar:', paisValue, 'Elemento:', modal1Pais);
             formData.append('Descripcion', modal1Descripcion ? modal1Descripcion.value || '' : '');
             formData.append('FechaPago', modal1FechaPago ? modal1FechaPago.value || '' : '');
             formData.append('SecuenciaEvento', modal1Secuencia.value || '');
@@ -1010,11 +1307,36 @@ document.addEventListener('DOMContentLoaded', function() {
         const factoresDescripcion = document.getElementById('factores-descripcion');
         if (factoresDescripcion) factoresDescripcion.value = data.data.descripcion || '';
         
+        const factoresPais = document.getElementById('factores-pais');
+        if (factoresPais) {
+            const paisValue = data.data.pais || '';
+            const flagUrl = getBanderaUrl(paisValue);
+            if (flagUrl && paisValue) {
+                // Crear un contenedor con la imagen y el texto
+                const flagImg = `<img src="${flagUrl}" alt="${paisValue}" style="width: 20px; height: 15px; margin-right: 0.5rem; vertical-align: middle; display: inline-block;">`;
+                factoresPais.value = flagImg + paisValue;
+                // Como es un input readonly, necesitamos usar un div o actualizar el estilo
+                // Por ahora, solo ponemos el texto y agregaremos la imagen con CSS background
+                factoresPais.style.backgroundImage = `url(${flagUrl})`;
+                factoresPais.style.backgroundRepeat = 'no-repeat';
+                factoresPais.style.backgroundPosition = '0.5rem center';
+                factoresPais.style.backgroundSize = '20px 15px';
+                factoresPais.style.paddingLeft = '2.5rem';
+                factoresPais.value = paisValue;
+            } else {
+                factoresPais.style.backgroundImage = 'none';
+                factoresPais.style.paddingLeft = '';
+                factoresPais.value = paisValue;
+            }
+        }
+        
         // Verificar si estamos modificando y mostrar factores originales como referencia
+        // También verificar si data tiene calificacion_id (indica modificación desde modal 1)
         const calificacionIdHidden = document.getElementById('calificacion-id-hidden');
-        const esModificacion = calificacionIdHidden && calificacionIdHidden.value;
+        const esModificacion = (calificacionIdHidden && calificacionIdHidden.value) || (data.calificacion_id && window.calificacionModificarData);
         
         // Si es modificación y tenemos factores guardados, mostrarlos como referencia
+        // También verificar si data.factores existe directamente (viene del servidor al actualizar)
         if (esModificacion && data.factores && Object.keys(data.factores).length > 0) {
             const factoresSection = document.getElementById('factores-calculados-section');
             if (factoresSection) {
@@ -1040,7 +1362,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Cargar montos si están disponibles en los datos, de lo contrario limpiar
-        if (data.montos) {
+        // IMPORTANTE: Los montos vienen del servidor cuando se actualiza una calificación
+        console.log('[DEBUG abrirModal2] data.montos:', data.montos);
+        console.log('[DEBUG abrirModal2] data.factores:', data.factores);
+        console.log('[DEBUG abrirModal2] esModificacion:', esModificacion);
+        
+        if (data.montos && Object.keys(data.montos).length > 0) {
+            console.log('[DEBUG abrirModal2] Cargando montos desde data.montos');
             for (let i = 8; i <= 37; i++) {
                 const montoField = `Monto${i.toString().padStart(2, '0')}`;
                 const montoValue = data.montos[montoField] || '0.0';
@@ -1057,6 +1385,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             // Limpiar todos los campos de montos si no hay datos
+            console.log('[DEBUG abrirModal2] No hay montos, limpiando campos');
             for (let i = 8; i <= 37; i++) {
                 const montoInput = document.getElementById(`monto_${i}`);
                 if (montoInput) montoInput.value = '0.00';
@@ -1078,9 +1407,12 @@ document.addEventListener('DOMContentLoaded', function() {
      * 2. Cambia su display a 'none' para ocultarlo
      */
     function cerrarModal2() {
-        // Ocultar el modal
-        // POR QUÉ: El usuario quiere cerrar el modal
+        // Ocultar el modal SIN guardar cambios
+        // POR QUÉ: El usuario quiere cerrar el modal sin guardar
         // CÓMO: Cambiamos display a 'none' para ocultar el overlay
+        // IMPORTANTE: NO se guardan cambios automáticamente al cerrar
+        // Solo se guardan cuando el usuario presiona el botón "Grabar"
+        console.log('[DEBUG cerrarModal2] Cerrando modal sin guardar cambios');
         if (modalOverlay2) modalOverlay2.style.display = 'none';
     }
 
@@ -1354,7 +1686,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!calificaciones || calificaciones.length === 0) {
             tablaBody.innerHTML = `
                 <tr>
-                    <td colspan="38" style="text-align: center; padding: 20px;">
+                    <td colspan="39" style="text-align: center; padding: 20px;">
                         <em>No se encontraron calificaciones con los filtros seleccionados</em>
                     </td>
                 </tr>
@@ -1391,6 +1723,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // Columnas básicas
             html += `<td>${cal.ejercicio || ''}</td>`;
             html += `<td>${cal.instrumento || ''}</td>`;
+            // Obtener la URL de la bandera según el país
+            const flagUrl = getBanderaUrl(cal.pais);
+            if (flagUrl && cal.pais) {
+                html += `<td><img src="${flagUrl}" alt="${cal.pais}" style="width: 20px; height: 15px; margin-right: 0.5rem; vertical-align: middle;"> ${cal.pais}</td>`;
+            } else {
+                html += `<td>${cal.pais || ''}</td>`;
+            }
             html += `<td>${cal.fecha_pago || ''}</td>`;
             html += `<td>${cal.descripcion || ''}</td>`;
             html += `<td>${cal.secuencia_evento || ''}</td>`;
@@ -1416,12 +1755,14 @@ document.addEventListener('DOMContentLoaded', function() {
         btnBuscar.addEventListener('click', function() {
             const mercado = dashboardMercado ? dashboardMercado.value : '';
             const origen = dashboardOrigen ? dashboardOrigen.value : '';
+            const pais = dashboardPais ? dashboardPais.value : '';
             const periodo = dashboardPeriodo ? dashboardPeriodo.value : '';
 
             // Construir URL con parámetros
             const params = new URLSearchParams();
             if (mercado) params.append('mercado', mercado);
             if (origen) params.append('origen', origen);
+            if (pais) params.append('pais', pais);
             if (periodo) params.append('periodo', periodo);
 
             const url = `${buscarCalificacionesUrl}?${params.toString()}`;
@@ -1430,7 +1771,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (tablaBody) {
                 tablaBody.innerHTML = `
                     <tr>
-                        <td colspan="38" style="text-align: center; padding: 20px;">
+                        <td colspan="39" style="text-align: center; padding: 20px;">
                             <em>Buscando calificaciones...</em>
                         </td>
                     </tr>
@@ -1453,7 +1794,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (tablaBody) {
                         tablaBody.innerHTML = `
                             <tr>
-                                <td colspan="38" style="text-align: center; padding: 20px; color: red;">
+                                <td colspan="39" style="text-align: center; padding: 20px; color: red;">
                                     <em>Error al buscar calificaciones</em>
                                 </td>
                             </tr>
@@ -1467,7 +1808,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (tablaBody) {
                     tablaBody.innerHTML = `
                         <tr>
-                            <td colspan="38" style="text-align: center; padding: 20px; color: red;">
+                            <td colspan="39" style="text-align: center; padding: 20px; color: red;">
                                 <em>Error al buscar calificaciones</em>
                             </td>
                         </tr>
@@ -1652,6 +1993,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (modal1MercadoSelect) modal1MercadoSelect.style.display = 'none';
                 }
                 if (modal1Instrumento) modal1Instrumento.value = cal.instrumento || '';
+                const modal1Pais = document.getElementById('modal-pais');
+                if (modal1Pais) {
+                    modal1Pais.value = cal.pais || '';
+                    actualizarBanderaSelect(modal1Pais);
+                }
                 if (modal1Descripcion) modal1Descripcion.value = cal.descripcion || '';
                 if (modal1FechaPago) {
                     if (cal.fecha_pago) {
@@ -1684,6 +2030,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     data: {
                         mercado: cal.mercado || '',
                         instrumento: cal.instrumento || '',
+                        pais: cal.pais || '',
                         fecha_pago: cal.fecha_pago || '',
                         secuencia: cal.secuencia_evento || '',
                         anho: cal.anho || '',
@@ -1764,6 +2111,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Resetear filtros para mostrar todas las calificaciones
                         if (dashboardMercado) dashboardMercado.value = '';
                         if (dashboardOrigen) dashboardOrigen.value = '';
+                        if (dashboardPais) dashboardPais.value = '';
                         if (dashboardPeriodo) dashboardPeriodo.value = '';
                         // Recargar la tabla con todas las calificaciones
                         if (btnBuscar) btnBuscar.click();
@@ -2000,13 +2348,29 @@ document.addEventListener('DOMContentLoaded', function() {
         logsCalificacionActuales = logs;
         calificacionInfoActual = calificacionInfo;
 
-        // Llenar información de la calificación
+        // Llenar información de la calificación (rediseñada con iconos)
         const infoCalificacion = document.getElementById('log-calificacion-info');
         if (infoCalificacion && calificacionInfo) {
+            const isDarkTheme = detectarTemaOscuro();
+            const textColor = isDarkTheme ? '#E0E0E0' : '#1A1A1A';
+            const bgColor = isDarkTheme ? '#2D2D2D' : '#F9F9F9';
+            const borderColor = isDarkTheme ? '#404040' : '#E0E0E0';
+            
             infoCalificacion.innerHTML = `
-                <strong>Ejercicio:</strong> ${calificacionInfo.ejercicio || 'N/A'}<br>
-                <strong>Instrumento:</strong> ${calificacionInfo.instrumento || 'N/A'}<br>
-                <strong>Mercado:</strong> ${calificacionInfo.mercado || 'N/A'}
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: ${bgColor}; border-radius: 8px; border: 1px solid ${borderColor};">
+                        <i class="bi bi-calendar3" style="color: var(--color-primary); font-size: 1.1rem;"></i>
+                        <span style="color: ${textColor};"><strong>Ejercicio:</strong> ${calificacionInfo.ejercicio || 'N/A'}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: ${bgColor}; border-radius: 8px; border: 1px solid ${borderColor};">
+                        <i class="bi bi-file-earmark-text" style="color: var(--color-primary); font-size: 1.1rem;"></i>
+                        <span style="color: ${textColor};"><strong>Instrumento:</strong> ${calificacionInfo.instrumento || 'N/A'}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: ${bgColor}; border-radius: 8px; border: 1px solid ${borderColor};">
+                        <i class="bi bi-briefcase" style="color: var(--color-primary); font-size: 1.1rem;"></i>
+                        <span style="color: ${textColor};"><strong>Mercado:</strong> ${calificacionInfo.mercado || 'N/A'}</span>
+                    </div>
+                </div>
             `;
         }
 
@@ -2015,12 +2379,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return document.body.classList.contains('dark-theme') || document.documentElement.classList.contains('dark-theme');
         }
         
-        // Llenar tabla de logs
-        const tbody = document.getElementById('log-calificacion-tbody');
-        if (tbody) {
+        // Llenar contenedor de logs (rediseñado con tarjetas)
+        const container = document.getElementById('log-calificacion-container');
+        if (container) {
             if (logs && logs.length > 0) {
                 let html = '';
-                logs.forEach(log => {
+                logs.forEach((log, index) => {
                     // Detectar tema oscuro dinámicamente para cada log
                     const isDarkTheme = detectarTemaOscuro();
                     
@@ -2057,6 +2421,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             'Instrumento': 'Instrumento',
                             'Mercado': 'Mercado',
                             'Origen': 'Origen',
+                            'Pais': 'País',
                             'FechaPago': 'Fecha de Pago',
                             'SecuenciaEvento': 'Secuencia de Evento',
                             'Descripcion': 'Descripción',
@@ -2155,8 +2520,33 @@ document.addEventListener('DOMContentLoaded', function() {
                         const generarCambioHTML = (cambio, tipoColor) => {
                             const campoTecnico = cambio.campo || 'N/A';
                             const campoNombre = nombresCampos[campoTecnico] || campoTecnico;
-                            const valorAnterior = cambio.valor_anterior !== null && cambio.valor_anterior !== undefined ? cambio.valor_anterior : 'N/A';
-                            const valorNuevo = cambio.valor_nuevo !== null && cambio.valor_nuevo !== undefined ? cambio.valor_nuevo : 'N/A';
+                            let valorAnterior = cambio.valor_anterior !== null && cambio.valor_anterior !== undefined ? cambio.valor_anterior : 'N/A';
+                            let valorNuevo = cambio.valor_nuevo !== null && cambio.valor_nuevo !== undefined ? cambio.valor_nuevo : 'N/A';
+                            
+                            // Si el campo es "Pais", agregar banderas
+                            if (campoTecnico === 'Pais') {
+                                const flagAnterior = getBanderaUrl(valorAnterior);
+                                const flagNuevo = getBanderaUrl(valorNuevo);
+                                
+                                const flagAnteriorHtml = flagAnterior ? `<img src="${flagAnterior}" alt="${valorAnterior}" style="width: 20px; height: 15px; margin-right: 0.5rem; vertical-align: middle; display: inline-block;">` : '';
+                                const flagNuevoHtml = flagNuevo ? `<img src="${flagNuevo}" alt="${valorNuevo}" style="width: 20px; height: 15px; margin-right: 0.5rem; vertical-align: middle; display: inline-block;">` : '';
+                                
+                                return `
+                                    <div style="margin-bottom: 0.75rem; padding: 0.75rem; background-color: ${colores.cambioItem}; border-left: 3px solid ${tipoColor}; border-radius: 4px;">
+                                        <strong style="color: ${tipoColor}; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">${campoNombre}</strong>
+                                        <div style="font-size: 0.85rem; line-height: 1.6;">
+                                            <div style="margin-bottom: 0.25rem;">
+                                                <span style="color: ${colores.anterior}; font-weight: 600;">Anterior:</span> 
+                                                <code style="background: ${colores.codeBg}; padding: 3px 6px; border-radius: 3px; border: 1px solid ${colores.codeBorder}; display: inline-flex; align-items: center; margin-left: 0.25rem; font-family: monospace; color: ${colores.texto};">${flagAnteriorHtml}${valorAnterior}</code>
+                                            </div>
+                                            <div>
+                                                <span style="color: ${colores.nuevo}; font-weight: 600;">Nuevo:</span> 
+                                                <code style="background: ${colores.codeBg}; padding: 3px 6px; border-radius: 3px; border: 1px solid ${colores.codeBorder}; display: inline-flex; align-items: center; margin-left: 0.25rem; font-family: monospace; color: ${colores.texto};">${flagNuevoHtml}${valorNuevo}</code>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }
                             
                             return `
                                 <div style="margin-bottom: 0.75rem; padding: 0.75rem; background-color: ${colores.cambioItem}; border-left: 3px solid ${tipoColor}; border-radius: 4px;">
@@ -2247,33 +2637,64 @@ document.addEventListener('DOMContentLoaded', function() {
                         cambiosHtml = `<span style="color: ${isDarkTheme ? '#B0B0B0' : '#999'}; font-style: italic;">Sin cambios detallados</span>`;
                     }
                     
+                    // Determinar color de borde según acción
+                    const borderColor = log.accion.includes('Crear') ? '#28a745' : 
+                                       log.accion.includes('Modificar') ? '#ffc107' : 
+                                       log.accion.includes('Eliminar') ? '#dc3545' : '#6c757d';
+                    
+                    const cardBg = isDarkTheme ? '#2D2D2D' : '#FFFFFF';
+                    const cardBorder = isDarkTheme ? '#404040' : '#E0E0E0';
+                    const textColor = isDarkTheme ? '#E0E0E0' : '#1A1A1A';
+                    const secondaryText = isDarkTheme ? '#B0B0B0' : '#666';
+                    
                     html += `
-                        <tr>
-                            <td>${fecha}</td>
-                            <td>
-                                ${log.actor_nombre && log.actor_nombre !== 'N/A' ? `<strong>${log.actor_nombre}</strong><br>` : ''}
-                                ${log.actor_correo || 'N/A'}<br>
-                                <small style="color: ${isDarkTheme ? '#B0B0B0' : '#666'};">ID: ${log.actor_id || 'N/A'}</small>
-                            </td>
-                            <td>
-                                <span class="accion-badge ${accionClass}">${log.accion || 'N/A'}</span>
-                            </td>
-                            <td style="max-width: 700px; word-wrap: break-word; min-width: 600px;">
+                        <div class="log-card" style="
+                            background: ${cardBg};
+                            border-left: 4px solid ${borderColor};
+                            border-radius: 8px;
+                            padding: 1.25rem;
+                            margin-bottom: 1rem;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                            transition: transform 0.2s, box-shadow 0.2s;
+                        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" 
+                           onmouseout="this.style.transform=''; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'">
+                            <!-- Header de la tarjeta -->
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                                <div style="flex: 1; min-width: 200px;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <i class="bi bi-clock" style="color: var(--color-primary); font-size: 1.1rem;"></i>
+                                        <span style="color: ${textColor}; font-weight: 600; font-size: 0.95rem;">${fecha}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="bi bi-person-circle" style="color: var(--color-primary); font-size: 1.1rem;"></i>
+                                        <div>
+                                            ${log.actor_nombre && log.actor_nombre !== 'N/A' ? `<strong style="color: ${textColor}; display: block;">${log.actor_nombre}</strong>` : ''}
+                                            <span style="color: ${secondaryText}; font-size: 0.85rem;">${log.actor_correo || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="accion-badge ${accionClass}" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">${log.accion || 'N/A'}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Cambios detallados -->
+                            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid ${cardBorder};">
                                 ${cambiosHtml}
-                            </td>
-                        </tr>
+                            </div>
+                        </div>
                     `;
                 });
-                tbody.innerHTML = html;
+                container.innerHTML = html;
             } else {
                 // Detectar tema oscuro dinámicamente
                 const isDarkTheme = detectarTemaOscuro();
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="4" style="text-align: center; padding: 40px; color: ${isDarkTheme ? '#B0B0B0' : '#999'};">
-                            No hay registros de log para esta calificación.
-                        </td>
-                    </tr>
+                const textColor = isDarkTheme ? '#B0B0B0' : '#999';
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: ${textColor};">
+                        <i class="bi bi-inbox" style="font-size: 3rem; margin-bottom: 1rem; display: block; opacity: 0.5;"></i>
+                        <p style="font-size: 1.1rem; margin: 0;">No hay registros de cambios para esta calificación</p>
+                    </div>
                 `;
             }
         }
@@ -2302,6 +2723,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Resetear filtros a valores vacíos para limpiar todos los filtros
             if (dashboardMercado) dashboardMercado.value = ''; // Vacío para mostrar todos
             if (dashboardOrigen) dashboardOrigen.value = ''; // Vacío para mostrar todos
+            if (dashboardPais) dashboardPais.value = ''; // Vacío para mostrar todos
             if (dashboardPeriodo) dashboardPeriodo.value = ''; // Vacío para mostrar todos
 
             // Ejecutar búsqueda automáticamente para mostrar todas las calificaciones sin filtros
@@ -2818,7 +3240,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.duplicado) {
                     mostrarMensaje('Archivo Duplicado', data.error || 'Este archivo ya fue subido anteriormente', 'error');
                 } else {
-                    mostrarMensaje('Error', data.error || 'Error al procesar el archivo', 'error');
+                    // Ajustar colores del mensaje de error según el modo oscuro
+                    const errorMensaje = ajustarColoresErrorModoOscuro(data.error || 'Error al procesar el archivo');
+                    mostrarMensaje('Error', errorMensaje, 'error');
                 }
             }
         })
@@ -2853,16 +3277,26 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!tablaPreviewFactor) return;
         
         if (datos.length === 0) {
-            tablaPreviewFactor.innerHTML = '<tr><td colspan="38" style="padding: 2rem; text-align: center; color: #999;">No hay datos para mostrar.</td></tr>';
+            tablaPreviewFactor.innerHTML = '<tr><td colspan="40" style="padding: 2rem; text-align: center; color: #999;">No hay datos para mostrar.</td></tr>';
             return;
         }
         
         let html = '';
         datos.forEach((fila, index) => {
             html += '<tr>';
+            // ID de la calificación (ID de MongoDB, puede venir del CSV o de la búsqueda en BD)
+            html += `<td>${fila._id_calificacion || fila.ID || fila.id || fila._id || 'SIN ID'}</td>`;
             html += `<td>${fila.Ejercicio || ''}</td>`;
             html += `<td>${fila.Mercado || ''}</td>`;
             html += `<td>${fila.Instrumento || ''}</td>`;
+            // PAIS (buscar diferentes variaciones del nombre) con bandera
+            const pais = fila.PAIS || fila.Pais || fila.pais || '';
+            const banderaUrl = getBanderaUrl(pais);
+            if (banderaUrl) {
+                html += `<td><img src="${banderaUrl}" alt="${pais}" style="width: 20px; height: 15px; object-fit: cover; border-radius: 2px; vertical-align: middle; margin-right: 0.5rem; display: inline-block;">${pais}</td>`;
+            } else {
+                html += `<td>${pais}</td>`;
+            }
             html += `<td>${fila.FEC_PAGO || ''}</td>`;
             html += `<td>${fila.SEC_EVE || ''}</td>`;
             html += `<td>${fila.DESCRIPCION || ''}</td>`;
@@ -2904,16 +3338,26 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!tablaPreviewMonto) return;
         
         if (datos.length === 0) {
-            tablaPreviewMonto.innerHTML = '<tr><td colspan="38" style="padding: 2rem; text-align: center; color: #999;">No hay datos para mostrar.</td></tr>';
+            tablaPreviewMonto.innerHTML = '<tr><td colspan="40" style="padding: 2rem; text-align: center; color: #999;">No hay datos para mostrar.</td></tr>';
             return;
         }
         
         let html = '';
         datos.forEach((fila, index) => {
             html += '<tr>';
+            // ID de la calificación (ID de MongoDB, puede venir del CSV o de la búsqueda en BD)
+            html += `<td>${fila._id_calificacion || fila.ID || fila.id || fila._id || 'SIN ID'}</td>`;
             html += `<td>${fila.Ejercicio || ''}</td>`;
             html += `<td>${fila.Mercado || ''}</td>`;
             html += `<td>${fila.Instrumento || ''}</td>`;
+            // PAIS (buscar diferentes variaciones del nombre) con bandera
+            const pais = fila.PAIS || fila.Pais || fila.pais || '';
+            const banderaUrl = getBanderaUrl(pais);
+            if (banderaUrl) {
+                html += `<td><img src="${banderaUrl}" alt="${pais}" style="width: 20px; height: 15px; object-fit: cover; border-radius: 2px; vertical-align: middle; margin-right: 0.5rem; display: inline-block;">${pais}</td>`;
+            } else {
+                html += `<td>${pais}</td>`;
+            }
             html += `<td>${fila.FEC_PAGO || ''}</td>`;
             html += `<td>${fila.SEC_EVE || ''}</td>`;
             html += `<td>${fila.DESCRIPCION || ''}</td>`;
@@ -3020,7 +3464,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nombreArchivoFactor) nombreArchivoFactor.value = '';
         // Limpiar tabla de preview
         if (tablaPreviewFactor) {
-            tablaPreviewFactor.innerHTML = '<tr><td colspan="38" style="padding: 2rem; text-align: center; color: #999;">No hay datos para mostrar. Seleccione un archivo CSV.</td></tr>';
+            tablaPreviewFactor.innerHTML = '<tr><td colspan="39" style="padding: 2rem; text-align: center; color: #999;">No hay datos para mostrar. Seleccione un archivo CSV.</td></tr>';
         }
         // Deshabilitar botón de grabar
         if (btnGrabarFactor) btnGrabarFactor.disabled = true;
@@ -3184,6 +3628,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Limpiar filtros del dashboard
                         if (dashboardMercado) dashboardMercado.value = '';
                         if (dashboardOrigen) dashboardOrigen.value = '';
+                        if (dashboardPais) dashboardPais.value = '';
                         if (dashboardPeriodo) dashboardPeriodo.value = '';
                         
                         // Hacer la búsqueda sin filtros (parámetros vacíos)
@@ -3305,6 +3750,56 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // ============================================
+    // FUNCIÓN: ajustarColoresErrorModoOscuro(mensaje)
+    // ============================================
+    /**
+     * Ajusta los colores del mensaje de error HTML según el modo oscuro/claro.
+     * Reemplaza los colores hardcodeados por colores adaptativos.
+     * 
+     * Parámetros:
+     *   - mensaje: String HTML con el mensaje de error
+     * 
+     * Returns:
+     *   - String HTML con colores ajustados según el tema
+     */
+    function ajustarColoresErrorModoOscuro(mensaje) {
+        // Detectar si está en modo oscuro
+        const isDarkMode = document.body.classList.contains('dark-theme');
+        
+        // Si no es un mensaje HTML o no contiene estilos, retornar tal cual
+        if (!mensaje || typeof mensaje !== 'string' || !mensaje.includes('style=')) {
+            return mensaje;
+        }
+        
+        // Colores para modo oscuro
+        const bgColor = isDarkMode ? '#3A2A1A' : '#FFF4E6';
+        const textColor = isDarkMode ? '#E0E0E0' : '#1A1A1A';
+        const textSecondary = isDarkMode ? '#B0B0B0' : '#555';
+        const textTertiary = isDarkMode ? '#C0C0C0' : '#333';
+        const textInfo = isDarkMode ? '#B0B0B0' : '#666';
+        
+        // Reemplazar colores en el mensaje HTML usando expresiones regulares más robustas
+        let mensajeAjustado = mensaje;
+        
+        // Reemplazar background: #FFF4E6 (con posibles espacios)
+        mensajeAjustado = mensajeAjustado.replace(/background:\s*#FFF4E6/gi, `background: ${bgColor}`);
+        
+        // Reemplazar color: #555 (con posibles espacios)
+        mensajeAjustado = mensajeAjustado.replace(/color:\s*#555/gi, `color: ${textSecondary}`);
+        
+        // Reemplazar color: #333 (con posibles espacios)
+        mensajeAjustado = mensajeAjustado.replace(/color:\s*#333/gi, `color: ${textTertiary}`);
+        
+        // Reemplazar color: #666 (con posibles espacios)
+        mensajeAjustado = mensajeAjustado.replace(/color:\s*#666/gi, `color: ${textInfo}`);
+        
+        // Reemplazar color: inherit (si existe, usar el color del tema)
+        mensajeAjustado = mensajeAjustado.replace(/color:\s*inherit/gi, `color: ${textColor}`);
+        
+        return mensajeAjustado;
+    }
+    
     // Ver formato - Factor
     if (btnVerFormatoFactor) {
         btnVerFormatoFactor.addEventListener('click', () => {
@@ -3345,37 +3840,134 @@ document.addEventListener('DOMContentLoaded', function() {
      *   - tipo: Tipo de carga ('factor' o 'monto')
      */
     function mostrarFormatoRequerido(tipo) {
+        // Detectar si está en modo oscuro
+        const isDarkMode = document.body.classList.contains('dark-theme');
+        const bgColor = isDarkMode ? '#3A2A1A' : '#FFF4E6';
+        const textColor = isDarkMode ? '#E0E0E0' : '#1A1A1A';
+        const infoBgColor = isDarkMode ? 'rgba(13, 110, 253, 0.2)' : 'rgba(13, 110, 253, 0.1)';
+        
         let mensaje = '';
         if (tipo === 'factor') {
             mensaje = `
-                <strong>Formato requerido para Carga Por Factor:</strong><br><br>
-                El archivo CSV debe contener las siguientes columnas:<br>
-                - Ejercicio (requerido)<br>
-                - Mercado (requerido)<br>
-                - Instrumento<br>
-                - FEC_PAGO<br>
-                - SEC_EVE<br>
-                - DESCRIPCION<br>
-                - F8, F9, F10, ..., F37 (factores del 8 al 37)<br><br>
-                Los factores deben estar ya calculados y ser valores decimales entre 0 y 1.
+                <div style="text-align: center; padding: 0.5rem 0; width: 100%;">
+                    <div style="text-align: center; margin-bottom: 1.5rem; width: 100%; display: flex; flex-direction: column; align-items: center;">
+                        <p style="margin: 0 0 0.75rem 0; font-size: 1.2rem; font-weight: 600; color: #FF6B00; text-align: center;">
+                            <span style="font-size: 1.5rem;">📋</span> Formato requerido para Carga Por Factor
+                        </p>
+                    </div>
+                    <p style="margin: 0 auto 1rem auto; color: ${textColor}; text-align: center; font-size: 0.95rem; width: 100%; opacity: 0.9;">El archivo CSV debe contener las siguientes columnas:</p>
+                    <div style="background: ${bgColor}; border-left: 4px solid #FF6B00; border-radius: 6px; padding: 1.25rem; margin: 1rem auto; max-width: 90%; text-align: center;">
+                        <div style="display: grid; gap: 0.5rem; justify-items: center;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>Ejercicio</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>Mercado</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>Instrumento</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>PAIS</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>FEC_PAGO</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>SEC_EVE</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>DESCRIPCION</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>F8, F9, F10, ..., F37</strong> <span style="opacity: 0.8; font-size: 0.85rem;">(factores del 8 al 37)</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="background: ${infoBgColor}; border-left: 4px solid #0D6EFD; border-radius: 6px; padding: 1rem; margin: 1rem auto 0 auto; max-width: 90%; text-align: center;">
+                        <p style="margin: 0; color: ${textColor}; font-size: 0.9rem; display: flex; align-items: flex-start; justify-content: center; gap: 0.5rem; opacity: 0.9;">
+                            <span style="font-size: 1.2rem; line-height: 1;">ℹ️</span>
+                            <span>Los factores deben estar ya calculados y ser valores decimales entre <strong>0 y 1</strong>.</span>
+                        </p>
+                    </div>
+                    <div style="margin-top: 1.5rem; text-align: center;">
+                        <button class="btn-descargar-plantilla" data-tipo="factor" style="background: #FF6B00; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: background 0.2s;">
+                            📥 Descargar Plantilla CSV
+                        </button>
+                    </div>
+                </div>
             `;
         } else {
             mensaje = `
-                <strong>Formato requerido para Carga Por Monto:</strong><br><br>
-                El archivo CSV debe contener las siguientes columnas:<br>
-                - Ejercicio (requerido)<br>
-                - Mercado (requerido)<br>
-                - Instrumento<br>
-                - FEC_PAGO<br>
-                - SEC_EVE<br>
-                - DESCRIPCION<br>
-                - F8 MONT, F9 MONT, F10 M, ..., F37 M (montos del 8 al 37)<br><br>
-                Los montos serán utilizados para calcular los factores automáticamente.
+                <div style="text-align: center; padding: 0.5rem 0; width: 100%;">
+                    <div style="text-align: center; margin-bottom: 1.5rem; width: 100%; display: flex; flex-direction: column; align-items: center;">
+                        <p style="margin: 0 0 0.75rem 0; font-size: 1.2rem; font-weight: 600; color: #FF6B00; text-align: center;">
+                            <span style="font-size: 1.5rem;">📋</span> Formato requerido para Carga Por Monto
+                        </p>
+                    </div>
+                    <p style="margin: 0 auto 1rem auto; color: ${textColor}; text-align: center; font-size: 0.95rem; width: 100%; opacity: 0.9;">El archivo CSV debe contener las siguientes columnas:</p>
+                    <div style="background: ${bgColor}; border-left: 4px solid #FF6B00; border-radius: 6px; padding: 1.25rem; margin: 1rem auto; max-width: 90%; text-align: center;">
+                        <div style="display: grid; gap: 0.5rem; justify-items: center;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>Ejercicio</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>Mercado</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>Instrumento</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>PAIS</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>FEC_PAGO</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>SEC_EVE</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>DESCRIPCION</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; text-align: center; color: ${textColor};">
+                                <span style="color: #FF6B00; font-weight: bold;">●</span>
+                                <span><strong>F8 MONT, F9 MONT, F10 M, ..., F37 M</strong> <span style="opacity: 0.8; font-size: 0.85rem;">(montos del 8 al 37)</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="background: ${infoBgColor}; border-left: 4px solid #0D6EFD; border-radius: 6px; padding: 1rem; margin: 1rem auto 0 auto; max-width: 90%; text-align: center;">
+                        <p style="margin: 0; color: ${textColor}; font-size: 0.9rem; display: flex; align-items: flex-start; justify-content: center; gap: 0.5rem; opacity: 0.9;">
+                            <span style="font-size: 1.2rem; line-height: 1;">ℹ️</span>
+                            <span>Los montos serán utilizados para <strong>calcular los factores automáticamente</strong>.</span>
+                        </p>
+                    </div>
+                    <div style="margin-top: 1.5rem; text-align: center;">
+                        <button class="btn-descargar-plantilla" data-tipo="monto" style="background: #FF6B00; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: background 0.2s;">
+                            📥 Descargar Plantilla CSV
+                        </button>
+                    </div>
+                </div>
             `;
         }
         
         mostrarMensaje('Formato Requerido', mensaje, 'info');
     }
+
 
     // ========== MODAL DE OPCIONES Y TEMA OSCURO ==========
     const modalOpcionesOverlay = document.getElementById('opciones-modal-overlay');

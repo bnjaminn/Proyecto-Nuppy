@@ -111,6 +111,43 @@
                     <option value="csv">CSV</option>
                 </select>
             </div>
+            <!-- Filtro de País: CHILE, PERU, COLOMBIA -->
+            <div class="filter-group">
+                <label for="pais">País:</label>
+                <!-- Select oculto para mantener compatibilidad con el formulario -->
+                <select id="pais" name="pais" class="pais-select" style="display: none;">
+                    <option value="">Todos</option>
+                    <option value="CHILE" data-flag="https://flagcdn.com/20x15/cl.png">CHILE</option>
+                    <option value="PERU" data-flag="https://flagcdn.com/20x15/pe.png">PERU</option>
+                    <option value="COLOMBIA" data-flag="https://flagcdn.com/20x15/co.png">COLOMBIA</option>
+                </select>
+                <!-- Dropdown personalizado con banderas -->
+                <div class="custom-select-pais" id="custom-select-pais">
+                    <div class="custom-select-pais-trigger">
+                        <span class="custom-select-pais-value">
+                            <span class="custom-select-pais-text">Todos</span>
+                        </span>
+                        <span class="custom-select-pais-arrow">▼</span>
+                    </div>
+                    <div class="custom-select-pais-options" id="custom-select-pais-options">
+                        <div class="custom-select-pais-option" data-value="">
+                            <span class="custom-select-pais-text">Todos</span>
+                        </div>
+                        <div class="custom-select-pais-option" data-value="CHILE" data-flag="https://flagcdn.com/20x15/cl.png">
+                            <img src="https://flagcdn.com/20x15/cl.png" alt="CHILE" class="custom-select-pais-flag">
+                            <span class="custom-select-pais-text">CHILE</span>
+                        </div>
+                        <div class="custom-select-pais-option" data-value="PERU" data-flag="https://flagcdn.com/20x15/pe.png">
+                            <img src="https://flagcdn.com/20x15/pe.png" alt="PERU" class="custom-select-pais-flag">
+                            <span class="custom-select-pais-text">PERU</span>
+                        </div>
+                        <div class="custom-select-pais-option" data-value="COLOMBIA" data-flag="https://flagcdn.com/20x15/co.png">
+                            <img src="https://flagcdn.com/20x15/co.png" alt="COLOMBIA" class="custom-select-pais-flag">
+                            <span class="custom-select-pais-text">COLOMBIA</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- Filtro de Período: Año fiscal (ejercicio) -->
             <div class="filter-group" style="position: relative;">
                 <label for="periodo">Periodo Comercial:</label>
@@ -177,6 +214,7 @@
                     <!-- Columnas de información básica de la calificación -->
                     <th>Ejercicio</th>
                     <th>Instrumento</th>
+                    <th>País</th>
                     <th>Fecha Pago</th>
                     <th>Descripcion</th>
                     <th>Secuencia Evento</th>
@@ -222,7 +260,7 @@
             </thead>
             <tbody id="tabla-calificaciones-body">
                 <tr>
-                    <td colspan="38" style="text-align: center; padding: 20px;">
+                    <td colspan="39" style="text-align: center; padding: 20px;">
                         <em>Seleccione los filtros y haga clic en "buscar" para ver las calificaciones</em>
                     </td>
                 </tr>

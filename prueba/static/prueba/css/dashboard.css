@@ -149,6 +149,163 @@ body {
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+/* Estilos para mostrar banderas en selects de país */
+.filter-group select#pais,
+.form-field select#modal-pais {
+    padding-left: 2.5rem !important;
+    background-position: 0.5rem center !important;
+    background-repeat: no-repeat !important;
+    background-size: 20px 15px !important;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Asegurar que el padding se aplique cuando tiene bandera */
+.filter-group select#pais.has-flag,
+.form-field select#modal-pais.has-flag {
+    padding-left: 2.5rem !important;
+}
+
+/* Mejorar la apariencia cuando el select está enfocado o tiene bandera */
+.filter-group select#pais.has-flag:focus,
+.form-field select#modal-pais.has-flag:focus {
+    background-position: 0.5rem center !important;
+}
+
+/* Dropdown personalizado con banderas */
+.custom-select-pais {
+    position: relative;
+    width: 100%;
+    min-width: 150px;
+}
+
+.custom-select-pais-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    min-height: 2.2rem;
+}
+
+.custom-select-pais-trigger:hover {
+    border-color: var(--color-primary);
+}
+
+.custom-select-pais-trigger.active {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2);
+}
+
+.custom-select-pais-value {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex: 1;
+}
+
+.custom-select-pais-flag {
+    width: 24px;
+    height: 18px;
+    object-fit: cover;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.custom-select-pais-text {
+    white-space: nowrap;
+    font-size: 0.9rem;
+}
+
+.custom-select-pais-arrow {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    transition: transform 0.2s;
+    margin-left: 0.5rem;
+    flex-shrink: 0;
+}
+
+.custom-select-pais-trigger.active .custom-select-pais-arrow {
+    transform: rotate(180deg);
+}
+
+.custom-select-pais-options {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 150px;
+    width: max-content;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    max-height: 220px;
+    overflow-y: auto;
+    display: none;
+}
+
+.custom-select-pais-options.show {
+    display: block;
+}
+
+.custom-select-pais-option {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+    min-width: 130px;
+    white-space: nowrap;
+}
+
+.custom-select-pais-option:last-child {
+    border-bottom: none;
+}
+
+.custom-select-pais-option:hover {
+    background-color: rgba(255, 107, 0, 0.1);
+}
+
+.custom-select-pais-option.selected {
+    background-color: rgba(255, 107, 0, 0.15);
+    font-weight: 600;
+}
+
+/* Modo oscuro para el dropdown personalizado */
+body.dark-theme .custom-select-pais-trigger {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+body.dark-theme .custom-select-pais-options {
+    background-color: var(--bg-primary);
+    border-color: var(--border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .custom-select-pais-option {
+    border-bottom-color: var(--border);
+}
+
+body.dark-theme .custom-select-pais-option:hover {
+    background-color: rgba(255, 107, 0, 0.2);
+}
+
+body.dark-theme .custom-select-pais-option.selected {
+    background-color: rgba(255, 107, 0, 0.25);
+}
+
 .filter-group select:focus, 
 .filter-group input:focus {
     border-color: var(--color-primary);

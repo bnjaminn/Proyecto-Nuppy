@@ -879,6 +879,7 @@ def buscar_calificaciones_view(request):
         # .strip() elimina espacios al inicio y final
         mercado_raw = request.GET.get('mercado', '').strip()
         origen = request.GET.get('origen', '').strip()
+        pais = request.GET.get('pais', '').strip()
         periodo = request.GET.get('periodo', '').strip()
 
         # NORMALIZAR MERCADO
@@ -916,6 +917,13 @@ def buscar_calificaciones_view(request):
         # Agregar filtro de origen si tiene valor
         if origen_normalizado:
             query['Origen'] = origen_normalizado
+        
+        # Agregar filtro de país si tiene valor
+        if pais:
+            # Normalizar país a mayúsculas para coincidir con valores guardados
+            pais_upper = pais.upper().strip()
+            if pais_upper in ['CHILE', 'PERU', 'COLOMBIA']:
+                query['Pais'] = pais_upper
         
         # Agregar filtro de período si tiene valor
         if periodo:
@@ -960,6 +968,7 @@ def buscar_calificaciones_view(request):
                 'id': cal_id,
                 'ejercicio': cal.Ejercicio or '',
                 'instrumento': cal.Instrumento or '',
+                'pais': cal.Pais or '',
                 'fecha_pago': cal.FechaPago.strftime('%Y-%m-%d') if cal.FechaPago else '',
                 'descripcion': cal.Descripcion or '',
                 'secuencia_evento': cal.SecuenciaEvento or '',
@@ -1085,17 +1094,32 @@ def exportar_calificaciones_view(request):
         writer = csv.writer(response)
         
         # ESCRIBIR ENCABEZADOS DEL CSV
-        # Primera fila contiene los nombres de las columnas
+        # IMPORTANTE: Campos adicionales primero, luego campos requeridos para carga (con nombres correctos)
+        # Formato requerido para carga: Ejercicio, Mercado, Instrumento, PAIS, FEC_PAGO, SEC_EVE, DESCRIPCION, F8-F37
         headers = [
-            'ID', 'Ejercicio', 'Mercado', 'Origen', 'Instrumento', 'Fecha Pago', 
-            'Secuencia Evento', 'Descripcion', 'Fecha Act', 'Dividendo', 
-            'Valor Historico', 'Factor Actualizacion', 'Anho', 'ISFUT'
+            # Campos adicionales primero (no requeridos para carga, pero útiles para información completa)
+            'ID',  # ID de la calificación
+            'Origen',  # Origen de los datos (Corredor, CSV)
+            'Fecha Act',  # Fecha de última actualización
+            'Dividendo',  # Monto del dividendo
+            'Valor Historico',  # Valor histórico
+            'Factor Actualizacion',  # Factor de actualización
+            'Anho',  # Año alternativo
+            'ISFUT',  # Indicador booleano
+            # Campos requeridos para carga (con nombres exactos)
+            'Ejercicio', 
+            'Mercado', 
+            'Instrumento', 
+            'PAIS', 
+            'FEC_PAGO', 
+            'SEC_EVE', 
+            'DESCRIPCION'
         ]
         
-        # Agregar encabezados de factores F8 a F37
-        # POR QUÉ: Cada factor necesita su propia columna en el CSV
+        # Agregar encabezados de factores F8 a F37 (formato F8, F9, F10, ..., F37)
+        # POR QUÉ: Cada factor necesita su propia columna en el CSV con el formato correcto
         for i in range(8, 38):
-            headers.append(f'Factor{i:02d}')
+            headers.append(f'F{i}')
         
         # Escribir la fila de encabezados
         writer.writerow(headers)
@@ -1104,27 +1128,31 @@ def exportar_calificaciones_view(request):
         # Cada calificación se convierte en una fila del CSV
         for cal in calificaciones:
             # Crear fila con datos básicos de la calificación
+            # IMPORTANTE: Campos adicionales primero, luego campos requeridos para carga (con formato correcto)
             # or '' convierte None a string vacío para evitar errores
             row = [
+                # Campos adicionales primero
                 str(cal.id) if cal.id else '',  # ID como string
-                cal.Ejercicio or '',  # Año del ejercicio
-                cal.Mercado or '',  # Tipo de mercado
                 cal.Origen or '',  # Origen de los datos
-                cal.Instrumento or '',  # Código del instrumento
-                cal.FechaPago.strftime('%Y-%m-%d') if cal.FechaPago else '',  # Fecha formateada
-                cal.SecuenciaEvento or '',  # Secuencia del evento
-                cal.Descripcion or '',  # Descripción
                 cal.FechaAct.strftime('%Y-%m-%d %H:%M:%S') if cal.FechaAct else '',  # Fecha de actualización
                 str(cal.Dividendo) if cal.Dividendo else '0.0',  # Dividendo
                 str(cal.ValorHistorico) if cal.ValorHistorico else '0.0',  # Valor histórico
                 str(cal.FactorActualizacion) if cal.FactorActualizacion else '0.0',  # Factor de actualización
                 cal.Anho or '',  # Año alternativo
-                'True' if cal.ISFUT else 'False'  # Indicador booleano como string
+                'True' if cal.ISFUT else 'False',  # Indicador booleano como string
+                # Campos requeridos para carga (orden y formato exacto)
+                cal.Ejercicio or '',  # Año del ejercicio
+                cal.Mercado or '',  # Tipo de mercado
+                cal.Instrumento or '',  # Código del instrumento
+                cal.Pais or '',  # País de la calificación (formato PAIS en mayúsculas)
+                cal.FechaPago.strftime('%Y-%m-%d') if cal.FechaPago else '',  # Fecha formateada (formato FEC_PAGO)
+                cal.SecuenciaEvento or '',  # Secuencia del evento (formato SEC_EVE)
+                cal.Descripcion or ''  # Descripción (formato DESCRIPCION)
             ]
             
-            # Agregar todos los factores F8 a F37 a la fila
+            # Agregar todos los factores F8 a F37 a la fila (formato F8, F9, F10, ..., F37)
             for i in range(8, 38):
-                field_name = f'Factor{i:02d}'
+                field_name = f'Factor{i:02d}'  # Nombre del campo en el modelo (Factor08, Factor09, etc.)
                 valor = getattr(cal, field_name, 0.0)
                 # Convertir a string, usar '0.0' si es None
                 row.append(str(valor) if valor else '0.0')
@@ -1276,11 +1304,11 @@ def ingresar_view(request):
             # POR QUÉ: MongoDB necesita DateTime, no string
             if 'FechaPago' in cleaned_data and cleaned_data['FechaPago']:
                 if isinstance(cleaned_data['FechaPago'], str):
-                    from datetime import datetime
                     try:
                         # strptime() convierte string a DateTime
                         # '%Y-%m-%d' es el formato esperado: "2024-01-15"
-                        cleaned_data['FechaPago'] = datetime.strptime(cleaned_data['FechaPago'], '%Y-%m-%d')
+                        # Usar datetime.datetime.strptime para evitar conflicto con import local
+                        cleaned_data['FechaPago'] = datetime.datetime.strptime(cleaned_data['FechaPago'], '%Y-%m-%d')
                     except:
                         # Si el formato es inválido, ignorar (no romper el flujo)
                         pass
@@ -1336,9 +1364,40 @@ def ingresar_view(request):
                     # POR QUÉ: Solo actualizamos FechaAct si hubo cambios reales
                     campos_actualizados = False
                     
-                    # Recorrer todos los campos del formulario
+                    # PROCESAR PAIS ESPECÍFICAMENTE - SIEMPRE PROCESAR SI ESTÁ EN EL REQUEST
+                    # El campo PAIS debe procesarse siempre que esté presente en el POST
+                    # Obtener valor del POST (tanto 'Pais' como 'pais' por compatibilidad)
+                    pais_nuevo_post = request.POST.get('Pais') or request.POST.get('pais')
+                    
+                    # Si no está en POST, intentar desde cleaned_data
+                    if pais_nuevo_post is None and 'Pais' in cleaned_data:
+                        pais_nuevo_post = cleaned_data.get('Pais', '')
+                    
+                    # Si encontramos un valor en el POST, procesarlo
+                    if 'Pais' in request.POST or 'pais' in request.POST:
+                        # Obtener valor actual de la calificación
+                        pais_actual = getattr(calificacion, 'Pais', None) or ''
+                        
+                        # Normalizar valores para comparación
+                        pais_actual_str = str(pais_actual).strip() if pais_actual else ''
+                        pais_nuevo_str = str(pais_nuevo_post).strip() if pais_nuevo_post else ''
+                        
+                        # Actualizar si hay cambio
+                        if pais_actual_str != pais_nuevo_str:
+                            calificacion.Pais = pais_nuevo_str
+                            campos_actualizados = True
+                            cambios_detallados.append({
+                                'campo': 'Pais',
+                                'valor_anterior': pais_actual_str if pais_actual_str else '(vacío)',
+                                'valor_nuevo': pais_nuevo_str if pais_nuevo_str else '(vacío)'
+                            })
+                    
+                    # Recorrer todos los campos del formulario (excepto PAIS que ya se procesó)
                     for key, value in cleaned_data.items():
-                        # Solo procesar campos que fueron enviados en el POST original
+                        # Saltar PAIS porque ya se procesó arriba
+                        if key == 'Pais':
+                            continue
+                        # Para otros campos, solo procesar si fueron enviados en el POST original
                         # POR QUÉ: Algunos campos pueden estar en cleaned_data pero no fueron modificados
                         if key in request.POST:
                             # Obtener el valor actual del campo en la calificación
@@ -1351,13 +1410,20 @@ def ingresar_view(request):
                                 if val is None:
                                     return None
                                 # Si es datetime, convertir a string formateado
-                                if isinstance(val, datetime.datetime):
-                                    return val.strftime('%Y-%m-%d %H:%M:%S')
+                                try:
+                                    # Verificar si es datetime de forma segura
+                                    if hasattr(val, 'strftime') and hasattr(val, 'year'):
+                                        return val.strftime('%Y-%m-%d %H:%M:%S')
+                                except (TypeError, AttributeError, ValueError):
+                                    pass
                                 # Si es booleano, convertir a "Sí" o "No"
                                 if isinstance(val, bool):
                                     return 'Sí' if val else 'No'
                                 # Para otros tipos, convertir a string
-                                return str(val)
+                                try:
+                                    return str(val)
+                                except Exception:
+                                    return repr(val) if val is not None else 'None'
                             
                             # Formatear valores para comparación y para el log
                             valor_anterior_str = formatear_valor(valor_actual)
@@ -1386,9 +1452,18 @@ def ingresar_view(request):
                             
                             # Para campos string
                             elif isinstance(value, str):
-                                # Solo actualizar si el string no está vacío y es diferente
-                                # POR QUÉ: No queremos sobrescribir con strings vacíos
-                                if value.strip() != '' and valor_actual != value:
+                                # Para PAIS, permitir actualizar incluso si está vacío
+                                # Para otros campos, solo actualizar si el string no está vacío y es diferente
+                                if key == 'Pais':
+                                    # PAIS puede ser actualizado incluso con cadena vacía
+                                    # Normalizar None a cadena vacía para comparación
+                                    valor_actual_normalizado = str(valor_actual) if valor_actual is not None else ''
+                                    valor_nuevo_normalizado = str(value) if value is not None else ''
+                                    if valor_actual_normalizado != valor_nuevo_normalizado:
+                                        setattr(calificacion, key, value)
+                                        campos_actualizados = True
+                                        cambio_realizado = True
+                                elif value.strip() != '' and valor_actual != value:
                                     setattr(calificacion, key, value)
                                     campos_actualizados = True
                                     cambio_realizado = True
@@ -1438,6 +1513,38 @@ def ingresar_view(request):
                     
                     # Retornar JSON con los datos actualizados
                     # JavaScript usará estos datos para actualizar la interfaz
+                    # Incluir también montos y factores para que el modal 2 los muestre correctamente
+                    from decimal import Decimal
+                    
+                    # Preparar diccionarios para montos y factores
+                    montos_data = {}
+                    factores_data = {}
+                    
+                    # Obtener la SumaBase guardada para calcular montos desde factores
+                    suma_base = calificacion.SumaBase or Decimal(0)
+                    
+                    # Calcular montos desde factores guardados (cálculo inverso)
+                    # Fórmula: Monto = Factor * SumaBase
+                    for i in range(8, 38):
+                        # Obtener factor guardado
+                        factor_field = f'Factor{i:02d}'
+                        factor_value = getattr(calificacion, factor_field, Decimal(0))
+                        
+                        # Calcular monto desde el factor
+                        if suma_base > 0:
+                            # Monto = Factor * SumaBase
+                            monto_calculado = (factor_value * suma_base).quantize(Decimal('0.01'))
+                        else:
+                            # Si SumaBase es 0, el monto también es 0
+                            monto_calculado = Decimal(0)
+                        
+                        # Guardar monto calculado
+                        monto_field = f'Monto{i:02d}'
+                        montos_data[monto_field] = str(monto_calculado) if monto_calculado else '0.0'
+                        
+                        # También incluir el factor guardado
+                        factores_data[factor_field] = str(factor_value) if factor_value else '0.0'
+                    
                     return JsonResponse({
                         'success': True,
                         'calificacion_id': str(calificacion.id),
@@ -1445,13 +1552,16 @@ def ingresar_view(request):
                             'mercado': calificacion.Mercado or '',
                             'origen': calificacion.Origen or '',
                             'instrumento': calificacion.Instrumento or '',
+                            'pais': calificacion.Pais or '',
                             'evento_capital': calificacion.EventoCapital or str(calificacion.SecuenciaEvento) if calificacion.SecuenciaEvento else '',
                             'fecha_pago': calificacion.FechaPago.strftime('%Y-%m-%d') if calificacion.FechaPago else '',
                             'secuencia': calificacion.SecuenciaEvento or '',
                             'anho': calificacion.Anho or calificacion.Ejercicio or '',
                             'valor_historico': str(calificacion.ValorHistorico or 0.0),
                             'descripcion': calificacion.Descripcion or ''
-                        }
+                        },
+                        'montos': montos_data,  # Montos calculados desde factores
+                        'factores': factores_data  # Factores guardados
                     })
                 except Calificacion.DoesNotExist:
                     # Si la calificación no existe, retornar error
@@ -1463,6 +1573,11 @@ def ingresar_view(request):
                 # Crear nuevo objeto Calificacion con los datos del formulario
                 # **cleaned_data expande el diccionario como argumentos: Mercado='acciones', Ejercicio=2024, etc.
                 nueva_calificacion = Calificacion(**cleaned_data)
+                
+                # Asegurar que PAIS se asigne correctamente
+                # Verificar si Pais está en cleaned_data y asignarlo explícitamente
+                if 'Pais' in cleaned_data:
+                    nueva_calificacion.Pais = cleaned_data['Pais'] or ''
                 
                 # Asignar EventoCapital automáticamente si no está definido
                 # Si EventoCapital está vacío pero hay SecuenciaEvento, usar SecuenciaEvento
@@ -1485,6 +1600,7 @@ def ingresar_view(request):
                         'mercado': nueva_calificacion.Mercado or '',
                         'origen': nueva_calificacion.Origen or '',
                         'instrumento': nueva_calificacion.Instrumento or '',
+                        'pais': nueva_calificacion.Pais or '',
                         'evento_capital': nueva_calificacion.EventoCapital or str(nueva_calificacion.SecuenciaEvento) if nueva_calificacion.SecuenciaEvento else '',
                         'fecha_pago': nueva_calificacion.FechaPago.strftime('%Y-%m-%d') if nueva_calificacion.FechaPago else '',
                         'secuencia': nueva_calificacion.SecuenciaEvento or '',
@@ -1504,6 +1620,7 @@ def ingresar_view(request):
             'Mercado': request.GET.get('mercado'),
             'Ejercicio': request.GET.get('ejercicio'),
             'Instrumento': request.GET.get('instrumento'),
+            'Pais': request.GET.get('pais'),
             'FechaPago': request.GET.get('fecha_pago'),
             'SecuenciaEvento': request.GET.get('secuencia'),
         }
@@ -1597,6 +1714,7 @@ def ingresar_calificacion(request):
                 
                 nueva_calificacion.Mercado = mercado_normalizado
                 nueva_calificacion.Instrumento = form.cleaned_data.get('Instrumento', '')
+                nueva_calificacion.Pais = form.cleaned_data.get('Pais', '')
                 
                 # NORMALIZAR ORIGEN
                 origen_raw = form.cleaned_data.get('Origen', 'corredor')
@@ -2760,6 +2878,7 @@ def obtener_calificacion_view(request, calificacion_id):
             'origen': calificacion.Origen or '',
             'ejercicio': calificacion.Ejercicio or '',
             'instrumento': calificacion.Instrumento or '',
+            'pais': calificacion.Pais or '',
             'descripcion': calificacion.Descripcion or '',
             'fecha_pago': calificacion.FechaPago.isoformat() if calificacion.FechaPago else '',  # ISO format: "2024-01-15"
             'secuencia_evento': calificacion.SecuenciaEvento or '',
@@ -2957,6 +3076,7 @@ def copiar_calificacion_view(request, calificacion_id):
         nueva_calificacion.Origen = calificacion_original.Origen
         nueva_calificacion.Ejercicio = calificacion_original.Ejercicio
         nueva_calificacion.Instrumento = calificacion_original.Instrumento
+        nueva_calificacion.Pais = calificacion_original.Pais
         nueva_calificacion.EventoCapital = calificacion_original.EventoCapital
         nueva_calificacion.FechaPago = calificacion_original.FechaPago
         nueva_calificacion.SecuenciaEvento = calificacion_original.SecuenciaEvento
@@ -3123,20 +3243,104 @@ def preview_factor_view(request):
         
         # Leer CSV con pandas
         try:
-            # Intentar diferentes encodings (encodings se refiere a los caracteres que se usan en el archivo)
+            # IMPORTANTE: Usar index_col=False para evitar que pandas use la primera columna como índice
+            # y keep_default_na=False para que las celdas vacías se traten como strings vacíos, no como NaN
             try:
-                df = pd.read_csv(archivo, encoding='utf-8')
+                df = pd.read_csv(archivo, encoding='utf-8', index_col=False, keep_default_na=False)
             except UnicodeDecodeError: # Si hay error de decodificación de caracteres, retorna un error
                 archivo.seek(0)
-                df = pd.read_csv(archivo, encoding='latin-1') # Si hay error de decodificación de caracteres, retorna un error
+                df = pd.read_csv(archivo, encoding='latin-1', index_col=False, keep_default_na=False) # Si hay error de decodificación de caracteres, retorna un error
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al leer el archivo CSV: {str(e)}'}, status=400) # Se retorna un JSON con el error de lectura de archivo
         
         # Limpiar nombres de columnas (eliminar espacios)
         df.columns = df.columns.str.strip() # Se eliminan los espacios de los nombres de las columnas
         
+        # Debug: mostrar las columnas y la primera fila después de leer
+        print(f"[PREVIEW_FACTOR] Columnas después de leer CSV: {list(df.columns)}")
+        if len(df) > 0:
+            print(f"[PREVIEW_FACTOR] Primera fila después de leer CSV: {df.iloc[0].to_dict()}")
+        
         # Eliminar filas completamente vacías
         df = df.dropna(how='all') # Se eliminan las filas completamente vacías
+        
+        # Verificar que haya al menos una fila de datos
+        if len(df) == 0:
+            return JsonResponse({
+                'success': False,
+                'error': 'El archivo CSV no contiene datos. Asegúrese de que el archivo tenga al menos una fila de datos además del encabezado.'
+            }, status=400)
+        
+        # ============================================
+        # VALIDACIÓN DE COLUMNAS REQUERIDAS PARA CARGA POR FACTOR
+        # ============================================
+        # Definir columnas requeridas según formato especificado
+        # Todas las columnas deben estar presentes y no estar completamente vacías
+        columnas_requeridas = {
+            'Ejercicio': True,  # requerido
+            'Mercado': True,    # requerido
+            'Instrumento': True,  # debe estar presente
+            'PAIS': True,         # debe estar presente
+            'FEC_PAGO': True,     # debe estar presente
+            'SEC_EVE': True,      # debe estar presente
+            'DESCRIPCION': True   # debe estar presente
+        }
+        
+        # Agregar factores F8 a F37 (todos deben estar presentes)
+        for i in range(8, 38):
+            columnas_requeridas[f'F{i}'] = True
+        
+        # Obtener columnas presentes en el CSV (case-insensitive)
+        columnas_csv = [col.strip() for col in df.columns]
+        columnas_csv_lower = {col.lower(): col for col in columnas_csv}
+        
+        # Verificar que todas las columnas requeridas estén presentes
+        columnas_faltantes = []
+        columnas_vacias = []
+        
+        for col_requerida, es_obligatorio in columnas_requeridas.items():
+            # Buscar columna de forma case-insensitive
+            col_encontrada = None
+            col_requerida_lower = col_requerida.lower()
+            
+            # Primero buscar coincidencia exacta
+            if col_requerida in columnas_csv:
+                col_encontrada = col_requerida
+            # Si no, buscar en el diccionario case-insensitive
+            elif col_requerida_lower in columnas_csv_lower:
+                col_encontrada = columnas_csv_lower[col_requerida_lower]
+            
+            if col_encontrada is None:
+                # Columna no encontrada
+                columnas_faltantes.append(col_requerida)
+            else:
+                # Verificar si la columna está completamente vacía
+                # Una columna está vacía si todas sus filas son NaN o strings vacíos
+                columna_vacia = df[col_encontrada].isna().all() or (df[col_encontrada].astype(str).str.strip() == '').all()
+                if columna_vacia:
+                    columnas_vacias.append(col_requerida)
+        
+        # Si faltan columnas o hay columnas vacías, retornar error con formato específico
+        if columnas_faltantes or columnas_vacias:
+            # Mensaje conciso y visual, todo centrado
+            mensaje_error = '<div style="text-align: center; padding: 0.5rem 0; width: 100%;">'
+            mensaje_error += '<p style="margin: 0 0 1rem 0; font-size: 1.1rem; font-weight: 600; color: #DC3545; text-align: center;">⚠️ Formato de archivo incorrecto</p>'
+            
+            if columnas_faltantes:
+                mensaje_error += '<p style="margin: 0.75rem 0; color: #555; text-align: center;"><strong>Columnas faltantes:</strong></p>'
+                mensaje_error += f'<p style="margin: 0.5rem auto 1rem auto; padding: 0.75rem; background: #FFF4E6; border-left: 3px solid #FF6B00; border-radius: 4px; color: #333; font-family: monospace; font-size: 0.9rem; text-align: center; max-width: 90%; display: inline-block;">{", ".join(columnas_faltantes)}</p>'
+            
+            if columnas_vacias:
+                mensaje_error += '<p style="margin: 0.75rem 0; color: #555; text-align: center;"><strong>Columnas vacías:</strong></p>'
+                mensaje_error += f'<p style="margin: 0.5rem auto 0 auto; padding: 0.75rem; background: #FFF4E6; border-left: 3px solid #FF6B00; border-radius: 4px; color: #333; font-family: monospace; font-size: 0.9rem; text-align: center; max-width: 90%; display: inline-block;">{", ".join(columnas_vacias)}</p>'
+            
+            mensaje_error += '<p style="margin: 1.25rem 0 0.5rem 0; font-size: 0.85rem; color: #666; font-style: italic; text-align: center;">Verifique que el archivo contenga: Ejercicio, Mercado, Instrumento, PAIS, FEC_PAGO, SEC_EVE, DESCRIPCION y factores F8-F37</p>'
+            mensaje_error += '</div>'
+            
+            return JsonResponse({
+                'success': False,
+                'error': mensaje_error
+            }, status=400)
         
         # Convertir a lista de diccionarios
         datos = [] # Se crea una lista para los datos
@@ -3150,18 +3354,50 @@ def preview_factor_view(request):
                 # Convertir valores NaN a strings vacíos y limpiar
                 fila_limpia = {} # Se crea un diccionario para la fila limpia
                 for key, value in fila.items():
+                    # Limpiar también la clave (eliminar espacios)
+                    key_limpio = key.strip() if isinstance(key, str) else str(key).strip()
                     if pd.isna(value):
-                        fila_limpia[key] = '' # Se asigna un string vacío al diccionario de la fila limpia
+                        fila_limpia[key_limpio] = '' # Se asigna un string vacío al diccionario de la fila limpia
                     else:
-                        fila_limpia[key] = str(value).strip() if value else '' # Se asigna el valor de la fila limpia al diccionario de la fila limpia
+                        fila_limpia[key_limpio] = str(value).strip() if value else '' # Se asigna el valor de la fila limpia al diccionario de la fila limpia
                 
-                # Validar campos requeridos (buscar con diferentes variaciones)
-                ejercicio = fila_limpia.get('Ejercicio') or fila_limpia.get('ejercicio') or '' # Se obtiene el valor del campo Ejercicio de la fila limpia
-                mercado = fila_limpia.get('Mercado') or fila_limpia.get('mercado') or '' # Se obtiene el valor del campo Mercado de la fila limpia
+                # Buscar campos con diferentes variaciones de nombres (case-insensitive y con/sin espacios)
+                # Ejercicio
+                ejercicio = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'ejercicio':
+                        ejercicio = fila_limpia[key]
+                        break
+                
+                # Mercado
+                mercado = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'mercado':
+                        mercado = fila_limpia[key]
+                        break
                 
                 if not ejercicio or not mercado:
                     errores.append(f'Fila {idx + 2}: Faltan campos requeridos (Ejercicio, Mercado)') # Se agrega el error a la lista de errores
                     continue
+                
+                # Buscar ID de la calificación (ID de MongoDB) solo en el CSV
+                # Si el CSV viene de una exportación, tendrá el campo ID
+                # Si es un CSV nuevo, no tendrá ID y se mostrará "SIN ID"
+                id_calificacion = ''
+                posibles_columnas_id = ['ID', 'id', 'Id', '_id']
+                for col_id in posibles_columnas_id:
+                    if col_id in fila_limpia and fila_limpia[col_id]:
+                        id_calificacion = str(fila_limpia[col_id]).strip()
+                        break
+                
+                # Asignar "SIN ID" si no se encontró en el CSV
+                if not id_calificacion:
+                    id_calificacion = 'SIN ID'
+                
+                # Agregar el ID de la calificación a la fila
+                fila_limpia['_id_calificacion'] = id_calificacion
                 
                 datos.append(fila_limpia) # Se agrega la fila limpia a la lista de datos
                 
@@ -3273,19 +3509,27 @@ def preview_monto_view(request):
         # LEER CSV CON PANDAS
         # Intentar diferentes encodings para manejar caracteres especiales
         try:
-            # Primero intentar UTF-8 (estándar moderno)
-            df = pd.read_csv(archivo, encoding='utf-8')
-        except UnicodeDecodeError:
-            # Si falla, intentar Latin-1 (común en archivos antiguos)
-            archivo.seek(0)
-            df = pd.read_csv(archivo, encoding='latin-1')
+            # IMPORTANTE: Usar index_col=False para evitar que pandas use la primera columna como índice
+            # y keep_default_na=False para que las celdas vacías se traten como strings vacíos, no como NaN
+            try:
+                # Primero intentar UTF-8 (estándar moderno)
+                df = pd.read_csv(archivo, encoding='utf-8', index_col=False, keep_default_na=False)
+            except UnicodeDecodeError:
+                # Si falla, intentar Latin-1 (común en archivos antiguos)
+                archivo.seek(0)
+                df = pd.read_csv(archivo, encoding='latin-1', index_col=False, keep_default_na=False)
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al leer el archivo CSV: {str(e)}'}, status=400)
         
         # Limpiar nombres de columnas (eliminar espacios al inicio y final)
         df.columns = df.columns.str.strip()
         
-        # Eliminar filas completamente vacías
+        # Debug: mostrar las columnas y la primera fila después de leer
+        print(f"[PREVIEW_MONTO] Columnas después de leer CSV: {list(df.columns)}")
+        if len(df) > 0:
+            print(f"[PREVIEW_MONTO] Primera fila después de leer CSV: {df.iloc[0].to_dict()}")
+        
+        # Eliminar filas completamente vacías (ahora que keep_default_na=False, las celdas vacías son strings, no NaN)
         df = df.dropna(how='all')
         
         # Convertir a lista de diccionarios para procesar
@@ -3312,6 +3556,23 @@ def preview_monto_view(request):
                 if not ejercicio or not mercado:
                     errores.append(f'Fila {idx + 2}: Faltan campos requeridos (Ejercicio, Mercado)') # Se agrega el error a la lista de errores
                     continue
+                
+                # Buscar ID de la calificación (ID de MongoDB) solo en el CSV
+                # Si el CSV viene de una exportación, tendrá el campo ID
+                # Si es un CSV nuevo, no tendrá ID y se mostrará "SIN ID"
+                id_calificacion = ''
+                posibles_columnas_id = ['ID', 'id', 'Id', '_id']
+                for col_id in posibles_columnas_id:
+                    if col_id in fila_limpia and fila_limpia[col_id]:
+                        id_calificacion = str(fila_limpia[col_id]).strip()
+                        break
+                
+                # Asignar "SIN ID" si no se encontró en el CSV
+                if not id_calificacion:
+                    id_calificacion = 'SIN ID'
+                
+                # Agregar el ID de la calificación a la fila
+                fila_limpia['_id_calificacion'] = id_calificacion
                 
                 datos.append(fila_limpia) # Se agrega la fila limpia a la lista de datos
                 
@@ -3414,46 +3675,77 @@ def cargar_factor_view(request):
                         'duplicado': True
                     }, status=400)
         
-        # Convertir a DataFrame de pandas para procesamiento más eficiente
-        df = pd.DataFrame(datos_csv) # Se convierte el JSON a un dataframe de pandas
+        # IMPORTANTE: Los datos ya vienen como diccionarios desde el frontend
+        # No necesitamos convertir a DataFrame, podemos trabajar directamente con los diccionarios
+        # Esto evita problemas de orden de columnas que pandas puede causar
         
-        # Limpiar nombres de columnas (eliminar espacios)
-        df.columns = df.columns.str.strip() # Se eliminan los espacios de los nombres de las columnas
+        # Normalizar las claves de los diccionarios para asegurar consistencia
+        datos_csv_normalizados = []
+        for fila in datos_csv:
+            fila_normalizada = {}
+            for key, value in fila.items():
+                # Limpiar la clave (eliminar espacios y normalizar)
+                key_limpio = key.strip() if isinstance(key, str) else str(key).strip()
+                # Normalizar valores
+                if value is None:
+                    fila_normalizada[key_limpio] = ''
+                elif isinstance(value, float) and pd.isna(value):
+                    fila_normalizada[key_limpio] = ''
+                elif isinstance(value, str) and value.strip() == '':
+                    fila_normalizada[key_limpio] = ''
+                else:
+                    fila_normalizada[key_limpio] = str(value).strip() if value else ''
+            datos_csv_normalizados.append(fila_normalizada)
         
-        # Eliminar filas completamente vacías
-        df = df.dropna(how='all') # Se eliminan las filas completamente vacías
+        # Debug: mostrar primera fila normalizada
+        if len(datos_csv_normalizados) > 0:
+            print(f"[CARGAR_FACTOR] Primera fila normalizada: {datos_csv_normalizados[0]}")
         
         calificaciones_creadas = 0 # Se inicializa la variable de calificaciones creadas
         errores = [] # Se inicializa la variable de errores
         
-        # Iterar sobre el DataFrame
-        for idx, row in df.iterrows():
-            fila_num = idx + 2  # +2 porque idx empieza en 0 y la fila 1 es el encabezado
+        # Iterar directamente sobre los diccionarios normalizados (no usar DataFrame)
+        for idx, fila_limpia in enumerate(datos_csv_normalizados):
+            fila_num = idx + 1  # +1 porque idx empieza en 0
             try:
-                # Convertir la fila a diccionario
-                fila = row.to_dict()
-                
-                # Convertir valores NaN a strings vacíos y limpiar
-                fila_limpia = {} # Se crea un diccionario para la fila limpia
-                for key, value in fila.items():
-                    if pd.isna(value):
-                        fila_limpia[key] = ''
-                    else:
-                        fila_limpia[key] = str(value).strip() if value else '' # Se asigna el valor de la fila limpia al diccionario de la fila limpia
+                # Ya tenemos fila_limpia como diccionario, no necesitamos convertir
                 
                 # Debug: mostrar las claves disponibles en la primera fila
                 if fila_num == 2:
                     print(f"[CARGAR_FACTOR] Claves disponibles en CSV: {list(fila_limpia.keys())}")
                     print(f"[CARGAR_FACTOR] Primera fila completa: {fila_limpia}")
-                    print(f"[CARGAR_FACTOR] Ejercicio raw: '{fila_limpia.get('Ejercicio')}'")
-                    print(f"[CARGAR_FACTOR] Mercado raw: '{fila_limpia.get('Mercado')}'")
-                    print(f"[CARGAR_FACTOR] Instrumento raw: '{fila_limpia.get('Instrumento')}'")
                 
-                # Validar campos requeridos (buscar con diferentes variaciones)
-                # Primero intentar obtener Ejercicio
-                ejercicio = fila_limpia.get('Ejercicio') or fila_limpia.get('ejercicio') or ''
-                mercado_raw = fila_limpia.get('Mercado') or fila_limpia.get('mercado') or ''
-                instrumento = fila_limpia.get('Instrumento') or fila_limpia.get('instrumento') or ''
+                # Buscar campos con diferentes variaciones de nombres (case-insensitive y con/sin espacios)
+                # Ejercicio
+                ejercicio = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'ejercicio':
+                        ejercicio = fila_limpia[key]
+                        break
+                
+                # Mercado
+                mercado_raw = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'mercado':
+                        mercado_raw = fila_limpia[key]
+                        break
+                
+                # Instrumento
+                instrumento = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'instrumento':
+                        instrumento = fila_limpia[key]
+                        break
+                
+                # Debug para primera fila
+                if fila_num == 1:
+                    print(f"[CARGAR_FACTOR] Claves disponibles en fila {fila_num}: {list(fila_limpia.keys())}")
+                    print(f"[CARGAR_FACTOR] Ejercicio encontrado: '{ejercicio}'")
+                    print(f"[CARGAR_FACTOR] Mercado encontrado: '{mercado_raw}'")
+                    print(f"[CARGAR_FACTOR] Instrumento encontrado: '{instrumento}'")
                 
                 # Normalizar mercado a los valores válidos (acciones, CFI, Fondos mutuos)
                 mercado_normalizado = mercado_raw
@@ -3495,8 +3787,8 @@ def cargar_factor_view(request):
                 
                 if not ejercicio or not mercado: # Si Ejercicio o Mercado no es None, mostrar qué claves tiene la fila para ayudar a debuggear
                     # Mostrar qué claves tiene la fila para ayudar a debuggear
-                    claves_disponibles = ', '.join(fila.keys()) # Se obtiene las claves de la fila
-                    errores.append(f'Fila {idx}: Faltan campos requeridos (Ejercicio, Mercado). Claves disponibles: {claves_disponibles}') # Se agrega el error a la lista de errores
+                    claves_disponibles = ', '.join(fila_limpia.keys()) # Se obtiene las claves de la fila
+                    errores.append(f'Fila {fila_num}: Faltan campos requeridos (Ejercicio, Mercado). Claves disponibles: {claves_disponibles}') # Se agrega el error a la lista de errores
                     continue # Se pasa al siguiente try
                 
                 # Validar y convertir Ejercicio a entero (si no es un número entero, mostrar el error)
@@ -3504,8 +3796,8 @@ def cargar_factor_view(request):
                     ejercicio_int = int(ejercicio) # Se convierte el ejercicio a entero
                 except (ValueError, TypeError): # Si hay error, se pasa al siguiente try
                     # Mostrar más información sobre el error
-                    claves_disponibles = ', '.join(fila.keys()) # Se obtiene las claves de la fila
-                    errores.append(f'Fila {idx}: El campo Ejercicio debe ser un número entero. Valor recibido: "{ejercicio}". Instrumento recibido: "{instrumento}". Claves disponibles: {claves_disponibles}') # Se agrega el error a la lista de errores
+                    claves_disponibles = ', '.join(fila_limpia.keys()) # Se obtiene las claves de la fila
+                    errores.append(f'Fila {fila_num}: El campo Ejercicio debe ser un número entero. Valor recibido: "{ejercicio}". Instrumento recibido: "{instrumento}". Claves disponibles: {claves_disponibles}') # Se agrega el error a la lista de errores
                     continue # Se pasa al siguiente try
                 
                 # Crear nueva calificación (se crea un nuevo documento en la base de datos) para la calificación
@@ -3513,12 +3805,40 @@ def cargar_factor_view(request):
                 nueva_calificacion.Ejercicio = ejercicio_int # Se asigna el valor del ejercicio a la nueva calificación
                 nueva_calificacion.Mercado = mercado # Se asigna el valor del mercado a la nueva calificación
                 nueva_calificacion.Instrumento = instrumento # Se asigna el valor del instrumento a la nueva calificación
+                
+                # Buscar PAIS del CSV (case-insensitive)
+                pais = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'pais':
+                        pais = fila_limpia[key]
+                        break
+                # Normalizar PAIS a valores válidos (CHILE, PERU, COLOMBIA)
+                if pais:
+                    pais_upper = pais.upper().strip()
+                    if pais_upper in ['CHILE', 'PERU', 'COLOMBIA']:
+                        nueva_calificacion.Pais = pais_upper
+                    else:
+                        nueva_calificacion.Pais = pais  # Guardar tal cual si no coincide exactamente
                 nueva_calificacion.Origen = 'csv'  # Normalizado a minúsculas para coincidir con el filtro
                 nueva_calificacion.hash_archivo_csv = hash_archivo  # Guardar el hash del archivo CSV para relacionar la calificación con el archivo
-                nueva_calificacion.Descripcion = fila_limpia.get('DESCRIPCION') or fila_limpia.get('Descripcion') or fila_limpia.get('descripcion') or '' # Se asigna el valor de la descripción a la nueva calificación
+                # Buscar DESCRIPCION (case-insensitive)
+                descripcion = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'descripcion':
+                        descripcion = fila_limpia[key]
+                        break
+                nueva_calificacion.Descripcion = descripcion # Se asigna el valor de la descripción a la nueva calificación
                 
+                # Buscar FEC_PAGO (case-insensitive)
+                fecha_pago = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower in ['fec_pago', 'fecha_pago', 'fecha pago']:
+                        fecha_pago = fila_limpia[key]
+                        break
                 # Fecha de pago usando pandas (se convierte la fecha de pago a un objeto datetime)
-                fecha_pago = fila_limpia.get('FEC_PAGO') or fila_limpia.get('Fec_Pago') or fila_limpia.get('fec_pago') or '' # Se obtiene el valor de la fecha de pago
                 if fecha_pago: # Si la fecha de pago no es None, se convierte a datetime
                     try:
                         fecha_parsed = pd.to_datetime(fecha_pago, format='%Y-%m-%d', errors='coerce') # Se convierte la fecha de pago a un objeto datetime
@@ -3528,8 +3848,14 @@ def cargar_factor_view(request):
                         print(f"[CARGAR_FACTOR] Error al parsear fecha: {e}") # Imprime el error de parseo de fecha
                         pass # Si hay error, se pasa al siguiente try
                 
+                # Buscar SEC_EVE (case-insensitive)
+                sec_eve = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower in ['sec_eve', 'secuencia_evento', 'secuencia evento']:
+                        sec_eve = fila_limpia[key]
+                        break
                 # Secuencia evento usando pandas (se convierte la secuencia de evento a un entero)
-                sec_eve = fila_limpia.get('SEC_EVE') or fila_limpia.get('Sec_Eve') or fila_limpia.get('sec_eve') or '' # Se obtiene el valor de la secuencia de evento
                 if sec_eve: # Si la secuencia de evento no es None, se convierte a entero
                     try:
                         nueva_calificacion.SecuenciaEvento = pd.to_numeric(sec_eve, errors='raise').astype(int) # Se convierte la secuencia de evento a un entero
@@ -3537,10 +3863,93 @@ def cargar_factor_view(request):
                         print(f"[CARGAR_FACTOR] Advertencia: No se pudo convertir SecuenciaEvento '{sec_eve}' a entero en fila {fila_num}")
                         pass
                 
-                # Asignar factores (F8 a F37) usando pandas
+                # Buscar y procesar campos adicionales del CSV (si están presentes) - case-insensitive
+                # Dividendo
+                dividendo = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'dividendo':
+                        dividendo = fila_limpia[key]
+                        break
+                if dividendo:
+                    try:
+                        dividendo_numeric = pd.to_numeric(dividendo, errors='coerce')
+                        if not pd.isna(dividendo_numeric):
+                            nueva_calificacion.Dividendo = Decimal(str(dividendo_numeric))
+                    except Exception as e:
+                        print(f"[CARGAR_FACTOR] Error al procesar Dividendo: {e}")
+                
+                # Valor Historico
+                valor_historico = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower in ['valor historico', 'valorhistorico', 'valor_historico']:
+                        valor_historico = fila_limpia[key]
+                        break
+                if valor_historico:
+                    try:
+                        valor_historico_numeric = pd.to_numeric(valor_historico, errors='coerce')
+                        if not pd.isna(valor_historico_numeric):
+                            nueva_calificacion.ValorHistorico = Decimal(str(valor_historico_numeric))
+                    except Exception as e:
+                        print(f"[CARGAR_FACTOR] Error al procesar ValorHistorico: {e}")
+                
+                # Factor Actualizacion
+                factor_actualizacion = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower in ['factor actualizacion', 'factoractualizacion', 'factor_actualizacion']:
+                        factor_actualizacion = fila_limpia[key]
+                        break
+                if factor_actualizacion:
+                    try:
+                        factor_actualizacion_numeric = pd.to_numeric(factor_actualizacion, errors='coerce')
+                        if not pd.isna(factor_actualizacion_numeric):
+                            nueva_calificacion.FactorActualizacion = Decimal(str(factor_actualizacion_numeric))
+                    except Exception as e:
+                        print(f"[CARGAR_FACTOR] Error al procesar FactorActualizacion: {e}")
+                
+                # Anho
+                anho = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'anho':
+                        anho = fila_limpia[key]
+                        break
+                if anho:
+                    try:
+                        anho_int = pd.to_numeric(anho, errors='raise').astype(int)
+                        nueva_calificacion.Anho = anho_int
+                    except (ValueError, TypeError, Exception):
+                        print(f"[CARGAR_FACTOR] Advertencia: No se pudo convertir Anho '{anho}' a entero")
+                
+                # ISFUT
+                isfut = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'isfut':
+                        isfut = fila_limpia[key]
+                        break
+                if isfut:
+                    try:
+                        # Convertir string a booleano
+                        isfut_str = str(isfut).strip().lower()
+                        if isfut_str in ['true', '1', 'yes', 'si', 'sí']:
+                            nueva_calificacion.ISFUT = True
+                        elif isfut_str in ['false', '0', 'no']:
+                            nueva_calificacion.ISFUT = False
+                    except Exception as e:
+                        print(f"[CARGAR_FACTOR] Error al procesar ISFUT: {e}")
+                
+                # Asignar factores (F8 a F37) - buscar por nombre exacto
                 for i in range(8, 38): # Se recorre el rango de factores (F8 a F37)
                     factor_key = f'F{i}' # Se obtiene el nombre del factor
-                    factor_value = fila_limpia.get(factor_key, '0.0') # Se obtiene el valor del factor
+                    # Buscar el factor en la fila (case-insensitive)
+                    factor_value = '0.0'
+                    for key in fila_limpia.keys():
+                        if key.strip() == factor_key:
+                            factor_value = fila_limpia[key]
+                            break
                     try:
                         # Usar pandas para convertir a numérico
                         factor_numeric = pd.to_numeric(factor_value, errors='coerce') # Se convierte el valor del factor a un número
@@ -3567,7 +3976,8 @@ def cargar_factor_view(request):
                 print(f"[CARGAR_FACTOR] Error en fila {fila_num}: {e}") # Imprime el error de la fila
                 import traceback
                 print(traceback.format_exc()) # Imprime el traceback de la excepción
-                errores.append(f'Fila {fila_num}: {str(e)}')
+                claves_disponibles = ', '.join(fila_limpia.keys()) if 'fila_limpia' in locals() else 'N/A'
+                errores.append(f'Fila {fila_num}: {str(e)}. Claves disponibles: {claves_disponibles}')
                 continue
         
         # Crear log de carga masiva
@@ -3693,46 +4103,76 @@ def cargar_monto_view(request):
                         'duplicado': True
                     }, status=400)
         
-        # Convertir a DataFrame de pandas para procesamiento más eficiente
-        df = pd.DataFrame(datos_csv) # Se convierte el JSON a un dataframe de pandas
+        # IMPORTANTE: Los datos ya vienen como diccionarios desde el frontend
+        # No necesitamos convertir a DataFrame, podemos trabajar directamente con los diccionarios
+        # Esto evita problemas de orden de columnas que pandas puede causar
         
-        # Limpiar nombres de columnas (eliminar espacios)
-        df.columns = df.columns.str.strip() # Se eliminan los espacios de los nombres de las columnas
+        # Normalizar las claves de los diccionarios para asegurar consistencia
+        datos_csv_normalizados = []
+        for fila in datos_csv:
+            fila_normalizada = {}
+            for key, value in fila.items():
+                # Limpiar la clave (eliminar espacios y normalizar)
+                key_limpio = key.strip() if isinstance(key, str) else str(key).strip()
+                # Normalizar valores
+                if value is None:
+                    fila_normalizada[key_limpio] = ''
+                elif isinstance(value, float) and pd.isna(value):
+                    fila_normalizada[key_limpio] = ''
+                elif isinstance(value, str) and value.strip() == '':
+                    fila_normalizada[key_limpio] = ''
+                else:
+                    fila_normalizada[key_limpio] = str(value).strip() if value else ''
+            datos_csv_normalizados.append(fila_normalizada)
         
-        # Eliminar filas completamente vacías
-        df = df.dropna(how='all') # Se eliminan las filas completamente vacías
+        # Debug: mostrar primera fila normalizada
+        if len(datos_csv_normalizados) > 0:
+            print(f"[CARGAR_MONTO] Primera fila normalizada: {datos_csv_normalizados[0]}")
         
         calificaciones_creadas = 0 # Se inicializa la variable de calificaciones creadas
         errores = [] # Se inicializa la variable de errores
         
-        # Iterar sobre el DataFrame
-        for idx, row in df.iterrows():
-            fila_num = idx + 2  # +2 porque idx empieza en 0 y la fila 1 es el encabezado (la primera fila es el encabezado)
+        # Iterar directamente sobre los diccionarios normalizados (no usar DataFrame)
+        for idx, fila_limpia in enumerate(datos_csv_normalizados):
+            fila_num = idx + 1  # +1 porque idx empieza en 0
             try:
-                # Convertir la fila a diccionario
-                fila = row.to_dict()
-                
-                # Convertir valores NaN a strings vacíos y limpiar
-                fila_limpia = {} # Se crea un diccionario para la fila limpia
-                for key, value in fila.items():
-                    if pd.isna(value): # Si el valor es NaN, se asigna un string vacío
-                        fila_limpia[key] = '' # Se asigna un string vacío al diccionario de la fila limpia
-                    else: # Si el valor no es NaN, se convierte a string y se eliminan los espacios
-                        fila_limpia[key] = str(value).strip() if value else '' # Se asigna el valor de la fila limpia al diccionario de la fila limpia
+                # Ya tenemos fila_limpia como diccionario, no necesitamos convertir
                 
                 # Debug: mostrar las claves disponibles en la primera fila
-                if fila_num == 2:
+                if fila_num == 1:
                     print(f"[CARGAR_MONTO] Claves disponibles en CSV: {list(fila_limpia.keys())}") # Imprime las claves disponibles en el CSV
                     print(f"[CARGAR_MONTO] Primera fila completa: {fila_limpia}")
-                    print(f"[CARGAR_MONTO] Ejercicio raw: '{fila_limpia.get('Ejercicio')}'") # Imprime el ejercicio raw
-                    print(f"[CARGAR_MONTO] Mercado raw: '{fila_limpia.get('Mercado')}'") # Imprime el mercado raw
-                    print(f"[CARGAR_MONTO] Instrumento raw: '{fila_limpia.get('Instrumento')}'") # Imprime el instrumento raw
                 
-                # Validar campos requeridos (buscar con diferentes variaciones)
-                # Primero intentar obtener Ejercicio
-                ejercicio = fila_limpia.get('Ejercicio') or fila_limpia.get('ejercicio') or ''
-                mercado_raw = fila_limpia.get('Mercado') or fila_limpia.get('mercado') or ''
-                instrumento = fila_limpia.get('Instrumento') or fila_limpia.get('instrumento') or ''
+                # Buscar campos con diferentes variaciones de nombres (case-insensitive y con/sin espacios)
+                # Ejercicio
+                ejercicio = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'ejercicio':
+                        ejercicio = fila_limpia[key]
+                        break
+                
+                # Mercado
+                mercado_raw = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'mercado':
+                        mercado_raw = fila_limpia[key]
+                        break
+                
+                # Instrumento
+                instrumento = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'instrumento':
+                        instrumento = fila_limpia[key]
+                        break
+                
+                # Debug para primera fila
+                if fila_num == 1:
+                    print(f"[CARGAR_MONTO] Ejercicio encontrado: '{ejercicio}'")
+                    print(f"[CARGAR_MONTO] Mercado encontrado: '{mercado_raw}'")
+                    print(f"[CARGAR_MONTO] Instrumento encontrado: '{instrumento}'")
                 
                 # Normalizar mercado a los valores válidos (acciones, CFI, Fondos mutuos)
                 mercado_normalizado = mercado_raw
@@ -3774,8 +4214,8 @@ def cargar_monto_view(request):
                 
                 if not ejercicio or not mercado:
                     # Mostrar qué claves tiene la fila para ayudar a debuggear
-                    claves_disponibles = ', '.join(fila.keys())
-                    errores.append(f'Fila {idx}: Faltan campos requeridos (Ejercicio, Mercado). Claves disponibles: {claves_disponibles}')
+                    claves_disponibles = ', '.join(fila_limpia.keys())
+                    errores.append(f'Fila {fila_num}: Faltan campos requeridos (Ejercicio, Mercado). Claves disponibles: {claves_disponibles}')
                     continue
                 
                 # Validar y convertir Ejercicio a entero
@@ -3783,8 +4223,8 @@ def cargar_monto_view(request):
                     ejercicio_int = int(ejercicio)
                 except (ValueError, TypeError):
                     # Mostrar más información sobre el error
-                    claves_disponibles = ', '.join(fila.keys())
-                    errores.append(f'Fila {idx}: El campo Ejercicio debe ser un número entero. Valor recibido: "{ejercicio}". Instrumento recibido: "{instrumento}". Claves disponibles: {claves_disponibles}')
+                    claves_disponibles = ', '.join(fila_limpia.keys())
+                    errores.append(f'Fila {fila_num}: El campo Ejercicio debe ser un número entero. Valor recibido: "{ejercicio}". Instrumento recibido: "{instrumento}". Claves disponibles: {claves_disponibles}')
                     continue
                 
                 # Crear nueva calificación
@@ -3792,12 +4232,41 @@ def cargar_monto_view(request):
                 nueva_calificacion.Ejercicio = ejercicio_int
                 nueva_calificacion.Mercado = mercado
                 nueva_calificacion.Instrumento = instrumento
+                
+                # Buscar PAIS del CSV (case-insensitive)
+                pais = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'pais':
+                        pais = fila_limpia[key]
+                        break
+                # Normalizar PAIS a valores válidos (CHILE, PERU, COLOMBIA)
+                if pais:
+                    pais_upper = pais.upper().strip()
+                    if pais_upper in ['CHILE', 'PERU', 'COLOMBIA']:
+                        nueva_calificacion.Pais = pais_upper
+                    else:
+                        nueva_calificacion.Pais = pais  # Guardar tal cual si no coincide exactamente
                 nueva_calificacion.Origen = 'csv'  # Normalizado a minúsculas para coincidir con el filtro
                 nueva_calificacion.hash_archivo_csv = hash_archivo  # Guardar el hash del archivo CSV para relacionar la calificación con el archivo
-                nueva_calificacion.Descripcion = fila_limpia.get('DESCRIPCION') or fila_limpia.get('Descripcion') or fila_limpia.get('descripcion') or ''
                 
+                # Buscar DESCRIPCION (case-insensitive)
+                descripcion = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower == 'descripcion':
+                        descripcion = fila_limpia[key]
+                        break
+                nueva_calificacion.Descripcion = descripcion
+                
+                # Buscar FEC_PAGO (case-insensitive)
+                fecha_pago = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower in ['fec_pago', 'fecha_pago', 'fecha pago']:
+                        fecha_pago = fila_limpia[key]
+                        break
                 # Fecha de pago usando pandas
-                fecha_pago = fila_limpia.get('FEC_PAGO') or fila_limpia.get('Fec_Pago') or fila_limpia.get('fec_pago') or ''
                 if fecha_pago:
                     try:
                         fecha_parsed = pd.to_datetime(fecha_pago, format='%Y-%m-%d', errors='coerce')
@@ -3807,14 +4276,73 @@ def cargar_monto_view(request):
                         print(f"[CARGAR_MONTO] Error al parsear fecha: {e}")
                         pass
                 
+                # Buscar SEC_EVE (case-insensitive)
+                sec_eve = ''
+                for key in fila_limpia.keys():
+                    key_lower = key.lower().strip()
+                    if key_lower in ['sec_eve', 'secuencia_evento', 'secuencia evento']:
+                        sec_eve = fila_limpia[key]
+                        break
                 # Secuencia evento usando pandas
-                sec_eve = fila_limpia.get('SEC_EVE') or fila_limpia.get('Sec_Eve') or fila_limpia.get('sec_eve') or ''
                 if sec_eve:
                     try:
                         nueva_calificacion.SecuenciaEvento = pd.to_numeric(sec_eve, errors='raise').astype(int)
                     except (ValueError, TypeError, Exception):
                         print(f"[CARGAR_MONTO] Advertencia: No se pudo convertir SecuenciaEvento '{sec_eve}' a entero en fila {fila_num}")
                         pass
+                
+                # Procesar campos adicionales del CSV (si están presentes)
+                # Dividendo
+                dividendo = fila_limpia.get('Dividendo') or fila_limpia.get('dividendo') or ''
+                if dividendo:
+                    try:
+                        dividendo_numeric = pd.to_numeric(dividendo, errors='coerce')
+                        if not pd.isna(dividendo_numeric):
+                            nueva_calificacion.Dividendo = Decimal(str(dividendo_numeric))
+                    except Exception as e:
+                        print(f"[CARGAR_MONTO] Error al procesar Dividendo: {e}")
+                
+                # Valor Historico
+                valor_historico = fila_limpia.get('Valor Historico') or fila_limpia.get('ValorHistorico') or fila_limpia.get('valor_historico') or fila_limpia.get('valor historico') or ''
+                if valor_historico:
+                    try:
+                        valor_historico_numeric = pd.to_numeric(valor_historico, errors='coerce')
+                        if not pd.isna(valor_historico_numeric):
+                            nueva_calificacion.ValorHistorico = Decimal(str(valor_historico_numeric))
+                    except Exception as e:
+                        print(f"[CARGAR_MONTO] Error al procesar ValorHistorico: {e}")
+                
+                # Factor Actualizacion
+                factor_actualizacion = fila_limpia.get('Factor Actualizacion') or fila_limpia.get('FactorActualizacion') or fila_limpia.get('factor_actualizacion') or fila_limpia.get('factor actualizacion') or ''
+                if factor_actualizacion:
+                    try:
+                        factor_actualizacion_numeric = pd.to_numeric(factor_actualizacion, errors='coerce')
+                        if not pd.isna(factor_actualizacion_numeric):
+                            nueva_calificacion.FactorActualizacion = Decimal(str(factor_actualizacion_numeric))
+                    except Exception as e:
+                        print(f"[CARGAR_MONTO] Error al procesar FactorActualizacion: {e}")
+                
+                # Anho
+                anho = fila_limpia.get('Anho') or fila_limpia.get('anho') or fila_limpia.get('Anho') or ''
+                if anho:
+                    try:
+                        anho_int = pd.to_numeric(anho, errors='raise').astype(int)
+                        nueva_calificacion.Anho = anho_int
+                    except (ValueError, TypeError, Exception):
+                        print(f"[CARGAR_MONTO] Advertencia: No se pudo convertir Anho '{anho}' a entero")
+                
+                # ISFUT
+                isfut = fila_limpia.get('ISFUT') or fila_limpia.get('isfut') or fila_limpia.get('Isfut') or ''
+                if isfut:
+                    try:
+                        # Convertir string a booleano
+                        isfut_str = str(isfut).strip().lower()
+                        if isfut_str in ['true', '1', 'yes', 'si', 'sí']:
+                            nueva_calificacion.ISFUT = True
+                        elif isfut_str in ['false', '0', 'no']:
+                            nueva_calificacion.ISFUT = False
+                    except Exception as e:
+                        print(f"[CARGAR_MONTO] Error al procesar ISFUT: {e}")
                 
                 # Verificar si ya tiene factores calculados (después de presionar "CALCULAR FACTORES")
                 tiene_factores = any(f'F{i}' in fila_limpia for i in range(8, 38)) # Se verifica si ya tiene factores calculados
@@ -3918,7 +4446,8 @@ def cargar_monto_view(request):
                 print(f"[CARGAR_MONTO] Error en fila {fila_num}: {e}")
                 import traceback
                 print(traceback.format_exc())
-                errores.append(f'Fila {fila_num}: {str(e)}')
+                claves_disponibles = ', '.join(fila_limpia.keys()) if 'fila_limpia' in locals() else 'N/A'
+                errores.append(f'Fila {fila_num}: {str(e)}. Claves disponibles: {claves_disponibles}')
                 continue
         
         # Crear log de carga masiva (se crea el log de carga masiva)

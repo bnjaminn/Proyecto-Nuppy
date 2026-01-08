@@ -52,6 +52,11 @@ class CalificacionModalForm(forms.Form):
     Origen = forms.CharField(required=False)  # Campo para el origen (Corredor, CSV)
     Ejercicio = forms.IntegerField()
     Instrumento = forms.CharField(max_length=50, required=False)
+    Pais = forms.ChoiceField(
+        choices=[('', 'Seleccione...'), ('CHILE', 'CHILE'), ('PERU', 'PERU'), ('COLOMBIA', 'COLOMBIA')],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-input'})
+    )
     FechaPago = forms.DateField(required=False, input_formats=['%Y-%m-%d']) 
     SecuenciaEvento = forms.IntegerField(required=False)
     Dividendo = forms.DecimalField(initial=0.0, required=False, decimal_places=8)

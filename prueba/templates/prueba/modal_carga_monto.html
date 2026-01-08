@@ -56,10 +56,13 @@
                     <!-- Encabezados de la tabla - definen las columnas que debe tener el CSV -->
                     <thead>
                         <tr>
+                            <!-- Columna de ID de calificación -->
+                            <th>ID Calificacion</th>    <!-- ID de MongoDB de la calificación -->
                             <!-- Columnas de información básica -->
                             <th>Ejercicio</th>          <!-- Año o período fiscal -->
                             <th>Mercado</th>            <!-- Tipo de mercado financiero -->
                             <th>Instrumento</th>        <!-- Tipo de instrumento financiero -->
+                            <th>PAIS</th>               <!-- País de la calificación -->
                             <th>FEC_PAGO</th>           <!-- Fecha de pago -->
                             <th>SEC_EVE</th>            <!-- Secuencia del evento -->
                             <th>DESCRIPCION</th>        <!-- Descripción del registro -->
@@ -97,16 +100,16 @@
                             <th>F35 M</th>
                             <th>F36 M</th>
                             <th>F37 M</th>
-                            <!-- Total: 38 columnas (6 de información básica + 32 de montos mensuales) -->
+                            <!-- Total: 40 columnas (ID Calificacion + 7 de información básica + PAIS + 32 de montos mensuales) -->
                         </tr>
                     </thead>
                     
                     <!-- Cuerpo de la tabla - aquí se insertarán dinámicamente las filas con los datos del CSV -->
                     <tbody id="tabla-preview-monto-body">
                         <!-- Mensaje inicial cuando no hay datos cargados -->
-                        <!-- colspan="38" hace que el mensaje ocupe todas las columnas -->
+                        <!-- colspan="39" hace que el mensaje ocupe todas las columnas (incluyendo ID Calificacion) -->
                         <tr>
-                            <td colspan="38" class="preview-empty-message">No hay datos para mostrar. Seleccione un archivo CSV.</td>
+                            <td colspan="40" class="preview-empty-message">No hay datos para mostrar. Seleccione un archivo CSV.</td>
                         </tr>
                         <!-- JavaScript reemplazará este contenido con los datos del CSV al cargar un archivo -->
                     </tbody>
